@@ -1,0 +1,9 @@
+# Declare dependencies for the User service.
+#
+# Author: Shuohui Liu
+# Date: 19 Oct 2026
+
+fastapi>=0.115,<1
+uvicorn>=0.30,<1
+sqlalchemy>=2.0,<3
+psycopg[binary]>=3.2,<4
