@@ -1,7 +1,0 @@
-# Exclude local build artifacts and dependencies from Docker context.
-# Author: Shuohui Liu
-# Date: 19 Oct 2026
-node_modules
-.next
-.git
-*.log

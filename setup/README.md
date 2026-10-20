@@ -20,13 +20,13 @@ python buildup_dev_environment.py
 cp .env.example .env
 cat .env
 docker compose config
-docker compose -p English-Learning-Class up -d --build
+docker compose up -d --build
 ```
 
 2.2 Individually update
 
 ```sh
-docker compose -p English-Learning-Class up -d --build user1 user2 ...
+docker compose up -d --build user1 user2 ...
 ```
 
 2.3 Checking 
@@ -81,7 +81,7 @@ docker compose down
 docker compose down -v
 
 # rerun
-docker compose up -d
+docker compose up -d --build
 ```
 
 5.2 Stop containers
