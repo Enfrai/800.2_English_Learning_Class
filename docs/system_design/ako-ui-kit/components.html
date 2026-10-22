@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ako components</title>
+<link rel="stylesheet" href="css/tokens.css"><link rel="stylesheet" href="css/components.css"></head>
+<body>
+<header class="bar">
+  <a class="logo" href="#">Ako</a>
+  <nav><a href="#" aria-current="page">Home</a><a href="#">Class sessions</a><a href="#">Learners</a><a href="#">Lessons</a><a href="#">Attendance reports</a><a href="#">Accounts</a></nav>
+  <div class="who">Anna Smith (coordinator) · <a href="#">Log out</a></div>
+</header>
+<main class="page">
+<h1>Components</h1><p class="sub">Copy the markup. Class names are the contract with the CSS.</p>
+
+<h2>Buttons</h2>
+<div class="row">
+  <button class="btn">Main action</button>
+  <button class="btn btn-secondary">Second action</button>
+  <button class="btn btn-danger">Delete lesson</button>
+  <button class="btn btn-later" disabled>Open check-in with QR code (later)</button>
+  <a class="btn btn-big" href="#">Start today's class</a>
+</div>
+
+<h2>Form fields</h2>
+<div class="grid-2">
+  <div class="field"><label class="req" for="a">First name</label><input id="a" type="text" value="Ana"></div>
+  <div class="field invalid"><label class="req" for="b">Title</label><input id="b" type="text" aria-describedby="b-err">
+    <div id="b-err" class="msg msg-error" role="alert">Title is required</div></div>
+  <div class="field"><label for="c">Phone or email</label><input id="c" type="text"><div class="hint">Only if the learner agrees</div></div>
+  <div class="field"><label for="d">Lesson</label><select id="d"><option>Using the bus</option><option>At the doctor</option></select></div>
+  <div class="field"><div class="check"><input id="e" type="checkbox"><label for="e">Contains Māori content</label></div></div>
+</div>
+
+<h2>Messages</h2>
+<div class="msg msg-error" role="alert">Username or password is incorrect</div>
+<div class="msg msg-warning">A learner with this name already exists. <button class="btn btn-secondary">Cancel</button> <button class="btn">Add anyway</button></div>
+<div class="msg msg-success" role="status">Session saved</div>
+<div class="msg msg-info">No lessons found. <a href="#">Create a new lesson</a></div>
+
+<h2>Table, badges and chips</h2>
+<table class="data">
+  <thead><tr><th>Title</th><th>Date</th><th>Tags</th><th>Māori content</th><th>Actions</th></tr></thead>
+  <tbody>
+    <tr><td>Using the bus</td><td>19 Oct 2026</td><td><span class="chip">transport</span></td><td>–</td><td><a href="#">Edit</a></td></tr>
+    <tr><td>Te reo Māori greetings</td><td>12 Oct 2026</td><td><span class="chip">culture</span></td><td><span class="badge badge-review">Māori content – not yet reviewed</span></td><td><a href="#">Edit</a></td></tr>
+    <tr><td>At the doctor</td><td>5 Oct 2026</td><td><span class="chip">health</span></td><td><span class="badge badge-reviewed">Reviewed by Aroha, 8 Oct 2026</span></td><td><a href="#">Edit</a></td></tr>
+    <tr><td>Ana Silva</td><td>19 Oct 2026</td><td>–</td><td><span class="badge badge-present">Present</span> <span class="badge badge-corrected">Corrected</span> <span class="badge badge-absent">Absent</span></td><td>–</td></tr>
+    <tr class="inactive"><td>Old account</td><td>–</td><td>–</td><td><span class="badge badge-inactive">Inactive</span></td><td>–</td></tr>
+  </tbody>
+</table>
+
+<h2>Summary figure</h2>
+<p><span class="stat">Present 3 of 5</span></p>
+
+<h2>Cards</h2>
+<div class="grid-2">
+  <div class="card"><strong>Learners</strong><br>Add and update the class list</div>
+  <div class="card later"><strong>Check-in with QR code</strong><br>Later</div>
+</div>
+</main>
+</body></html>
