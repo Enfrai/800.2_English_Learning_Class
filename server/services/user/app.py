@@ -1,9 +1,8 @@
-"""Implement user login, password verification, and database-backed sessions.
+"""Implement Ako login with UUID-backed SQLAlchemy tables.
 
 Author: Shuohui Liu
 Date: 19 Oct 2026
 """
-
 import hashlib
 import hmac
 import os
@@ -13,70 +12,52 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy import (
-    DateTime,
-    ForeignKey,
-    Integer,
-    String,
-    create_engine,
-    delete,
-    select,
-)
+from sqlalchemy import create_engine, delete, select, update
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
+from sqlalchemy.orm import sessionmaker
+
+from models import Base, user_sessions, users
 
 engine = create_engine(os.environ["DATABASE_URL"], pool_pre_ping=True)
 SessionLocal = sessionmaker(engine)
 INSTANCE = os.getenv("INSTANCE_NAME", "unknown")
+ROUNDS = 600_000
 
 
-class Base(DeclarativeBase):
-    pass
+def password_hash(password: str, salt: bytes) -> str:
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, ROUNDS).hex()
+    return f"pbkdf2_sha256${ROUNDS}${salt.hex()}${digest}"
 
 
-class User(Base):
-    __tablename__ = "users"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    username: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
-    password_salt: Mapped[str] = mapped_column(String(64), nullable=False)
-    password_hash: Mapped[str] = mapped_column(String(128), nullable=False)
-
-
-class LoginSession(Base):
-    __tablename__ = "login_sessions"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
-    session_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
-    expires_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
-
-
-def hash_password(password: str, salt: bytes) -> str:
-    return hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 600_000).hex()
+def verify_password(password: str, encoded: str) -> bool:
+    try:
+        algorithm, rounds, salt, digest = encoded.split("$")
+        if algorithm != "pbkdf2_sha256" or int(rounds) != ROUNDS:
+            return False
+        actual = password_hash(password, bytes.fromhex(salt)).split("$")[-1]
+        return hmac.compare_digest(actual, digest)
+    except (ValueError, TypeError):
+        return False
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Demo-only table creation and demo user seeding. Use migrations in production.
-    Base.metadata.create_all(engine)
-    with SessionLocal() as db:
-        username = os.getenv("DEMO_USERNAME", "demo")
-        if not db.scalar(select(User).where(User.username == username)):
+    Base.metadata.create_all(bind=engine)
+    username = os.getenv("DEMO_USERNAME", "demo")
+    with SessionLocal.begin() as db:
+        if db.execute(select(users.c.id).where(users.c.username == username)).first() is None:
             salt = secrets.token_bytes(16)
-            db.add(
-                User(
-                    username=username,
-                    password_salt=salt.hex(),
-                    password_hash=hash_password(
-                        os.getenv("DEMO_PASSWORD", "DemoPass123!"), salt
-                    ),
-                )
-            )
             try:
-                db.commit()
-            except IntegrityError:  # Two replicas may seed concurrently.
-                db.rollback()
+                with db.begin_nested():
+                    db.execute(users.insert().values(
+                        username=username,
+                        password_hash=password_hash(os.getenv("DEMO_PASSWORD", "DemoPass123!"), salt),
+                        display_name="Demo Coordinator",
+                        role="coordinator",
+                    ))
+            except IntegrityError:
+                # Another replica may have seeded the same username.
+                pass
     yield
 
 
@@ -96,29 +77,34 @@ def health():
 @app.post("/login")
 def login(payload: LoginRequest):
     with SessionLocal() as db:
-        user = db.scalar(select(User).where(User.username == payload.username))
-        if user is None or not hmac.compare_digest(
-            user.password_hash,
-            hash_password(payload.password, bytes.fromhex(user.password_salt)),
-        ):
-            raise HTTPException(status_code=401, detail="Invalid username or password")
-        # Lock the user row to serialize concurrent logins across both replicas.
-        # A successful new login invalidates all previously issued sessions.
-        user = db.scalar(select(User).where(User.id == user.id).with_for_update())
-        db.execute(delete(LoginSession).where(LoginSession.user_id == user.id))
-        session_id = secrets.token_urlsafe(32)
-        expiry = datetime.now(UTC) + timedelta(hours=1)
-        db.add(
-            LoginSession(
-                user_id=user.id,
-                session_hash=hashlib.sha256(session_id.encode()).hexdigest(),
-                expires_at=expiry,
-            )
-        )
-        db.commit()
-        return {
-            "sessionid": session_id,
-            "expires_at": expiry.isoformat(),
-            "user_id": user.id,
-            "instance": INSTANCE,
-        }
+        with db.begin():
+            row = db.execute(
+                select(users).where(users.c.username == payload.username).with_for_update()
+            ).mappings().first()
+            now = datetime.now(UTC)
+            if row is None or not row["is_active"]:
+                raise HTTPException(status_code=401, detail="Invalid username or password")
+            if row["locked_until"] and row["locked_until"] > now:
+                raise HTTPException(status_code=423, detail="Account temporarily locked")
+            if not verify_password(payload.password, row["password_hash"]):
+                attempts = row["failed_login_attempts"] + 1
+                db.execute(users.update().where(users.c.id == row["id"]).values(
+                    failed_login_attempts=0 if attempts >= 5 else attempts,
+                    locked_until=now + timedelta(minutes=10) if attempts >= 5 else None,
+                ))
+                # Commit failed-attempt tracking before raising.
+                db.commit()
+                raise HTTPException(status_code=401, detail="Invalid username or password")
+            db.execute(users.update().where(users.c.id == row["id"]).values(
+                failed_login_attempts=0, locked_until=None, last_login_at=now, updated_at=now
+            ))
+            # The partial unique index permits only one unrevoked session per user.
+            db.execute(delete(user_sessions).where(user_sessions.c.user_id == row["id"]))
+            token = secrets.token_urlsafe(32)
+            expires = now + timedelta(minutes=30)
+            db.execute(user_sessions.insert().values(
+                user_id=row["id"], token_hash=hashlib.sha256(token.encode()).hexdigest(),
+                expires_at=expires, last_activity_at=now
+            ))
+            return {"sessionid": token, "expires_at": expires.isoformat(),
+                    "user_id": str(row["id"]), "instance": INSTANCE}
