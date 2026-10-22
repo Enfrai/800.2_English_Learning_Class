@@ -3,17 +3,17 @@
 Author: Shuohui Liu
 Date: 19 Oct 2026
 """
+
 import os
 from contextlib import asynccontextmanager
 from datetime import date
 from uuid import UUID
 
 from fastapi import FastAPI
+from models import Base, lessons
 from pydantic import BaseModel, Field
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
-from models import Base, lessons
 
 engine = create_engine(os.environ["DATABASE_URL"], pool_pre_ping=True)
 SessionLocal = sessionmaker(engine)
@@ -44,9 +44,12 @@ def health():
 def create(payload: CreateLessonRequest):
     with SessionLocal.begin() as db:
         row = db.execute(
-            lessons.insert().values(
-                title=payload.title, lesson_date=payload.lesson_date,
-                created_by=payload.created_by
-            ).returning(lessons.c.id, lessons.c.title)
+            lessons.insert()
+            .values(
+                title=payload.title,
+                lesson_date=payload.lesson_date,
+                created_by=payload.created_by,
+            )
+            .returning(lessons.c.id, lessons.c.title)
         ).one()
         return {"lesson_id": str(row.id), "title": row.title, "instance": INSTANCE}
