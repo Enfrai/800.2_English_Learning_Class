@@ -33,5 +33,5 @@ user_sessions = Table("user_sessions", Base.metadata,
 )
 
 learners = Table("learners", Base.metadata,
-    id_col(), value("full_name",String(150)), value("contact",String(255),nullable=True), value("first_language",String(100),nullable=True), Column("is_active",Boolean,nullable=False,server_default=text("true")), ref("created_by","users.id"), ref("updated_by","users.id",nullable=True), *timestamps(), Index("ix_learners_full_name","full_name")
+    id_col(), value("first_name",String(100)), value("family_name",String(100)), value("contact",String(255),nullable=True), value("first_language",String(100),nullable=True), Column("is_active",Boolean,nullable=False,server_default=text("true")), ref("created_by","users.id"), ref("updated_by","users.id",nullable=True), *timestamps(), Index("ix_learners_name","family_name","first_name")
 )
