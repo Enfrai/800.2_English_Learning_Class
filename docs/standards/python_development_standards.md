@@ -162,3 +162,7 @@ Decide explicitly whether database files belong in version control. Prefer initi
 - Changes must be reviewed by another contributor before merging, normally the asignee will be the one who responds to the module.
 - Do not commit conflict markers, temporary debugging code, or unexplained disabled checks.
 - Update documentation when behavior, configuration, or setup changes.
+
+## 11 Git branches management
+
+Reference to [git branches management](./git_workflow_standards.md)

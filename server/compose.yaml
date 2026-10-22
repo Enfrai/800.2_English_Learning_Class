@@ -3,14 +3,14 @@
 # Author: Shuohui Liu
 # Date: 19 Oct 2026
 
-name: fastapi-microservices
+name: ako-server
 
 x-api: &api
   restart: unless-stopped
   networks: [backend]
 
 services:
-  frontend:
+  web:
     build: ../web
     networks: [backend]
     restart: unless-stopped
@@ -22,7 +22,7 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      frontend: {condition: service_started}
+      web: {condition: service_started}
       user1: {condition: service_healthy}
       user2: {condition: service_healthy}
       access1: {condition: service_healthy}
@@ -147,5 +147,8 @@ networks:
 
 volumes:
   user_data:
+    name: ${USER_DATA_VOLUME:-fastapi-microservices_user_data}
   access_data:
+    name: ${ACCESS_DATA_VOLUME:-fastapi-microservices_access_data}
   lesson_data:
+    name: ${LESSON_DATA_VOLUME:-fastapi-microservices_lesson_data}
