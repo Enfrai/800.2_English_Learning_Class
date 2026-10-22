@@ -7,6 +7,7 @@
 
 import { type FormEvent, useState } from "react";
 import { CircularProgress, FilledButton, TextField } from "./material";
+import { saveSessionId } from "@/lib/session";
 
 type LoginResult = {
   sessionid: string;
@@ -43,6 +44,8 @@ export default function LoginForm() {
         return;
       }
       const result = data as LoginResult;
+      // Logged-in pages send this id to the User Service.
+      saveSessionId(result.sessionid);
       setMessage(
         `Login successful! User ID: ${result.user_id}; Instance: ${result.instance}; Expires: ${result.expires_at}`,
       );
