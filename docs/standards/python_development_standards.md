@@ -165,4 +165,4 @@ Decide explicitly whether database files belong in version control. Prefer initi
 
 ## 11 Git branches management
 
-Reference to [git branches management](./git_branches_management_standards.md)
+Reference to [git branches management](./git_workflow_standards.md)
