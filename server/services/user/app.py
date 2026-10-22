@@ -14,7 +14,7 @@ from datetime import UTC, datetime, timedelta
 from fastapi import FastAPI, HTTPException
 from models import Base, user_sessions, users
 from pydantic import BaseModel, Field
-from sqlalchemy import create_engine, delete, select, update
+from sqlalchemy import create_engine, delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
