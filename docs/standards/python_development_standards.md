@@ -156,8 +156,8 @@ Decide explicitly whether database files belong in version control. Prefer initi
 ## 10. Git and Code Review
 
 - Keep the default branch runnable and releasable according to the project's release policy.
-- Develop changes on short-lived branches, such as `feature/user_signup`. `feature/[VERSION]_dev` as a merging branch from all features of a version, `feature/[VERSION]_[USER_STORY]` for feature development, `fix/[VERSION]_[ISSUE_NUMBER]` for bug fix, `test/[VERSION]_[BRANCH_NAME]` for testing, and `hotfix/[VERSION]_[ISSUE_NUMBER]` for fixing issues on a published version.
-- All completed feature branch must be firstly mergecd into `feature/[VERSION]_dev` for testing and debuging phases. Once testing is completed, then merge it into `main` to deploy and publish.
+- Develop changes on short-lived branches, such as `feature/v1.0/user_signup`. `feature/v[VERSION_NUMBER]/dev` as a merging branch from all features of a version, `feature/[VERSION]/[USER_STORY | BRANCH_NAME]` for feature development and for bug fix and testing, and `hotfix/[VERSION]/[ISSUE_NUMBER | BRANCH_NAME]` for fixing issues on a published version.
+- All completed feature branch must be firstly mergecd into `feature/v[VERSION_NUMBER]/dev` for testing and debuging phases. Once testing is completed, then merge it into `main` to deploy and publish.
 - Keep commits focused and describe the change clearly.
 - Changes must be reviewed by another contributor before merging, normally the asignee will be the one who responds to the module.
 - Do not commit conflict markers, temporary debugging code, or unexplained disabled checks.
