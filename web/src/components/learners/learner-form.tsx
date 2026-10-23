@@ -26,8 +26,8 @@ const FAMILY_NAME_REQUIRED = "Family name is required";
 const NAME_TOO_LONG = "Name must be 100 characters or fewer";
 const SAVE_FAILED = "The learner could not be saved. Please try again.";
 
-type FieldName = keyof LearnerDetails;
-type FieldErrors = Partial<Record<FieldName, string>>;
+export type FieldName = keyof LearnerDetails;
+export type FieldErrors = Partial<Record<FieldName, string>>;
 
 const FIELD_IDS: Record<FieldName, string> = {
   first_name: "learner-first-name",
@@ -36,7 +36,7 @@ const FIELD_IDS: Record<FieldName, string> = {
   contact: "learner-contact",
 };
 
-function checkNames(details: LearnerDetails): FieldErrors {
+export function checkNames(details: LearnerDetails): FieldErrors {
   const errors: FieldErrors = {};
   const firstName = details.first_name.trim();
   const familyName = details.family_name.trim();
@@ -196,7 +196,7 @@ type TextFieldProps = {
   onChange: (field: FieldName, value: string) => void;
 };
 
-function TextField({ ref, name, label, value, error, hint, required, maxLength, onChange }: TextFieldProps) {
+export function TextField({ ref, name, label, value, error, hint, required, maxLength, onChange }: TextFieldProps) {
   const id = FIELD_IDS[name];
   const describedBy = [error && `${id}-error`, hint && `${id}-hint`].filter(Boolean).join(" ");
   return (

@@ -35,7 +35,12 @@ export default function MenuBar() {
           <a
             key={item.href}
             href={item.href}
-            aria-current={pathname === item.href ? "page" : undefined}
+            // A section stays current on its sub-pages, e.g. a session's attendance.
+            aria-current={
+              (item.href === "/" ? pathname === "/" : pathname.startsWith(item.href))
+                ? "page"
+                : undefined
+            }
           >
             {item.label}
           </a>

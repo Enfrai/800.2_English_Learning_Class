@@ -3,7 +3,9 @@
  * Date: 23 Oct 2026
  */
 
-import { getSessionId } from "./session";
+import { apiRequest, RequestFailedError } from "./api";
+
+export { LoginRequiredError, RequestFailedError } from "./api";
 
 const LEARNERS_URL = "/api/user/learners";
 
@@ -25,9 +27,6 @@ export type LearnerDetails = {
   contact: string;
 };
 
-/** No session, or the session has ended. */
-export class LoginRequiredError extends Error {}
-
 /** One field breaks a rule. The message comes from the server. */
 export class LearnerFieldError extends Error {
   readonly field: string;
@@ -48,36 +47,20 @@ export class DuplicateNameError extends Error {
   }
 }
 
-/** The server could not be reached or gave an unexpected answer. */
-export class RequestFailedError extends Error {}
-
-async function send<T>(url: string, init: RequestInit = {}): Promise<T> {
-  const sessionId = getSessionId();
-  if (!sessionId) throw new LoginRequiredError();
-
-  let response: Response;
-  try {
-    response = await fetch(url, {
-      ...init,
-      headers: {
-        Authorization: `Bearer ${sessionId}`,
-        "Content-Type": "application/json",
-      },
-    });
-  } catch {
-    throw new RequestFailedError();
-  }
-  if (response.ok) return (await response.json()) as T;
-
-  const body: { detail?: unknown } | null = await response.json().catch(() => null);
-  const detail = body?.detail as Record<string, unknown> | undefined;
-  if (response.status === 401) throw new LoginRequiredError();
-  if (response.status === 409 && Array.isArray(detail?.duplicates)) {
-    throw new DuplicateNameError(String(detail.message), detail.duplicates as Learner[]);
-  }
-  if (response.status === 422 && typeof detail?.field === "string") {
+/** Throw the learner error for a 422 field answer, if it is one. */
+export function throwIfFieldError(status: number, detail: Record<string, unknown> | undefined): void {
+  if (status === 422 && typeof detail?.field === "string") {
     throw new LearnerFieldError(detail.field, String(detail.message));
   }
+}
+
+async function send<T>(url: string, init: RequestInit = {}): Promise<T> {
+  const { status, body, detail } = await apiRequest(url, init);
+  if (status >= 200 && status < 300) return body as T;
+  if (status === 409 && Array.isArray(detail?.duplicates)) {
+    throw new DuplicateNameError(String(detail.message), detail.duplicates as Learner[]);
+  }
+  throwIfFieldError(status, detail);
   throw new RequestFailedError();
 }
 

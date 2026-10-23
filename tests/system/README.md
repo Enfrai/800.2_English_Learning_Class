@@ -7,6 +7,7 @@ that testers follow and sign off are in `docs/system_test/`.
 | File | Cases |
 | --- | --- |
 | `test_learners_page.py` | ST-11, and the Learners page parts of NT-05, NT-06, NT-07, NT-08, NT-10 |
+| `test_attendance_page.py` | ST-01, US-004 AC1 to AC5, and the attendance page parts of NT-01, NT-06, NT-07, NT-10 |
 
 ## Running the tests
 
@@ -52,5 +53,9 @@ Notes:
 - The tests log in as the demo coordinator. A new login ends the previous
   demo session, so a browser where you are logged in as demo is logged out.
 - The accessibility check loads axe-core from cdnjs, so it needs internet.
+- Until US-014 adds "Start today's class", the attendance tests create class
+  sessions with `docker compose exec` on the running system, so Docker must
+  be on the same computer. Set `COMPOSE_FILE` if the system was started from
+  another compose file.
 - Each test adds its own learners with a random suffix, so the tests run in
   any order and do not need an empty database.

@@ -193,6 +193,27 @@ def current_user_id(authorization: Annotated[str | None, Header()] = None) -> UU
 CurrentUser = Annotated[UUID, Depends(current_user_id)]
 
 
+class StaffOut(BaseModel):
+    id: UUID
+    display_name: str
+    role: str
+
+
+@app.get("/me", response_model=StaffOut)
+def read_me(user_id: CurrentUser):
+    """Return the logged-in user. Other services call this to check a session."""
+    with SessionLocal() as db:
+        return (
+            db.execute(
+                select(users.c.id, users.c.display_name, users.c.role).where(
+                    users.c.id == user_id
+                )
+            )
+            .mappings()
+            .one()
+        )
+
+
 class LearnerIn(BaseModel):
     """Learner details. Rules are checked in learners.py so messages match US-003."""
 

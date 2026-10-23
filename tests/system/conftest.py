@@ -7,13 +7,19 @@ The tests drive a real browser against a running Ako system started with
 - ``DEMO_USERNAME`` / ``DEMO_PASSWORD``: defaults match ``server/compose.yaml``
 - ``BROWSER_CHANNEL``: for example ``chrome`` to use the installed Google
   Chrome instead of Playwright's own Chromium
+- ``COMPOSE_FILE``: the running system's compose file, default
+  ``server/compose.yaml`` (used to create class sessions)
 
 Author: Pei Wu
 Date: 23 Oct 2026
 """
 
 import os
+import subprocess
+import time
 from collections.abc import Callable, Iterator
+from pathlib import Path
+from typing import Any
 
 import pytest
 from playwright.sync_api import Browser, Page, expect, sync_playwright
@@ -24,6 +30,12 @@ BASE_URL = os.environ.get("BASE_URL", "http://localhost:8080").rstrip("/")
 USERNAME = os.environ.get("DEMO_USERNAME", "demo")
 PASSWORD = os.environ.get("DEMO_PASSWORD", "DemoPass123!")
 SESSION_KEY = "ako.sessionid"
+COMPOSE_FILE = os.environ.get(
+    "COMPOSE_FILE", str(Path(__file__).resolve().parents[2] / "server/compose.yaml")
+)
+# Must match CLUB_TIMEZONE of the Accessment Service.
+CLUB_TIMEZONE = "Pacific/Auckland"
+API_PAUSE_SECONDS = 0.06  # Nginx allows 20 API requests a second.
 
 # The first page load after a build can be slow.
 expect.set_options(timeout=10_000)
@@ -61,14 +73,85 @@ def session_id(page: Page) -> str:
 
 
 @pytest.fixture
-def learners_page(page: Page, session_id: str) -> LearnersPage:
-    """The Learners page, opened by a logged-in coordinator."""
+def logged_in_page(page: Page, session_id: str) -> Page:
+    """A browser window where the demo coordinator is logged in."""
     page.context.add_init_script(
         f"window.localStorage.setItem({SESSION_KEY!r}, {session_id!r})"
     )
-    learners = LearnersPage(page)
+    return page
+
+
+@pytest.fixture
+def learners_page(logged_in_page: Page) -> LearnersPage:
+    """The Learners page, opened by a logged-in coordinator."""
+    learners = LearnersPage(logged_in_page)
     learners.open()
     return learners
+
+
+@pytest.fixture
+def add_learner(page: Page, session_id: str) -> Callable[..., dict[str, Any]]:
+    """Add a made-up learner through the User Service API."""
+
+    def add(first: str, family: str, language: str = "") -> dict[str, Any]:
+        response = page.request.post(
+            "/api/user/learners",
+            headers={"Authorization": f"Bearer {session_id}"},
+            data={
+                "first_name": first,
+                "family_name": family,
+                "first_language": language,
+                "contact": "",
+                "allow_duplicate": True,
+            },
+        )
+        assert response.status == 201, response.status
+        time.sleep(API_PAUSE_SECONDS)
+        return response.json()
+
+    return add
+
+
+@pytest.fixture
+def class_session() -> Callable[..., str]:
+    """Create a class session and return its id.
+
+    Until US-014 adds "Start today's class", sessions are inserted straight
+    into the Accessment database of the running ``docker compose`` system.
+    """
+
+    def create(days_ago: int = 0) -> str:
+        # days_ago is an int, so formatting it into the SQL text is safe.
+        sql = (
+            "INSERT INTO class_sessions (id, session_date, created_by) "
+            "VALUES (gen_random_uuid(), "
+            f"(now() AT TIME ZONE '{CLUB_TIMEZONE}')::date - {int(days_ago)}, "
+            "gen_random_uuid()) RETURNING id"
+        )
+        result = subprocess.run(
+            [
+                "docker",
+                "compose",
+                "-f",
+                COMPOSE_FILE,
+                "exec",
+                "-T",
+                "postgres-access",
+                "psql",
+                "-U",
+                "access_app",
+                "-d",
+                "accessdb",
+                "-tAqc",
+                sql,
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return result.stdout.strip().splitlines()[0]
+
+    return create
 
 
 @pytest.fixture
