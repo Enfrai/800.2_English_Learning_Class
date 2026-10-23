@@ -38,6 +38,7 @@ from security import (
     protect_login,
     set_session_cookie,
 )
+from staff import create_staff_router
 
 engine = create_engine(os.environ["DATABASE_URL"], pool_pre_ping=True)
 SessionLocal = sessionmaker(engine)
@@ -99,6 +100,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="User Service", lifespan=lifespan)
 app.state.session_factory = SessionLocal
 app.state.session_security = SessionSecurity.from_environment()
+app.include_router(create_staff_router(password_hash))
 
 
 @app.middleware("http")
@@ -106,7 +108,11 @@ async def authentication_cache_control(
     request: Request, call_next: RequestResponseEndpoint
 ) -> Response:
     response = await call_next(request)
-    if request.url.path in AUTH_PATHS:
+    if (
+        request.url.path in AUTH_PATHS
+        or request.url.path == "/staff"
+        or request.url.path.startswith("/staff/")
+    ):
         response.headers["Cache-Control"] = "no-store"
         response.headers["Pragma"] = "no-cache"
     return response

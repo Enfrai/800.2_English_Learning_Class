@@ -58,7 +58,10 @@ cover/
 *.mo
 *.pot
 
-.DS_Store/
+.DS_Store
+
+# Word temporary lock files
+~$*.docx
 
 # Django stuff:
 *.log
@@ -154,7 +157,11 @@ activemq-data/
 *.sage.py
 
 # Environments
+# Local/runtime secrets in any directory; keep example templates trackable.
 .env
+.env.*
+!.env.example
+!.env.*.example
 .envrc
 .venv
 env/
