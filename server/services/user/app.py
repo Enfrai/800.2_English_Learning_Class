@@ -10,8 +10,20 @@ import os
 import secrets
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
+from typing import Annotated
+from uuid import UUID
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
+from learners import (
+    DuplicateLearnerError,
+    LearnerError,
+    LearnerNotFoundError,
+    LearnerValidationError,
+    add_learner,
+    get_learner,
+    list_learners,
+    update_learner,
+)
 from models import Base, user_sessions, users
 from pydantic import BaseModel, Field
 from sqlalchemy import create_engine, delete, select
@@ -150,3 +162,122 @@ def login(payload: LoginRequest):
                 "user_id": str(row["id"]),
                 "instance": INSTANCE,
             }
+
+
+def current_user_id(authorization: Annotated[str | None, Header()] = None) -> UUID:
+    """Return the id of the user whose session is in the Authorization header.
+
+    The header is ``Authorization: Bearer <sessionid>``, using the sessionid
+    returned by ``/login``. Coordinators and teachers are both accepted.
+    """
+    scheme, _, token = (authorization or "").partition(" ")
+    if scheme.lower() != "bearer" or not token:
+        raise HTTPException(status_code=401, detail="Login required")
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    with SessionLocal() as db:
+        user_id = db.execute(
+            select(user_sessions.c.user_id)
+            .join(users, users.c.id == user_sessions.c.user_id)
+            .where(
+                user_sessions.c.token_hash == token_hash,
+                user_sessions.c.revoked_at.is_(None),
+                user_sessions.c.expires_at > datetime.now(UTC),
+                users.c.is_active.is_(True),
+            )
+        ).scalar_one_or_none()
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="Login required")
+    return user_id
+
+
+CurrentUser = Annotated[UUID, Depends(current_user_id)]
+
+
+class LearnerIn(BaseModel):
+    """Learner details. Rules are checked in learners.py so messages match US-003."""
+
+    first_name: str | None = None
+    family_name: str | None = None
+    contact: str | None = None
+    first_language: str | None = None
+    allow_duplicate: bool = False
+
+
+class LearnerOut(BaseModel):
+    id: UUID
+    first_name: str
+    family_name: str
+    contact: str | None
+    first_language: str | None
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+def learner_http_error(exc: LearnerError) -> HTTPException:
+    """Translate a learner error into the HTTP response the website shows."""
+    if isinstance(exc, LearnerNotFoundError):
+        return HTTPException(status_code=404, detail=str(exc))
+    if isinstance(exc, DuplicateLearnerError):
+        duplicates = [
+            LearnerOut.model_validate(row).model_dump(mode="json")
+            for row in exc.duplicates
+        ]
+        return HTTPException(
+            status_code=409, detail={"message": str(exc), "duplicates": duplicates}
+        )
+    if isinstance(exc, LearnerValidationError):
+        return HTTPException(
+            status_code=422, detail={"field": exc.field, "message": exc.message}
+        )
+    return HTTPException(status_code=400, detail=str(exc))
+
+
+@app.post("/learners", response_model=LearnerOut, status_code=201)
+def create_learner(payload: LearnerIn, user_id: CurrentUser):
+    try:
+        with SessionLocal.begin() as db:
+            return add_learner(
+                db,
+                first_name=payload.first_name,
+                family_name=payload.family_name,
+                contact=payload.contact,
+                first_language=payload.first_language,
+                allow_duplicate=payload.allow_duplicate,
+                created_by=user_id,
+            )
+    except LearnerError as exc:
+        raise learner_http_error(exc) from exc
+
+
+@app.get("/learners", response_model=list[LearnerOut])
+def read_learners(user_id: CurrentUser, search: str | None = None):
+    with SessionLocal() as db:
+        return list_learners(db, search)
+
+
+@app.get("/learners/{learner_id}", response_model=LearnerOut)
+def read_learner(learner_id: UUID, user_id: CurrentUser):
+    try:
+        with SessionLocal() as db:
+            return get_learner(db, learner_id)
+    except LearnerError as exc:
+        raise learner_http_error(exc) from exc
+
+
+@app.put("/learners/{learner_id}", response_model=LearnerOut)
+def change_learner(learner_id: UUID, payload: LearnerIn, user_id: CurrentUser):
+    try:
+        with SessionLocal.begin() as db:
+            return update_learner(
+                db,
+                learner_id,
+                first_name=payload.first_name,
+                family_name=payload.family_name,
+                contact=payload.contact,
+                first_language=payload.first_language,
+                allow_duplicate=payload.allow_duplicate,
+                updated_by=user_id,
+            )
+    except LearnerError as exc:
+        raise learner_http_error(exc) from exc
