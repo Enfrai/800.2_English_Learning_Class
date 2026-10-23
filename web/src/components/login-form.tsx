@@ -6,17 +6,21 @@
 "use client";
 
 import { type FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
+import { homeFor, type Role } from "@/lib/session";
 import { CircularProgress, FilledButton, TextField } from "./material";
 
 type LoginResult = {
   sessionid: string;
   expires_at: string;
-  user_id: number;
+  user_id: string;
   instance: string;
+  role: Role;
 };
 
 export default function LoginForm() {
-  const [username, setUsername] = useState("demo");
+  const router = useRouter();
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -31,21 +35,29 @@ export default function LoginForm() {
     try {
       const response = await fetch("/api/user/login", {
         method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
       const data: LoginResult | { detail?: unknown } = await response.json();
       if (!response.ok) {
         setFailed(true);
-        const detail = "detail" in data && typeof data.detail === "string"
-          ? data.detail : "Please check your credentials and try again.";
-        setMessage(`Login failed (${response.status}): ${detail}`);
+        if (response.status === 401) {
+          setMessage("Username or password is incorrect");
+        } else if (response.status === 423 && "detail" in data && data.detail && typeof data.detail === "object" && "locked_until" in data.detail) {
+          const retry = new Date(String(data.detail.locked_until));
+          setMessage(Number.isFinite(retry.getTime())
+            ? `Account temporarily locked. Please try again at ${retry.toLocaleString()}.`
+            : "Account temporarily locked. Please try again in 10 minutes.");
+        } else {
+          setMessage("Unable to sign in. Please try again shortly.");
+        }
         return;
       }
       const result = data as LoginResult;
-      setMessage(
-        `Login successful! User ID: ${result.user_id}; Instance: ${result.instance}; Expires: ${result.expires_at}`,
-      );
+      if (!["teacher", "coordinator"].includes(result.role)) throw new Error("Invalid role");
+      router.replace(homeFor(result.role));
     } catch {
       setFailed(true);
       setMessage("Unable to sign in. Please try again shortly.");

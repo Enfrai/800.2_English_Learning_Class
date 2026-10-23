@@ -58,3 +58,9 @@ md-circular-progress { width: 24px; height: 24px; }
   .page { padding: 16px; }
   .panel { padding: 28px 20px; }
 }
+
+.home-panel { width: min(100%, 760px); font-size: 18px; }
+.home-panel nav { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 32px; }
+.home-panel nav a { color: var(--md-sys-color-primary); display: inline-flex; align-items: center; min-height: 44px; }
+.home-panel nav a[aria-current="page"] { font-weight: 700; }
+.home-panel nav md-filled-button { width: auto; margin-left: auto; }
