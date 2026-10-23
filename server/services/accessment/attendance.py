@@ -47,7 +47,13 @@ class NotMarkedPresentError(AttendanceError):
     """There is no present record to remove."""
 
 
-def _check_session_is_running(db: Session, session_id: UUID, today: date) -> None:
+def check_session_is_running(db: Session, session_id: UUID, today: date) -> None:
+    """Check that attendance at this session can still be changed.
+
+    Raises:
+        SessionNotFoundError: no session has this id.
+        PastSessionError: the session is before ``today``.
+    """
     session_date = db.execute(
         select(class_sessions.c.session_date).where(class_sessions.c.id == session_id)
     ).scalar_one_or_none()
@@ -75,7 +81,7 @@ def mark_present(
         PastSessionError: the session is before ``today``.
         AlreadySignedInError: the learner is already present. Nothing changes.
     """
-    _check_session_is_running(db, session_id, today)
+    check_session_is_running(db, session_id, today)
     # The unique (session_id, learner_id) constraint also stops a duplicate
     # when two teachers tick the same learner at the same moment.
     inserted = (
@@ -132,7 +138,7 @@ def unmark(db: Session, *, session_id: UUID, learner_id: UUID, today: date) -> N
         PastSessionError: the session is before ``today``.
         NotMarkedPresentError: the learner is not marked present.
     """
-    _check_session_is_running(db, session_id, today)
+    check_session_is_running(db, session_id, today)
     removed = db.execute(
         attendance_records.delete()
         .where(
@@ -156,3 +162,18 @@ def present_count(db: Session, session_id: UUID) -> int:
             attendance_records.c.status == PRESENT,
         )
     ).scalar_one()
+
+
+def present_records(db: Session, session_id: UUID) -> list[dict[str, Any]]:
+    """Return the present records of a session, earliest first."""
+    return [
+        dict(row)
+        for row in db.execute(
+            select(attendance_records)
+            .where(
+                attendance_records.c.session_id == session_id,
+                attendance_records.c.status == PRESENT,
+            )
+            .order_by(attendance_records.c.recorded_at)
+        ).mappings()
+    ]
