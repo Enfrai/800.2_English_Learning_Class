@@ -107,6 +107,9 @@ class AttendanceOut(BaseModel):
 
 
 class AttendanceList(BaseModel):
+    session_date: date
+    # False for a session before today: only a coordinator can correct it.
+    editable: bool
     present_count: int
     records: list[AttendanceOut]
 
@@ -176,12 +179,16 @@ USER_SERVICE_ERRORS = (
 @app.get("/sessions/{session_id}/attendance", response_model=AttendanceList)
 def read_attendance(session_id: UUID, request: LoggedInStaff):
     with SessionLocal() as db:
-        found = db.execute(
-            select(class_sessions.c.id).where(class_sessions.c.id == session_id)
-        ).first()
-        if found is None:
+        session_date = db.execute(
+            select(class_sessions.c.session_date).where(
+                class_sessions.c.id == session_id
+            )
+        ).scalar_one_or_none()
+        if session_date is None:
             raise HTTPException(status_code=404, detail="Class session not found")
         return {
+            "session_date": session_date,
+            "editable": session_date >= club_today(),
             "present_count": present_count(db, session_id),
             "records": present_records(db, session_id),
         }
