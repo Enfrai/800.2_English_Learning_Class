@@ -3,7 +3,6 @@
  * Date: 23 Oct 2026
  */
 
-import { getSessionId } from "./session";
 
 /** No session, or the session has ended. */
 export class LoginRequiredError extends Error {}
@@ -21,21 +20,23 @@ export type ApiResponse = {
 };
 
 /**
- * Send a request with "Authorization: Bearer <sessionid>".
+ * Send same-origin cookies; Attendance uses the server-only Bearer adapter.
  * Throws LoginRequiredError for a missing or ended session and
  * RequestFailedError when the server cannot be reached. Every other answer
  * is returned so the caller can translate it.
  */
 export async function apiRequest(url: string, init: RequestInit = {}): Promise<ApiResponse> {
-  const sessionId = getSessionId();
-  if (!sessionId) throw new LoginRequiredError();
+  // Attendance retains its Bearer contract without exposing the cookie to JavaScript.
+  const target = url.startsWith("/api/access/")
+    ? url.replace("/api/access/", "/api/staff/access/") : url;
 
   let response: Response;
   try {
-    response = await fetch(url, {
+    response = await fetch(target, {
       ...init,
+      credentials: "same-origin",
+      cache: "no-store",
       headers: {
-        Authorization: `Bearer ${sessionId}`,
         "Content-Type": "application/json",
       },
     });

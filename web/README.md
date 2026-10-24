@@ -47,3 +47,25 @@ After logging in, the session id is kept in the browser (localStorage)
 
 Use `npm ci` for reproducible installs and `npm run build` for validation.
 The Compose service is named `web`; its build context is `./web`.
+
+
+## US-001 authentication
+
+Login uses the User service's HttpOnly cookie. `/teacher`, `/coordinator` and
+`/account-management` are protected by server-side middleware and a browser session
+shell. Account management is a permissions placeholder, not US-002 CRUD.
+The server-only `USER_API_URL` defaults to `http://nginx/api/user` for existing
+Compose networking. For separate local servers, set it to the User-service base
+URL. The browser still uses same-origin `/api/user/*` through the gateway.
+
+After `npm ci`, run `npm run build`. For full isolated backend/browser verification:
+
+```sh
+# From repository root, with backend test dependencies, Docker, Node and Chrome:
+US001_BROWSER_TESTS=1 python server/services/user/tests/run_postgres.py
+```
+
+The runner supplies temporary URLs, generated credentials and the isolated
+PostgreSQL database; `npm run test:e2e` alone requires that test environment.
+Browser tests use Playwright with the installed Google Chrome channel. No
+credentials or tokens are written into browser storage or test source files.

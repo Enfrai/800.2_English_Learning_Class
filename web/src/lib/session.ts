@@ -1,32 +1,20 @@
-/* Keep the login session id in this browser, shared by all its tabs.
- * The User Service expects it as "Authorization: Bearer <sessionid>".
- * Author: Pei Wu
- * Date: 23 Oct 2026
- */
+export type Role = "teacher" | "coordinator";
+export type Session = { user_id: string; display_name: string; role: Role; expiresAt: number };
+export const homeFor = (role: Role) => role === "teacher" ? "/teacher" : "/coordinator";
 
-const SESSION_KEY = "ako.sessionid";
-
-export function getSessionId(): string | null {
-  try {
-    return window.localStorage.getItem(SESSION_KEY);
-  } catch {
-    // Storage can be blocked (private mode, privacy settings).
-    return null;
+export async function readSession(): Promise<Session | null> {
+  const response = await fetch("/api/user/session", { cache: "no-store", credentials: "same-origin" });
+  if (response.status === 401) return null;
+  if (!response.ok) throw new Error("Unable to check your session. Please try again.");
+  const user = await response.json();
+  const expiresAt = Date.parse(response.headers.get("X-Session-Expires-At") ?? "");
+  if (!["teacher", "coordinator"].includes(user.role) || !Number.isFinite(expiresAt)) {
+    throw new Error("Unable to verify your session.");
   }
+  return { ...user, expiresAt };
 }
 
-export function saveSessionId(sessionId: string): void {
-  try {
-    window.localStorage.setItem(SESSION_KEY, sessionId);
-  } catch {
-    // Without storage the person is asked to log in again.
-  }
-}
-
+/** Remove dev's legacy browser token; new logins use only the HttpOnly cookie. */
 export function clearSessionId(): void {
-  try {
-    window.localStorage.removeItem(SESSION_KEY);
-  } catch {
-    // Nothing stored, nothing to clear.
-  }
+  try { window.localStorage.removeItem("ako.sessionid"); } catch { /* Storage may be disabled. */ }
 }
