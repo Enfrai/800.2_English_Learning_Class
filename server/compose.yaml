@@ -35,6 +35,11 @@ services:
   user1: &user
     <<: *api
     build: ./services/user
+    # Other services call the User Service at http://user-service:8000;
+    # Docker DNS sends each call to user1 or user2.
+    networks:
+      backend:
+        aliases: [user-service]
     environment:
       DATABASE_URL: postgresql+psycopg://user_app:${USER_DB_PASSWORD:-local_user_password}@postgres-user:5432/userdb
       DEMO_USERNAME: ${DEMO_USERNAME:-demo}

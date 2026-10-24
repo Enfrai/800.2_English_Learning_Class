@@ -13,3 +13,8 @@ export async function readSession(): Promise<Session | null> {
   }
   return { ...user, expiresAt };
 }
+
+/** Remove dev's legacy browser token; new logins use only the HttpOnly cookie. */
+export function clearSessionId(): void {
+  try { window.localStorage.removeItem("ako.sessionid"); } catch { /* Storage may be disabled. */ }
+}

@@ -31,6 +31,16 @@ from auth import (
     require_coordinator,
     unauthenticated,
 )
+from learners import (
+    DuplicateLearnerError,
+    LearnerError,
+    LearnerNotFoundError,
+    LearnerValidationError,
+    add_learner,
+    get_learner,
+    list_learners,
+    update_learner,
+)
 from models import Base, user_sessions, users
 from security import (
     SessionSecurity,
@@ -48,7 +58,7 @@ LOCKOUT_DURATION = timedelta(minutes=10)
 SESSION_DURATION = timedelta(minutes=30)
 INVALID_CREDENTIALS = "Username or password is incorrect"
 AUTH_PATHS = frozenset(
-    {"/login", "/session", "/logout", "/activity", "/account-management/access"}
+    {"/login", "/session", "/logout", "/activity", "/account-management/access", "/me"}
 )
 
 
@@ -351,3 +361,117 @@ def account_management_access(
 ) -> dict[str, bool]:
     """Authorization boundary only; no account queries or CRUD are implemented."""
     return {"allowed": True}
+
+
+# Preserve dev's UUID dependency and /me contract while sharing US-001 validation.
+def current_user_id(
+    user: Annotated[AuthenticatedUser, Depends(get_current_user)],
+) -> UUID:
+    return user.user_id
+
+
+CurrentUser = Annotated[UUID, Depends(current_user_id)]
+
+
+class StaffOut(BaseModel):
+    id: UUID
+    display_name: str
+    role: str
+
+
+@app.get("/me", response_model=StaffOut)
+def read_me(user: Annotated[AuthenticatedUser, Depends(get_current_user)]) -> StaffOut:
+    """Keep the cross-service identity contract; session reads never extend expiry."""
+    return StaffOut(id=user.user_id, display_name=user.display_name, role=user.role)
+
+
+class LearnerIn(BaseModel):
+    """Learner details. Rules are checked in learners.py so messages match US-003."""
+
+    first_name: str | None = None
+    family_name: str | None = None
+    contact: str | None = None
+    first_language: str | None = None
+    allow_duplicate: bool = False
+
+
+class LearnerOut(BaseModel):
+    id: UUID
+    first_name: str
+    family_name: str
+    contact: str | None
+    first_language: str | None
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+def learner_http_error(exc: LearnerError) -> HTTPException:
+    """Translate a learner error into the HTTP response the website shows."""
+    if isinstance(exc, LearnerNotFoundError):
+        return HTTPException(status_code=404, detail=str(exc))
+    if isinstance(exc, DuplicateLearnerError):
+        duplicates = [
+            LearnerOut.model_validate(row).model_dump(mode="json")
+            for row in exc.duplicates
+        ]
+        return HTTPException(
+            status_code=409, detail={"message": str(exc), "duplicates": duplicates}
+        )
+    if isinstance(exc, LearnerValidationError):
+        return HTTPException(
+            status_code=422, detail={"field": exc.field, "message": exc.message}
+        )
+    return HTTPException(status_code=400, detail=str(exc))
+
+
+@app.post("/learners", response_model=LearnerOut, status_code=201)
+def create_learner(payload: LearnerIn, user_id: CurrentUser, request: Request) -> dict:
+    try:
+        with request.app.state.session_factory.begin() as db:
+            return add_learner(
+                db,
+                first_name=payload.first_name,
+                family_name=payload.family_name,
+                contact=payload.contact,
+                first_language=payload.first_language,
+                allow_duplicate=payload.allow_duplicate,
+                created_by=user_id,
+            )
+    except LearnerError as exc:
+        raise learner_http_error(exc) from exc
+
+
+@app.get("/learners", response_model=list[LearnerOut])
+def read_learners(user_id: CurrentUser, request: Request, search: str | None = None):
+    with request.app.state.session_factory() as db:
+        return list_learners(db, search)
+
+
+@app.get("/learners/{learner_id}", response_model=LearnerOut)
+def read_learner(learner_id: UUID, user_id: CurrentUser, request: Request):
+    try:
+        with request.app.state.session_factory() as db:
+            return get_learner(db, learner_id)
+    except LearnerError as exc:
+        raise learner_http_error(exc) from exc
+
+
+@app.put("/learners/{learner_id}", response_model=LearnerOut)
+def change_learner(
+    learner_id: UUID, payload: LearnerIn, user_id: CurrentUser, request: Request
+):
+    try:
+        with request.app.state.session_factory.begin() as db:
+            return update_learner(
+                db,
+                learner_id,
+                first_name=payload.first_name,
+                family_name=payload.family_name,
+                contact=payload.contact,
+                first_language=payload.first_language,
+                allow_duplicate=payload.allow_duplicate,
+                updated_by=user_id,
+            )
+    except LearnerError as exc:
+        raise learner_http_error(exc) from exc
