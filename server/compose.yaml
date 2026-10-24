@@ -44,8 +44,6 @@ services:
       DATABASE_URL: postgresql+psycopg://user_app:${USER_DB_PASSWORD:-local_user_password}@postgres-user:5432/userdb
       DEMO_USERNAME: ${DEMO_USERNAME:-demo}
       DEMO_PASSWORD: ${DEMO_PASSWORD:-DemoPass123!}
-      # teacher1 and teacher2 for US-006 until US-001; set empty to skip them.
-      TEST_TEACHER_PASSWORD: ${TEST_TEACHER_PASSWORD-TeacherPass123!}
       INSTANCE_NAME: user1
     depends_on:
       postgres-user: {condition: service_healthy}
@@ -61,7 +59,6 @@ services:
       DATABASE_URL: postgresql+psycopg://user_app:${USER_DB_PASSWORD:-local_user_password}@postgres-user:5432/userdb
       DEMO_USERNAME: ${DEMO_USERNAME:-demo}
       DEMO_PASSWORD: ${DEMO_PASSWORD:-DemoPass123!}
-      TEST_TEACHER_PASSWORD: ${TEST_TEACHER_PASSWORD-TeacherPass123!}
       INSTANCE_NAME: user2
 
   access1: &access
@@ -89,11 +86,7 @@ services:
     build: ./services/lesson
     environment:
       DATABASE_URL: postgresql+psycopg://lesson_app:${LESSON_DB_PASSWORD:-local_lesson_password}@postgres-lesson:5432/lessondb
-      LESSON_FILES_DIR: /data/lesson-files
       INSTANCE_NAME: lesson1
-    # Both replicas share one volume, so a file uploaded through one can be
-    # downloaded through the other. Files never go into the code folder.
-    volumes: [lesson_files:/data/lesson-files]
     depends_on:
       postgres-lesson: {condition: service_healthy}
     healthcheck:
@@ -106,7 +99,6 @@ services:
     <<: *lesson
     environment:
       DATABASE_URL: postgresql+psycopg://lesson_app:${LESSON_DB_PASSWORD:-local_lesson_password}@postgres-lesson:5432/lessondb
-      LESSON_FILES_DIR: /data/lesson-files
       INSTANCE_NAME: lesson2
 
   postgres-user:
@@ -165,5 +157,3 @@ volumes:
     name: ${ACCESS_DATA_VOLUME:-fastapi-microservices_access_data}
   lesson_data:
     name: ${LESSON_DATA_VOLUME:-fastapi-microservices_lesson_data}
-  lesson_files:
-    name: ${LESSON_FILES_VOLUME:-fastapi-microservices_lesson_files}

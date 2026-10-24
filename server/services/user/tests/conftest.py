@@ -23,11 +23,18 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
 from models import Base, users
+from test_auth import context as context
+from test_login import api as api
+from test_postgres import pg as pg
+from test_postgres import postgres_url as postgres_url
 
 
-@pytest.fixture(scope="session")
-def engine() -> Iterator[Engine]:
+@pytest.fixture(scope="module")
+def engine(request: pytest.FixtureRequest) -> Iterator[Engine]:
     url = os.environ.get("TEST_DATABASE_URL")
+    if not url and os.environ.get("US001_TEST_PG_URL"):
+        # Reuse the identity-verified isolated US-001 runner, never the application URL.
+        url = request.getfixturevalue("postgres_url")
     if not url:
         pytest.fail(
             "TEST_DATABASE_URL is not set. See the testing section in "
