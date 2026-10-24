@@ -1,0 +1,91 @@
+/* Copied unchanged from docs/system_design/ako-ui-kit/css/components.css.
+   Update the kit first, then copy it here again. */
+/* Ako components. Needs tokens.css first. */
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font); font-size: var(--fs-body); color: var(--ink); background: var(--bg); line-height: 1.45; }
+h1 { font-size: var(--fs-h1); margin: 0 0 var(--space-2); }
+h2 { font-size: var(--fs-h2); margin: var(--space-5) 0 var(--space-2); }
+.sub { color: var(--slate); font-size: var(--fs-table); margin: 0 0 var(--space-4); }
+a { color: var(--navy); }
+:focus-visible { outline: var(--focus); outline-offset: 2px; }
+
+/* layouts */
+.page { max-width: var(--page-max); margin: 0 auto; padding: var(--space-5) var(--space-5); }
+.page-phone { max-width: var(--phone-w); margin: 0 auto; padding: var(--space-4); }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); }
+.row { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; }
+
+/* menu bar (logged-in pages) */
+.bar { background: var(--navy); color: #fff; display: flex; align-items: center; gap: var(--space-5); padding: var(--space-3) var(--space-5); font-size: 16px; flex-wrap: wrap; }
+.bar .logo { font-weight: 800; font-size: 24px; letter-spacing: .5px; color: #fff; text-decoration: none; }
+.bar nav { display: flex; gap: var(--space-4); flex: 1; flex-wrap: wrap; }
+.bar nav a { color: #fff; text-decoration: none; padding: var(--space-1) 0; border-bottom: 3px solid transparent; }
+.bar nav a[aria-current="page"] { border-bottom-color: #fff; font-weight: 700; }
+.bar .who { font-size: var(--fs-small); text-align: right; }
+.bar .who a { color: #fff; }
+.phone-top { background: var(--navy); color: #fff; padding: var(--space-3) var(--space-4); font-weight: 800; font-size: 22px; }
+
+/* buttons */
+.btn { display: inline-flex; align-items: center; justify-content: center; min-height: var(--control-h); padding: 10px 20px;
+  font: 700 var(--fs-body)/1.2 var(--font); border-radius: var(--radius); border: 2px solid var(--navy);
+  background: var(--navy); color: #fff; cursor: pointer; text-decoration: none; white-space: nowrap; }
+.btn:hover { filter: brightness(1.12); }
+.btn-secondary { background: #fff; color: var(--navy); }
+.btn-danger { background: #fff; color: var(--danger); border-color: var(--danger); }
+.btn-big { padding: 16px 26px; font-size: 22px; }
+.btn-later, .btn[disabled] { background: var(--later-bg); color: var(--later-text); border: 2px dashed var(--later-border); cursor: not-allowed; filter: none; }
+
+/* forms */
+.field { margin-bottom: var(--space-3); }
+.field label { display: block; font-weight: 700; font-size: 16px; margin-bottom: var(--space-1); }
+.field .req::after { content: " *"; }
+.field input[type=text], .field input[type=email], .field input[type=password], .field input[type=date],
+.field input[type=tel], .field select, .field textarea {
+  width: 100%; min-height: var(--control-h); padding: 9px 12px; font: inherit; color: var(--ink);
+  border: 2px solid var(--field-border); border-radius: var(--radius); background: #fff; }
+.field textarea { min-height: 110px; }
+.field .hint { color: var(--slate); font-size: var(--fs-small); margin-top: 3px; }
+.field.invalid input, .field.invalid select, .field.invalid textarea { border-color: var(--err-border); }
+.check { display: flex; gap: var(--space-2); align-items: flex-start; min-height: var(--control-h); }
+.check input { width: 26px; height: 26px; flex: none; margin-top: 8px; accent-color: var(--navy); }
+
+/* tables */
+table.data { border-collapse: collapse; width: 100%; font-size: var(--fs-table); }
+table.data th { background: var(--bg-head); text-align: left; padding: 9px 10px; border: 1px solid var(--line); font-size: 15px; }
+table.data td { padding: 9px 10px; border: 1px solid #cdd5de; min-height: var(--control-h); }
+table.data tr.inactive td { color: var(--later-text); background: var(--later-bg); }
+
+/* messages. Always put the message under the field or button it belongs to. */
+.msg { border: 2px solid; border-radius: var(--radius); padding: 10px 14px; margin: var(--space-3) 0; font-size: 16px; }
+.msg-error   { background: var(--err-bg);  border-color: var(--err-border);  color: var(--err-text); }
+.msg-success { background: var(--ok-bg);   border-color: var(--ok-border);   color: var(--ok-text); }
+.msg-warning { background: var(--warn-bg); border-color: var(--warn-border); color: var(--warn-text); }
+.msg-info    { background: var(--info-bg); border-color: var(--info-border); color: var(--info-text); }
+
+/* badges and chips */
+.badge { display: inline-block; border: 2px solid; border-radius: 14px; padding: 3px 12px; font-size: var(--fs-small); font-weight: 700; }
+.badge-review   { background: var(--warn-bg); border-color: var(--warn-border); color: var(--warn-text); }
+.badge-reviewed { background: var(--ok-bg);   border-color: var(--ok-border);   color: var(--ok-text); }
+.badge-inactive { background: var(--bg-head); border-color: var(--later-border); color: #44505c; }
+.badge-present   { background: var(--ok-bg);   border-color: var(--ok-border);   color: var(--ok-text); }
+.badge-absent    { background: var(--bg-head); border-color: var(--later-border); color: #44505c; }
+.badge-corrected { background: var(--warn-bg); border-color: var(--warn-border); color: var(--warn-text); }
+.chip { display: inline-block; border: 2px solid var(--info-border); color: var(--info-text); background: #eef5fc;
+  border-radius: 14px; padding: 3px 12px; font-size: 15px; margin: 0 6px 4px 0; }
+
+/* cards */
+.card { border: 2px solid var(--line); border-radius: 8px; padding: var(--space-4); background: var(--bg-soft); }
+.card.later { border-style: dashed; border-color: var(--later-border); background: var(--later-bg); color: var(--later-text); }
+
+/* summary figure, e.g. "Present 3 of 5" (attendance, history) */
+.stat { display: inline-block; border: 2px solid var(--line); border-radius: 8px; padding: 8px 16px; background: var(--bg-soft); font-weight: 700; }
+
+/* print (attendance list, reports, QR page) */
+@media print {
+  .bar, .no-print { display: none !important; }
+  body { background: #fff; color: #000; font-size: 12pt; }
+  .page { max-width: none; padding: 0; }
+  table.data th { background: #eee; }
+  table.data, table.data tr { page-break-inside: avoid; }
+}
+@media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } }
