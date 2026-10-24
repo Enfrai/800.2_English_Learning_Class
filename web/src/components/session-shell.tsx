@@ -4,7 +4,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { homeFor, readSession, type Session } from "@/lib/session";
+import { clearSessionId, homeFor, readSession, type Session } from "@/lib/session";
 
 const LogoutButton = dynamic(() => import("./logout-button"), { ssr: false });
 
@@ -30,6 +30,7 @@ export default function SessionShell({ children }: { children: ReactNode }) {
     const end = (broadcast = false) => {
       if (ended || disposed) return;
       ended = true;
+      clearSessionId();
       setSession(null);
       clearTimeout(activityTimer);
       clearTimeout(expiryTimer);
@@ -138,6 +139,9 @@ export default function SessionShell({ children }: { children: ReactNode }) {
   return <main className="page"><section className="panel home-panel">
     <nav aria-label={session.role === "teacher" ? "Teacher menu" : "Coordinator menu"}>
       <Link href={home} aria-current={path === home ? "page" : undefined}>Home</Link>
+      <Link href="/learners">Learners</Link>
+      <Link href="/sessions">Class sessions</Link>
+      <Link href="/lessons">Lessons</Link>
       {session.role === "coordinator" && <Link href="/account-management" aria-current={path === "/account-management" ? "page" : undefined}>Account management</Link>}
       <LogoutButton disabled={leaving} onClick={() => void logoutAction.current()} />
     </nav>

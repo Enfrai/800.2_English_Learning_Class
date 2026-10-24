@@ -7,7 +7,7 @@
 
 import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { homeFor, type Role } from "@/lib/session";
+import { clearSessionId, homeFor, type Role } from "@/lib/session";
 import { CircularProgress, FilledButton, TextField } from "./material";
 
 type LoginResult = {
@@ -57,6 +57,7 @@ export default function LoginForm() {
       }
       const result = data as LoginResult;
       if (!["teacher", "coordinator"].includes(result.role)) throw new Error("Invalid role");
+      clearSessionId();
       router.replace(homeFor(result.role));
     } catch {
       setFailed(true);

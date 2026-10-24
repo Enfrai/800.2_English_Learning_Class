@@ -132,3 +132,23 @@ test("AC5: accelerated idle timer returns to login; expired token rejected", asy
   const result = await page.request.get(`${base}/api/user/session`);
   assert.equal(result.status(), 401);
 });
+
+// Merge regression: dev's learner page must work with a cookie-only US-001 login.
+test("Cookie login reaches Learners and preserves create/edit APIs", async (t) => {
+  const { page } = await open(t);
+  await login(page);
+  assert.equal(await page.evaluate(() => localStorage.getItem("ako.sessionid")), null);
+  await page.getByRole("link", { name: "Learners", exact: true }).click();
+  await page.getByRole("heading", { name: "Learners", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Add learner", exact: true }).click();
+  await page.getByLabel("First name", { exact: true }).fill("Merge");
+  await page.getByLabel("Family name", { exact: true }).fill("Cookie Test");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page.getByText("Learner saved", { exact: true }).waitFor();
+  const me = await page.request.get(`${base}/api/user/me`);
+  assert.equal(me.status(), 200);
+  assert.equal((await me.json()).role, "teacher");
+  await page.getByRole("button", { name: "Log out", exact: true }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).waitFor();
+  assert.equal((await page.request.get(`${base}/api/user/learners`)).status(), 401);
+});

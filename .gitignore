@@ -17,6 +17,8 @@ downloads/
 eggs/
 .eggs/
 lib/
+# lib/ above is for Python builds; the web app keeps source code in web/src/lib.
+!web/src/lib/
 lib64/
 parts/
 sdist/

@@ -28,7 +28,22 @@ The login screen uses Material Design 3 components from `@material/web` with
 `@lit/react` adapters in `src/components/material.tsx`. Import these adapters for
 new screens. Material Web is in maintenance mode; see its upstream README.
 The login screen loads on the client (`ssr: false`) because these components use
-browser APIs. Theme tokens and layout are in `src/app/globals.css`.
+browser APIs. Theme tokens and layout are in `src/app/(auth)/globals.css`.
+
+## Logged-in pages
+
+Pages for logged-in staff live in `src/app/(staff)` and use the Ako UI kit
+(`docs/system_design/ako-ui-kit`), copied to `src/styles/ako`. Use the kit's
+classes and change the kit first, then copy the CSS again. The login page and
+the staff pages have separate root layouts, so the Material styles and the kit
+styles never load on the same page.
+
+After logging in, the session id is kept in the browser (localStorage)
+(`src/lib/session.ts`) and sent as `Authorization: Bearer <sessionid>`.
+
+| Page | Path | Story |
+| --- | --- | --- |
+| Learners | `/learners` | US-003 |
 
 Use `npm ci` for reproducible installs and `npm run build` for validation.
 The Compose service is named `web`; its build context is `./web`.

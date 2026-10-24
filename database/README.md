@@ -56,7 +56,8 @@ The spelling `accessment` is retained to match the existing project; the service
 | Column | PostgreSQL Type | Constraints | Description |
 |---|---|---|---|
 | `id` | UUID | PK | Learner identifier |
-| `full_name` | VARCHAR(150) | NOT NULL | Learner name |
+| `first_name` | VARCHAR(100) | NOT NULL | Learner first name |
+| `family_name` | VARCHAR(100) | NOT NULL | Learner family name |
 | `contact` | VARCHAR(255) | NULL | Optional contact information |
 | `first_language` | VARCHAR(100) | NULL | Optional first language |
 | `is_active` | BOOLEAN | NOT NULL, DEFAULT TRUE | Active record flag |
@@ -217,7 +218,7 @@ Additional audit and check-in actor fields follow the same rule. Service authent
 | `user_db` | `users` | UNIQUE (`username`) | Prevent duplicate login names |
 | `user_db` | `users` | INDEX (`role`, `is_active`) | Filter active volunteers |
 | `user_db` | `user_sessions` | INDEX (`user_id`, `expires_at`) | Session retrieval and cleanup |
-| `user_db` | `learners` | INDEX (`full_name`) | Name lookup |
+| `user_db` | `learners` | INDEX (`family_name`, `first_name`) | Name lookup |
 | `accessment_db` | `class_sessions` | INDEX (`session_date`) | Date-range lookup |
 | `accessment_db` | `attendance_records` | UNIQUE (`session_id`, `learner_id`) | One record per learner/session |
 | `accessment_db` | `attendance_records` | INDEX (`learner_id`) | Attendance history |
