@@ -5,6 +5,8 @@ The tests drive a real browser against a running Ako system started with
 
 - ``BASE_URL``: address of Nginx, default ``http://localhost:8080``
 - ``DEMO_USERNAME`` / ``DEMO_PASSWORD``: defaults match ``server/compose.yaml``
+- ``TEST_TEACHER_PASSWORD``: password of the ``teacher1`` and ``teacher2``
+  test accounts (US-006), default matches ``server/compose.yaml``
 - ``BROWSER_CHANNEL``: for example ``chrome`` to use the installed Google
   Chrome instead of Playwright's own Chromium
 - ``COMPOSE_FILE``: the running system's compose file, default
@@ -25,10 +27,12 @@ import pytest
 from playwright.sync_api import Browser, Page, expect, sync_playwright
 
 from learners_page import LearnersPage
+from lessons_page import LessonsPage
 
 BASE_URL = os.environ.get("BASE_URL", "http://localhost:8080").rstrip("/")
 USERNAME = os.environ.get("DEMO_USERNAME", "demo")
 PASSWORD = os.environ.get("DEMO_PASSWORD", "DemoPass123!")
+TEACHER_PASSWORD = os.environ.get("TEST_TEACHER_PASSWORD", "TeacherPass123!")
 SESSION_KEY = "ako.sessionid"
 COMPOSE_FILE = os.environ.get(
     "COMPOSE_FILE", str(Path(__file__).resolve().parents[2] / "server/compose.yaml")
@@ -163,6 +167,46 @@ def log_in_through_page(page: Page) -> Callable[[], None]:
         page.locator("md-outlined-text-field[name=username] input").fill(USERNAME)
         page.locator("md-outlined-text-field[name=password] input").fill(PASSWORD)
         page.locator("md-filled-button").click()
-        expect(page.get_by_text("Login successful")).to_be_visible()
+        # After signing in, the Lessons page opens (US-006).
+        page.wait_for_url("**/lessons")
 
     return log_in
+
+
+def api_login(page: Page, username: str, password: str) -> str:
+    response = page.request.post(
+        "/api/user/login", data={"username": username, "password": password}
+    )
+    assert response.ok, f"Login as {username} failed with status {response.status}"
+    return response.json()["sessionid"]
+
+
+@pytest.fixture
+def teacher_page(page: Page) -> Page:
+    """A browser window where the test teacher ``teacher1`` is logged in."""
+    session = api_login(page, "teacher1", TEACHER_PASSWORD)
+    page.context.add_init_script(
+        f"window.localStorage.setItem({SESSION_KEY!r}, {session!r})"
+    )
+    return page
+
+
+@pytest.fixture
+def other_teacher_page(browser: Browser) -> Iterator[Page]:
+    """A second, separate window where ``teacher2`` is logged in (UT-42)."""
+    context = browser.new_context(
+        base_url=BASE_URL, viewport={"width": 1280, "height": 900}
+    )
+    other = context.new_page()
+    session = api_login(other, "teacher2", TEACHER_PASSWORD)
+    context.add_init_script(
+        f"window.localStorage.setItem({SESSION_KEY!r}, {session!r})"
+    )
+    yield other
+    context.close()
+
+
+@pytest.fixture
+def lessons_page(teacher_page: Page) -> LessonsPage:
+    """The Lessons pages, used by the logged-in test teacher."""
+    return LessonsPage(teacher_page)

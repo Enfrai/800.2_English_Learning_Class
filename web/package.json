@@ -7,9 +7,7 @@
   "scripts": {
     "dev": "next dev --hostname 0.0.0.0",
     "build": "next build",
-    "start": "next start --hostname 0.0.0.0",
-    "test:e2e": "node --test --test-concurrency=1 tests/us001.test.mjs",
-    "test:staff-ui": "node tests/run-staff-ui.mjs"
+    "start": "next start --hostname 0.0.0.0"
   },
   "dependencies": {
     "@lit/react": "1.0.8",
@@ -22,7 +20,6 @@
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "typescript": "^5.0.0",
-    "playwright": "1.62.1"
+    "typescript": "^5.0.0"
   }
 }

@@ -1,26 +1,28 @@
 /* Render the Material 3 login form and call the User Service through Nginx.
  * Author: Shuohui Liu
  * Date: 19 Oct 2026
+ * Updated: Sandhya Tiwari, 23 Oct 2026 (open the Lessons page after signing in)
  */
 
 "use client";
 
 import { type FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
-import { clearSessionId, homeFor, type Role } from "@/lib/session";
 import { CircularProgress, FilledButton, TextField } from "./material";
+import { saveSessionId } from "@/lib/session";
+
+// The first page after signing in. There is no staff home page yet, so the
+// lesson library (US-006) opens.
+const AFTER_LOGIN_PAGE = "/lessons";
 
 type LoginResult = {
   sessionid: string;
   expires_at: string;
-  user_id: string;
+  user_id: number;
   instance: string;
-  role: Role;
 };
 
 export default function LoginForm() {
-  const router = useRouter();
-  const [username, setUsername] = useState("");
+  const [username, setUsername] = useState("demo");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -35,30 +37,22 @@ export default function LoginForm() {
     try {
       const response = await fetch("/api/user/login", {
         method: "POST",
-        credentials: "same-origin",
-        cache: "no-store",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
       const data: LoginResult | { detail?: unknown } = await response.json();
       if (!response.ok) {
         setFailed(true);
-        if (response.status === 401) {
-          setMessage("Username or password is incorrect");
-        } else if (response.status === 423 && "detail" in data && data.detail && typeof data.detail === "object" && "locked_until" in data.detail) {
-          const retry = new Date(String(data.detail.locked_until));
-          setMessage(Number.isFinite(retry.getTime())
-            ? `Account temporarily locked. Please try again at ${retry.toLocaleString()}.`
-            : "Account temporarily locked. Please try again in 10 minutes.");
-        } else {
-          setMessage("Unable to sign in. Please try again shortly.");
-        }
+        const detail = "detail" in data && typeof data.detail === "string"
+          ? data.detail : "Please check your credentials and try again.";
+        setMessage(`Login failed (${response.status}): ${detail}`);
         return;
       }
       const result = data as LoginResult;
-      if (!["teacher", "coordinator"].includes(result.role)) throw new Error("Invalid role");
-      clearSessionId();
-      router.replace(homeFor(result.role));
+      // Logged-in pages send this id to the User Service.
+      saveSessionId(result.sessionid);
+      setMessage("Login successful. Opening the lessons…");
+      window.location.assign(AFTER_LOGIN_PAGE);
     } catch {
       setFailed(true);
       setMessage("Unable to sign in. Please try again shortly.");

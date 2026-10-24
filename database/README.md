@@ -149,7 +149,7 @@ A closed or expired code cannot record attendance. Rate limiting for repeated in
 | `updated_at` | TIMESTAMPTZ | NOT NULL | Update time |
 | `deleted_at` | TIMESTAMPTZ | NULL | Soft deletion time |
 
-**Rules:** Teachers edit their own lessons; coordinators may edit any lesson, pending team confirmation. Unreviewed Māori content must not be shown to learners. Resetting review status to `pending` after relevant edits is recommended and should be confirmed.
+**Rules:** Teachers edit their own lessons; coordinators may edit any lesson (confirmed 19 Oct 2026). Deleting a lesson sets `deleted_at` on the lesson and its materials; rows are kept so linked sessions keep the title (US-006, confirmed 23 Oct 2026). Unreviewed Māori content must not be shown to learners. Resetting review status to `pending` after relevant edits is recommended and should be confirmed.
 
 ### 4.2 `tags` — Lesson Topics
 
@@ -158,6 +158,8 @@ A closed or expired code cannot record attendance. Rate limiting for repeated in
 | `id` | UUID | PK | Tag identifier |
 | `name` | VARCHAR(100) | UNIQUE, NOT NULL | Topic name |
 | `created_at` | TIMESTAMPTZ | NOT NULL | Creation time |
+
+The Lesson service loads the agreed tags at start-up (confirmed 23 Oct 2026): Transport, Health, Shopping, Culture, History, Accommodation, Lifestyle.
 
 ### 4.3 `lesson_tags` — Lesson-to-Tag Mapping
 
@@ -179,10 +181,11 @@ Primary key: `(lesson_id, tag_id)`.
 | `mime_type` | VARCHAR(100) | NOT NULL | MIME type |
 | `file_size` | BIGINT | NOT NULL, CHECK >= 0 | File size in bytes |
 | `uploaded_by` | UUID | NOT NULL; User-service reference | Uploader |
+| `share_with_learners` | BOOLEAN | NOT NULL, DEFAULT FALSE | "Share with learners" tick (US-013 uses it) |
 | `created_at` | TIMESTAMPTZ | NOT NULL | Upload time |
 | `deleted_at` | TIMESTAMPTZ | NULL | Soft deletion time |
 
-Store file content outside PostgreSQL, with metadata in this table. Supported types and maximum sizes need agreement.
+File content is stored outside PostgreSQL, in the `lesson_files` Docker volume, under a random `storage_key`; this table keeps the original name for downloads. Allowed: PDF, DOCX, JPG and PNG, from 1 KB to 10 MB each (US-006, confirmed 23 Oct 2026).
 
 ### 4.5 `lesson_review_logs` — Māori Content Review History (Recommended)
 

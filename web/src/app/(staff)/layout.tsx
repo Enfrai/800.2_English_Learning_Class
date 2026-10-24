@@ -6,7 +6,7 @@
  */
 
 import type { Metadata } from "next";
-import SessionShell from "@/components/session-shell";
+import MenuBar from "@/components/menu-bar";
 import "@/styles/ako/tokens.css";
 import "@/styles/ako/components.css";
 
@@ -21,7 +21,8 @@ export default function StaffLayout({
   return (
     <html lang="en">
       <body>
-        <SessionShell>{children}</SessionShell>
+        <MenuBar />
+        <main className="page">{children}</main>
       </body>
     </html>
   );
