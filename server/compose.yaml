@@ -1,0 +1,159 @@
+# Define the Nginx, FastAPI, and PostgreSQL Docker services.
+#
+# Author: Shuohui Liu
+# Date: 19 Oct 2026
+
+name: ako-server
+
+x-api: &api
+  restart: unless-stopped
+  networks: [backend]
+
+services:
+  web:
+    build: ../web
+    networks: [backend]
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.28-alpine
+    ports:
+      - "127.0.0.1:8080:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      web: {condition: service_started}
+      user1: {condition: service_healthy}
+      user2: {condition: service_healthy}
+      access1: {condition: service_healthy}
+      access2: {condition: service_healthy}
+      lesson1: {condition: service_healthy}
+      lesson2: {condition: service_healthy}
+    networks: [backend]
+    restart: unless-stopped
+
+  user1: &user
+    <<: *api
+    build: ./services/user
+    # Other services call the User Service at http://user-service:8000;
+    # Docker DNS sends each call to user1 or user2.
+    networks:
+      backend:
+        aliases: [user-service]
+    environment:
+      DATABASE_URL: postgresql+psycopg://user_app:${USER_DB_PASSWORD:-local_user_password}@postgres-user:5432/userdb
+      DEMO_USERNAME: ${DEMO_USERNAME:-demo}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-DemoPass123!}
+      INSTANCE_NAME: user1
+    depends_on:
+      postgres-user: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  user2:
+    <<: *user
+    environment:
+      DATABASE_URL: postgresql+psycopg://user_app:${USER_DB_PASSWORD:-local_user_password}@postgres-user:5432/userdb
+      DEMO_USERNAME: ${DEMO_USERNAME:-demo}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-DemoPass123!}
+      INSTANCE_NAME: user2
+
+  access1: &access
+    <<: *api
+    build: ./services/accessment
+    environment:
+      DATABASE_URL: postgresql+psycopg://access_app:${ACCESS_DB_PASSWORD:-local_access_password}@postgres-access:5432/accessdb
+      INSTANCE_NAME: access1
+    depends_on:
+      postgres-access: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  access2:
+    <<: *access
+    environment:
+      DATABASE_URL: postgresql+psycopg://access_app:${ACCESS_DB_PASSWORD:-local_access_password}@postgres-access:5432/accessdb
+      INSTANCE_NAME: access2
+
+  lesson1: &lesson
+    <<: *api
+    build: ./services/lesson
+    environment:
+      DATABASE_URL: postgresql+psycopg://lesson_app:${LESSON_DB_PASSWORD:-local_lesson_password}@postgres-lesson:5432/lessondb
+      INSTANCE_NAME: lesson1
+    depends_on:
+      postgres-lesson: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  lesson2:
+    <<: *lesson
+    environment:
+      DATABASE_URL: postgresql+psycopg://lesson_app:${LESSON_DB_PASSWORD:-local_lesson_password}@postgres-lesson:5432/lessondb
+      INSTANCE_NAME: lesson2
+
+  postgres-user:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: user_app
+      POSTGRES_PASSWORD: ${USER_DB_PASSWORD:-local_user_password}
+      POSTGRES_DB: userdb
+    volumes: [user_data:/var/lib/postgresql/data]
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user_app -d userdb"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    restart: unless-stopped
+
+  postgres-access:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: access_app
+      POSTGRES_PASSWORD: ${ACCESS_DB_PASSWORD:-local_access_password}
+      POSTGRES_DB: accessdb
+    volumes: [access_data:/var/lib/postgresql/data]
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U access_app -d accessdb"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    restart: unless-stopped
+
+  postgres-lesson:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: lesson_app
+      POSTGRES_PASSWORD: ${LESSON_DB_PASSWORD:-local_lesson_password}
+      POSTGRES_DB: lessondb
+    volumes: [lesson_data:/var/lib/postgresql/data]
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lesson_app -d lessondb"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    restart: unless-stopped
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  user_data:
+    name: ${USER_DATA_VOLUME:-fastapi-microservices_user_data}
+  access_data:
+    name: ${ACCESS_DATA_VOLUME:-fastapi-microservices_access_data}
+  lesson_data:
+    name: ${LESSON_DATA_VOLUME:-fastapi-microservices_lesson_data}

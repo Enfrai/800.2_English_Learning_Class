@@ -1,0 +1,5 @@
+# Keep User-service imports grouped without changing shared lint configuration.
+extend = "../../ruff.toml"
+
+[lint.isort]
+known-first-party = ["auth", "models", "security", "run_postgres", "test_auth", "test_login", "test_postgres"]
