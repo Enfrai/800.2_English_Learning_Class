@@ -21,7 +21,7 @@ export default function StaffLayout({
   return (
     <html lang="en">
       <body>
-        <SessionShell>{children}</SessionShell>
+        <SessionShell layout="kit">{children}</SessionShell>
       </body>
     </html>
   );

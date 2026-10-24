@@ -38,8 +38,9 @@ classes and change the kit first, then copy the CSS again. The login page and
 the staff pages have separate root layouts, so the Material styles and the kit
 styles never load on the same page.
 
-After logging in, the session id is kept in the browser (localStorage)
-(`src/lib/session.ts`) and sent as `Authorization: Bearer <sessionid>`.
+Login uses the User service's HttpOnly cookie (see "US-001 authentication"
+below). `SessionShell` with `layout="kit"` draws the navy menu bar for these
+pages; the (auth) pages keep its default panel layout.
 
 | Page | Path | Story |
 | --- | --- | --- |

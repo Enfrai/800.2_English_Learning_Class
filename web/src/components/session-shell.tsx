@@ -8,7 +8,18 @@ import { clearSessionId, homeFor, readSession, type Session } from "@/lib/sessio
 
 const LogoutButton = dynamic(() => import("./logout-button"), { ssr: false });
 
-export default function SessionShell({ children }: { children: ReactNode }) {
+/**
+ * `layout="kit"` is for the (staff) pages styled with the Ako UI kit: the navy
+ * menu bar from UI design document section 4. The default keeps the panel
+ * layout of the (auth) pages, which load the Material styles instead.
+ */
+export default function SessionShell({
+  children,
+  layout = "panel",
+}: {
+  children: ReactNode;
+  layout?: "panel" | "kit";
+}) {
   const router = useRouter();
   const path = usePathname();
   const [session, setSession] = useState<Session | null>(null);
@@ -136,6 +147,33 @@ export default function SessionShell({ children }: { children: ReactNode }) {
   const home = homeFor(session.role);
   const denied = (path.startsWith("/account-management") || path.startsWith("/coordinator")) && session.role !== "coordinator"
     || path.startsWith("/teacher") && session.role !== "teacher";
+  if (layout === "kit") {
+    // A section stays current on its sub-pages, e.g. a session's attendance.
+    const current = (href: string) =>
+      (href === home ? path === home : path.startsWith(href)) ? "page" : undefined;
+    return <>
+      <header className="bar">
+        <Link className="logo" href={home}>Ako</Link>
+        <nav aria-label={session.role === "teacher" ? "Teacher menu" : "Coordinator menu"}>
+          <Link href={home} aria-current={current(home)}>Home</Link>
+          <Link href="/sessions" aria-current={current("/sessions")}>Class sessions</Link>
+          <Link href="/learners" aria-current={current("/learners")}>Learners</Link>
+          <Link href="/lessons" aria-current={current("/lessons")}>Lessons</Link>
+          {session.role === "coordinator" && <Link href="/account-management">Account management</Link>}
+        </nav>
+        <div className="who">
+          {session.display_name} ({session.role}) ·{" "}
+          <button type="button" className="btn btn-secondary" disabled={leaving} onClick={() => void logoutAction.current()}>
+            {leaving ? "Logging out…" : "Log out"}
+          </button>
+        </div>
+      </header>
+      <main className="page">
+        {error && <div className="msg msg-error" role="alert">{error}</div>}
+        {denied ? <div className="msg msg-error" role="alert">You do not have permission</div> : children}
+      </main>
+    </>;
+  }
   return <main className="page"><section className="panel home-panel">
     <nav aria-label={session.role === "teacher" ? "Teacher menu" : "Coordinator menu"}>
       <Link href={home} aria-current={path === home ? "page" : undefined}>Home</Link>

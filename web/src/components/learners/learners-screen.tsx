@@ -126,7 +126,8 @@ function LearnerTable({
           const name = `${learner.first_name} ${learner.family_name}`;
           return (
             <tr key={learner.id}>
-              <td>{name}</td>
+              {/* A 100-character name with no spaces must wrap, not widen the table. */}
+              <td style={{ overflowWrap: "anywhere" }}>{name}</td>
               <td>{learner.first_language ?? "–"}</td>
               <td>{learner.contact ?? "–"}</td>
               <td className="no-print">

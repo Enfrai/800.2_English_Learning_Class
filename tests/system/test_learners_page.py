@@ -14,6 +14,7 @@ from collections.abc import Callable
 
 from playwright.sync_api import Page, expect
 
+from api import api_headers
 from learners_page import LearnersPage, unique
 
 LIST_UPDATE_SECONDS = 2  # ST-11
@@ -25,14 +26,12 @@ AXE_URL = "https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js"
 # Access to the page
 
 
-def test_logged_out_person_is_asked_to_log_in_and_sees_no_learners(
-    page: Page,
-) -> None:
+def test_logged_out_person_is_sent_to_the_login_page(page: Page) -> None:
     page.goto("/learners")
 
-    expect(page.locator(".msg-error")).to_contain_text(
-        "Please log in to see the learners"
-    )
+    # US-001: the server redirects before any learner data is sent.
+    page.wait_for_url("/")
+    expect(page.get_by_role("button", name="Sign in", exact=True)).to_be_visible()
     expect(page.locator("table.data")).to_have_count(0)
 
 
@@ -55,11 +54,12 @@ def test_log_out_ends_access_to_the_learners(
     log_in_through_page()
     LearnersPage(page).open()
 
-    page.get_by_role("link", name="Log out").click()
+    page.get_by_role("button", name="Log out", exact=True).click()
     page.wait_for_url("/")
     page.goto("/learners")
 
-    expect(page.locator(".msg-error")).to_contain_text("Please log in")
+    page.wait_for_url("/")
+    expect(page.locator("table.data")).to_have_count(0)
 
 
 # ST-11 Learner records
@@ -271,7 +271,7 @@ def test_nt07_list_of_50_learners_shows_within_3_seconds(
     for number in range(50):
         response = page.request.post(
             "/api/user/learners",
-            headers={"Authorization": f"Bearer {session_id}"},
+            headers=api_headers(session_id),
             data={
                 "first_name": f"Learner{number:02d}",
                 "family_name": family,
