@@ -6,6 +6,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { clearSessionId, homeFor, readSession, type Session } from "@/lib/session";
 
+import { SessionContext } from "./session-context";
+
 const LogoutButton = dynamic(() => import("./logout-button"), { ssr: false });
 
 export default function SessionShell({ children }: { children: ReactNode }) {
@@ -146,6 +148,6 @@ export default function SessionShell({ children }: { children: ReactNode }) {
       <LogoutButton disabled={leaving} onClick={() => void logoutAction.current()} />
     </nav>
     {error && <p className="result error" role="alert">{error}</p>}
-    {denied ? <p role="alert">You do not have permission</p> : children}
+    {denied ? <p role="alert">You do not have permission</p> : <SessionContext.Provider value={session}>{children}</SessionContext.Provider>}
   </section></main>;
 }

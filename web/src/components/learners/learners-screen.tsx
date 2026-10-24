@@ -6,6 +6,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import CsvUpload from "./csv-upload";
+import { useSession } from "@/components/session-context";
 import LearnerForm from "./learner-form";
 import { type Learner, LoginRequiredError, listLearners } from "@/lib/learners-api";
 
@@ -15,6 +17,8 @@ type LoadState = "loading" | "ready" | "login-required" | "failed";
 const LEARNER_SAVED = "Learner saved";
 
 export default function LearnersScreen() {
+  const session = useSession();
+  const [showImport, setShowImport] = useState(false);
   const [learners, setLearners] = useState<Learner[]>([]);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [formTarget, setFormTarget] = useState<FormTarget>(null);
@@ -65,7 +69,15 @@ export default function LearnersScreen() {
         <button type="button" className="btn" onClick={() => openForm(null)}>
           Add learner
         </button>
+        {/* Visibility uses SessionShell's validated role; the import API also enforces it. */}
+        {session?.role === "coordinator" && <button type="button" className="btn btn-secondary"
+          aria-expanded={showImport} onClick={() => setShowImport(current => !current)}>
+          {showImport ? "Close CSV import" : "Import CSV"}
+        </button>}
       </div>
+      {session?.role === "coordinator" && showImport && <div className="no-print">
+        <CsvUpload onImported={() => void load()} />
+      </div>}
       {notice && (
         <div className="msg msg-success" role="status">
           {notice}
