@@ -11,6 +11,9 @@ from sqlalchemy.orm import Session
 from auth import AuthenticatedUser, authenticate_session, require_coordinator
 from models import user_sessions, users
 
+# US-002 AC5; wording from Test Plan UT-12.
+LAST_COORDINATOR = "At least one coordinator must stay active"
+
 STAFF_COLUMNS = (
     users.c.id,
     users.c.username,
@@ -30,24 +33,32 @@ def list_staff(db: Session) -> list[RowMapping]:
 
 
 def lock_staff_operation(
-    db: Session, actor: AuthenticatedUser, token: str, target_id: UUID | None = None
+    db: Session,
+    actor: AuthenticatedUser,
+    token: str,
+    target_id: UUID | None = None,
+    *,
+    coordinator_target_allowed: bool = False,
 ) -> RowMapping | None:
     """Lock users in UUID order, then recheck the actor's live session and role.
 
     Login/activity/logout lock users before session writes. Holding the actor and
     target user locks prevents concurrent deactivation from bypassing this check.
-    No coordinator account is modified through this feature.
+    Only deactivation passes ``coordinator_target_allowed``; it may target a
+    Coordinator while another active Coordinator remains (AC5).
     """
     ids = {actor.user_id}
     if target_id is not None:
         ids.add(target_id)
+    locked = users.c.id.in_(ids)
+    if coordinator_target_allowed:
+        # Lock every active Coordinator as well, so two Coordinators deactivating
+        # each other at once cannot both pass the "another one stays" check.
+        locked = locked | ((users.c.role == "coordinator") & users.c.is_active)
     rows = {
         row["id"]: row
         for row in db.execute(
-            select(users)
-            .where(users.c.id.in_(ids))
-            .order_by(users.c.id)
-            .with_for_update()
+            select(users).where(locked).order_by(users.c.id).with_for_update()
         ).mappings()
     }
     current = require_coordinator(authenticate_session(token, db))
@@ -59,9 +70,16 @@ def lock_staff_operation(
     if target is None:
         raise HTTPException(status_code=404, detail="Staff account not found")
     if target["role"] != "teacher":
-        raise HTTPException(
-            status_code=403, detail="Only Teacher accounts can be modified"
+        if not coordinator_target_allowed:
+            raise HTTPException(
+                status_code=403, detail="Only Teacher accounts can be modified"
+            )
+        others_active = any(
+            row["role"] == "coordinator" and row["is_active"] and row["id"] != target_id
+            for row in rows.values()
         )
+        if target["is_active"] and not others_active:
+            raise HTTPException(status_code=409, detail=LAST_COORDINATOR)
     return target
 
 
@@ -111,7 +129,10 @@ def rename_teacher(db: Session, user_id: UUID, display_name: str) -> RowMapping:
 
 
 def deactivate_teacher(db: Session, user_id: UUID) -> RowMapping:
-    """Soft-deactivate a locked Teacher and revoke sessions in the same transaction."""
+    """Soft-deactivate a locked account and revoke sessions in the same transaction.
+
+    The account is a Teacher, or a Coordinator that lock_staff_operation allowed.
+    """
     now = datetime.now(UTC)
     row = (
         db.execute(

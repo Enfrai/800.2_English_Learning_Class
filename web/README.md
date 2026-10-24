@@ -75,10 +75,11 @@ credentials or tokens are written into browser storage or test source files.
 ## US-002 Staff Management — Phase 2
 
 `/account-management` reuses the existing Coordinator middleware and SessionShell.
-The screen shows only Teacher accounts from `GET /api/user/staff`, with name,
+The screen shows Teacher accounts from `GET /api/user/staff`, with name,
 username and Active/Inactive state. It creates Teachers, edits only display names,
-and requires confirmation before soft deactivation. Coordinator management and
-AC5 remain **Deferred**; no Coordinator action or delete action is provided.
+and requires confirmation before soft deactivation. Coordinator accounts are listed
+separately with Deactivate only (AC5): the only active Coordinator cannot be
+deactivated ("At least one coordinator must stay active"). No delete action is provided.
 
 Requests use same-origin cookies and no-store caching. The browser supplies Origin;
 the frontend does not construct tokens or override CSRF checks. The backend remains
@@ -127,5 +128,5 @@ are test processes, not application HTTP endpoints, and never modify shared data
 
 See `../server/services/user/US002_API.md` for the complete verification record,
 isolation/cleanup evidence and remaining acceptance limits. AC4 historical-page
-visibility remains **Pending Joint Verification**; AC5 remains **Deferred**. HTTP integration
+visibility remains **Pending Joint Verification**; AC5 was added later (see `US002_API.md`). HTTP integration
 success does not resolve the documented trusted-host/public-origin or HTTPS risks.

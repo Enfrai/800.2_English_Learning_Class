@@ -64,10 +64,15 @@ async function fillCreate(page, password = "12345678") {
 async function create(page) { await page.getByRole("button", { name: "Create Teacher", exact: true }).click(); }
 async function error(page, message) { await page.getByRole("alert").filter({ hasText: message }).waitFor(); }
 
-test("Coordinator sees Teachers only, including inactive state; mobile layout fits", async t => {
+test("Teachers and Coordinators are listed separately, including inactive state; mobile layout fits", async t => {
   const { page } = await screen(t, { viewport: { width: 390, height: 844 }, rows: [coordinator, teacher, { ...teacher, id: "inactive", username: "inactive", display_name: "Past Teacher", is_active: false }] });
   await page.getByRole("heading", { name: "Teacher One", exact: true }).waitFor();
-  assert.equal(await page.getByText("Coordinator Hidden", { exact: true }).count(), 0);
+  const teachers = page.getByRole("list", { name: "Teacher accounts" });
+  const coordinators = page.getByRole("list", { name: "Coordinator accounts" });
+  assert.equal(await teachers.getByText("Coordinator Hidden", { exact: true }).count(), 0);
+  await coordinators.getByText("Coordinator Hidden", { exact: true }).waitFor();
+  // Coordinators can be deactivated (AC5) but never renamed here.
+  assert.equal(await page.getByRole("button", { name: "Edit coordinator_hidden", exact: true }).count(), 0);
   assert.equal(await page.getByRole("button", { name: "Deactivate inactive", exact: true }).count(), 0);
   await page.getByText("Inactive", { exact: true }).waitFor();
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
@@ -213,4 +218,27 @@ test("SessionShell redirects an expired session while the staff form is open", a
   await page.evaluate(() => window.dispatchEvent(new Event("focus")));
   await page.waitForURL(`${base}/`);
   assert.equal(state.requests.length, 0);
+});
+
+test("AC5: deactivating the only active Coordinator is blocked with the agreed message", async t => {
+  const { page, state } = await screen(t);
+  await page.getByRole("button", { name: "Deactivate coordinator_hidden", exact: true }).click();
+  await page.getByRole("heading", { name: "Deactivate Coordinator?", exact: true }).waitFor();
+  state.failure = { status: 409, detail: "At least one coordinator must stay active" };
+  await page.getByRole("button", { name: "Confirm deactivation", exact: true }).click();
+  await error(page, "At least one coordinator must stay active");
+  const coordinators = page.getByRole("list", { name: "Coordinator accounts" });
+  await coordinators.getByText("Active", { exact: true }).waitFor();
+  assert.equal(state.requests.length, 1);
+  assert.equal(state.requests[0].path, `/staff/${coordinator.id}/deactivate`);
+});
+
+test("AC5: a Coordinator can be deactivated while another stays active", async t => {
+  const second = { ...coordinator, id: "00000000-0000-4000-8000-000000000002", username: "coordinator_two", display_name: "Coordinator Two" };
+  const { page } = await screen(t, { rows: [coordinator, second, { ...teacher }] });
+  await page.getByRole("button", { name: "Deactivate coordinator_two", exact: true }).click();
+  await page.getByRole("button", { name: "Confirm deactivation", exact: true }).click();
+  await page.getByRole("status").filter({ hasText: "Coordinator account deactivated." }).waitFor();
+  assert.equal(await page.getByRole("button", { name: "Deactivate coordinator_two", exact: true }).count(), 0);
+  await page.getByRole("button", { name: "Deactivate coordinator_hidden", exact: true }).waitFor();
 });
