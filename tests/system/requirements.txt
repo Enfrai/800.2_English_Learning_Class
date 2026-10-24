@@ -1,5 +1,0 @@
-# Browser system test dependencies.
-# Author: Pei Wu
-# Date: 23 Oct 2026
-pytest>=8,<9
-playwright>=1.50,<2
