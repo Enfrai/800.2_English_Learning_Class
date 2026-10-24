@@ -1,5 +1,6 @@
 """Run the complete suite with an owned, disposable PostgreSQL 17 container."""
 
+import argparse
 import json
 import os
 import secrets
@@ -34,6 +35,23 @@ def verify_container(container_id: str, run_id: str) -> dict:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--browser-only", action="store_true")
+    parser.add_argument("--test-file", action="append", default=[])
+    args = parser.parse_args()
+    test_dir = Path(__file__).resolve().parent
+    targets = []
+    for name in args.test_file:
+        candidate = (test_dir / name).resolve()
+        if (
+            candidate.parent != test_dir
+            or not candidate.name.startswith("test_")
+            or not candidate.is_file()
+        ):
+            parser.error(
+                "--test-file must name an existing test module in this directory"
+            )
+        targets.append(str(candidate))
     run_id = uuid4().hex
     name = f"us001-pg17-{run_id}"
     database = f"us001_test_{run_id}"
@@ -106,13 +124,13 @@ def main() -> int:
         )
         result = (
             0
-            if "--browser-only" in sys.argv
+            if args.browser_only
             else subprocess.run(
                 [
                     sys.executable,
                     "-m",
                     "pytest",
-                    str(Path(__file__).parent),
+                    *(targets or [str(test_dir)]),
                     "-q",
                     "-p",
                     "no:cacheprovider",
@@ -121,7 +139,7 @@ def main() -> int:
             ).returncode
         )
         if result == 0 and (
-            os.getenv("US001_BROWSER_TESTS") == "1" or "--browser-only" in sys.argv
+            os.getenv("US001_BROWSER_TESTS") == "1" or args.browser_only
         ):
             result = subprocess.run(
                 [sys.executable, str(Path(__file__).with_name("run_browser.py"))],

@@ -1,0 +1,20 @@
+/* Scoped Material-theme layout: do not change existing login or session styles. */
+.staff { min-width: 0; width: 100%; }
+.staff h2 { font-size: 1.2rem; font-weight: 500; }
+.section { margin-top: 28px; }
+.section form { max-width: 480px; }
+.listHeader { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.listHeader > md-filled-button { width: auto; }
+.list { list-style: none; padding: 0; display: grid; gap: 16px; }
+.card { border: 1px solid var(--md-sys-color-outline); border-radius: 16px; padding: 20px; display: grid; gap: 12px; }
+.details { min-width: 0; overflow-wrap: anywhere; }
+.details h3 { margin: 0; font-size: 1.1rem; }
+.details p { margin: 8px 0; font-size: 1rem; }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.actions > md-filled-button { width: auto; flex: 1 1 140px; }
+.confirmation { padding: 20px; margin-top: 28px; border-radius: 16px; background: var(--md-sys-color-primary-container); }
+.confirmation p { line-height: 1.5; overflow-wrap: anywhere; }
+@media (max-width: 480px) {
+  .listHeader { align-items: stretch; flex-direction: column; }
+  .card, .confirmation { padding: 16px; }
+}
