@@ -14,6 +14,8 @@ type StaffAccount = {
   is_active: boolean;
 };
 type Notice = { kind: "success" | "error"; message: string };
+// US-002 AC5; same text as the User service (Test Plan UT-12).
+const LAST_COORDINATOR = "At least one coordinator must stay active";
 class AccessLost extends Error {}
 
 function isAccount(value: unknown): value is StaffAccount {
@@ -24,10 +26,12 @@ function isAccount(value: unknown): value is StaffAccount {
     && (row.role === "teacher" || row.role === "coordinator");
 }
 
-/** Teacher management only. SessionShell and the server remain the permission boundary. */
+/** Teacher management, plus Coordinator deactivation for AC5. SessionShell and the server remain the permission boundary. */
 export default function StaffManagement() {
   const router = useRouter();
   const [teachers, setTeachers] = useState<StaffAccount[]>([]);
+  // Shown only so a Coordinator can be deactivated (AC5); never renamed here.
+  const [coordinators, setCoordinators] = useState<StaffAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -55,6 +59,7 @@ export default function StaffManagement() {
         accessLost.current = true;
         setBlocked(true);
         setTeachers([]);
+        setCoordinators([]);
         setPassword("");
         setEditing(null);
         setConfirming(null);
@@ -68,6 +73,7 @@ export default function StaffManagement() {
       const detail = body && typeof body === "object" && "detail" in body ? body.detail : null;
       // Render only agreed API messages, never arbitrary server errors or validation input.
       if (response.status === 409 && detail === "Username already taken") throw new Error(detail);
+      if (response.status === 409 && detail === LAST_COORDINATOR) throw new Error(detail);
       if (response.status === 422 && detail === "Password must be at least 8 characters") throw new Error(detail);
       if (response.status === 422) throw new Error("Please check the form fields and try again.");
       if (response.status === 404) throw new Error("This account is no longer available. Refresh the list.");
@@ -82,8 +88,9 @@ export default function StaffManagement() {
     const data: unknown = await response.json();
     if (!Array.isArray(data) || !data.every(isAccount)) throw new Error("Unable to read the staff list. Please try again.");
     if (mounted.current && !accessLost.current && !signal?.aborted) {
-      // The API includes Coordinators; this screen intentionally exposes Teacher actions only.
+      // Teachers get every action; Coordinators can only be deactivated (AC5).
       setTeachers(data.filter(account => account.role === "teacher"));
+      setCoordinators(data.filter(account => account.role === "coordinator"));
       setLoaded(true);
       setLoadError("");
     }
@@ -123,10 +130,11 @@ export default function StaffManagement() {
         ...(body === undefined ? {} : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
       });
       const account: unknown = await response.json();
-      if (!isAccount(account) || account.role !== "teacher") throw new Error("Unexpected response. Refresh the list before trying again.");
+      if (!isAccount(account)) throw new Error("Unexpected response. Refresh the list before trying again.");
       if (!mounted.current || accessLost.current) return false;
       // Show the committed change immediately; a failed follow-up GET must not imply the write failed.
-      setTeachers(current => [...current.filter(row => row.id !== account.id), account]
+      const setList = account.role === "teacher" ? setTeachers : setCoordinators;
+      setList(current => [...current.filter(row => row.id !== account.id), account]
         .sort((a, b) => a.username.localeCompare(b.username)));
       setNotice({ kind: "success", message });
       setEditing(null);
@@ -180,7 +188,8 @@ export default function StaffManagement() {
   async function deactivateTeacher() {
     if (!confirming || !confirming.is_active) return;
     // This action is reached only from the separate confirmation step; it never deletes history.
-    await mutate(`/staff/${encodeURIComponent(confirming.id)}/deactivate`, "POST", undefined, "Teacher account deactivated.");
+    const message = confirming.role === "teacher" ? "Teacher account deactivated." : "Coordinator account deactivated.";
+    await mutate(`/staff/${encodeURIComponent(confirming.id)}/deactivate`, "POST", undefined, message);
   }
 
   return <section className={styles.staff} aria-labelledby="staff-heading">
@@ -210,8 +219,9 @@ export default function StaffManagement() {
         </form>
       </section>}
       {confirming && <section className={styles.confirmation} aria-labelledby="confirm-heading">
-        <h2 id="confirm-heading">Deactivate Teacher?</h2>
-        <p>Deactivate {confirming.display_name} ({confirming.username})? They will no longer be able to sign in. Their lessons and attendance history will be kept.</p>
+        <h2 id="confirm-heading">{confirming.role === "teacher" ? "Deactivate Teacher?" : "Deactivate Coordinator?"}</h2>
+        <p>Deactivate {confirming.display_name} ({confirming.username})? They will no longer be able to sign in. Their lessons and attendance history will be kept.
+          {confirming.role === "coordinator" && " At least one coordinator must stay active."}</p>
         <div className={styles.actions}>
           <FilledButton type="button" disabled={disabled} onClick={() => void deactivateTeacher()}>Confirm deactivation</FilledButton>
           <FilledButton type="button" disabled={busy} onClick={() => setConfirming(null)}>Cancel deactivation</FilledButton>
@@ -230,6 +240,17 @@ export default function StaffManagement() {
             <div className={styles.actions}>
               <FilledButton type="button" disabled={disabled} aria-label={`Edit ${teacher.username}`} onClick={() => { setEditing(teacher); setEditName(teacher.display_name); setConfirming(null); setNotice(null); }}>Edit name</FilledButton>
               {teacher.is_active && <FilledButton type="button" disabled={disabled} aria-label={`Deactivate ${teacher.username}`} onClick={() => { setConfirming(teacher); setEditing(null); setNotice(null); }}>Deactivate</FilledButton>}
+            </div>
+          </li>)}
+        </ul>
+      </section>
+      <section className={styles.section} aria-labelledby="coordinator-list-heading">
+        <h2 id="coordinator-list-heading">Coordinator accounts</h2>
+        <ul className={styles.list} aria-label="Coordinator accounts">
+          {coordinators.map(account => <li key={account.id} className={styles.card}>
+            <div className={styles.details}><h3>{account.display_name}</h3><p>Username: {account.username}</p><p>Status: <strong>{account.is_active ? "Active" : "Inactive"}</strong></p></div>
+            <div className={styles.actions}>
+              {account.is_active && <FilledButton type="button" disabled={disabled} aria-label={`Deactivate ${account.username}`} onClick={() => { setConfirming(account); setEditing(null); setNotice(null); }}>Deactivate</FilledButton>}
             </div>
           </li>)}
         </ul>

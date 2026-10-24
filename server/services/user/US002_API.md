@@ -1,6 +1,7 @@
 # US-002 Staff Management — Phase 1
 
-Scope: backend AC1, AC2, AC3, AC4 and AC6. AC5 is **Deferred**. This phase has
+Scope: backend AC1, AC2, AC3, AC4 and AC6. AC5 was added later; see "AC5: last
+active Coordinator" below. This phase has
 no frontend changes, Coordinator bootstrap script, role assignment, Coordinator
 mutation, schema migration or shared infrastructure changes.
 
@@ -33,7 +34,8 @@ case-sensitive semantics and includes inactive accounts.
 | --- | --- |
 | Missing/invalid/inactive/expired/revoked authentication | 401, existing US-001 contract |
 | Teacher attempting any Staff API | 403, `You do not have permission` |
-| Attempt to rename or deactivate any Coordinator | 403, `Only Teacher accounts can be modified` |
+| Attempt to rename any Coordinator | 403, `Only Teacher accounts can be modified` |
+| Attempt to deactivate the only active Coordinator (AC5) | 409, `At least one coordinator must stay active` |
 | Missing target | 404, `Staff account not found` |
 | Existing username, including concurrent creation | 409, `Username already taken` |
 | Temporary password shorter than 8 characters | 422, `Password must be at least 8 characters` |
@@ -41,8 +43,19 @@ case-sensitive semantics and includes inactive accounts.
 | Cookie Origin/CSRF rejection | 403, existing US-001 contract |
 | Unexpected database failure | 500, generic existing error response; transaction rolled back |
 
-Coordinator target rejection is a scope boundary, not AC5 implementation. There
-is no active-Coordinator count or last-Coordinator protection workflow.
+## AC5: last active Coordinator
+
+Added on 25 Oct 2026 (branch `feature/v1.0/fix_us002_ac5`). Deactivation may
+target a Coordinator, including the actor's own account, while another active
+Coordinator remains; it then revokes that Coordinator's sessions like a Teacher's.
+Deactivating the only active Coordinator returns 409 `At least one coordinator
+must stay active` (Test Plan UT-12) and changes nothing. Renaming a Coordinator is
+still refused with 403.
+
+Deactivation locks every active Coordinator together with the actor and target,
+in UUID order, before counting. Two Coordinators deactivating themselves at the
+same moment are therefore serialized, and the second is refused. The Account
+management page lists Coordinator accounts separately with Deactivate only.
 
 ## Authentication, transactions and concurrency
 
@@ -156,7 +169,7 @@ Acceptance status:
 | AC2 | Passed; exact duplicate message and unchanged original account |
 | AC3 | Passed; seven rejected by UI/API, eight accepted and usable for login |
 | AC4 | Account/session/identity checks passed; lesson and attendance historical-page visibility is **Pending Joint Verification** with those modules' owners |
-| AC5 | **Deferred**, not implemented or claimed passed |
+| AC5 | Passed: API tests in `tests/test_staff.py` (including the concurrent case), mocked UI tests in `web/tests/staff-ui.test.mjs`, and a real-browser check on 25 Oct 2026 |
 | AC6 | Passed; name updated in browser/database, UUID and username retained |
 
 Remaining deployment limits:

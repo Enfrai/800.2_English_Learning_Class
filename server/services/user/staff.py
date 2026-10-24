@@ -137,7 +137,9 @@ def create_staff_router(hash_password: Callable[[str, bytes], str]) -> APIRouter
         payload: Annotated[EmptyAction | None, Body()] = None,
     ) -> StaffAccount:
         with db.begin():
-            lock_staff_operation(db, actor, token, user_id)
+            lock_staff_operation(
+                db, actor, token, user_id, coordinator_target_allowed=True
+            )
             result = StaffAccount.model_validate(deactivate_teacher(db, user_id))
         return result
 
