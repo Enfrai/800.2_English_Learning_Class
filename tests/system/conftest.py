@@ -24,9 +24,9 @@ from typing import Any
 import pytest
 from playwright.sync_api import Browser, Page, expect, sync_playwright
 
+from api import BASE_URL, api_headers
 from learners_page import LearnersPage
 
-BASE_URL = os.environ.get("BASE_URL", "http://localhost:8080").rstrip("/")
 USERNAME = os.environ.get("DEMO_USERNAME", "demo")
 PASSWORD = os.environ.get("DEMO_PASSWORD", "DemoPass123!")
 SESSION_KEY = "ako.sessionid"
@@ -96,7 +96,7 @@ def add_learner(page: Page, session_id: str) -> Callable[..., dict[str, Any]]:
     def add(first: str, family: str, language: str = "") -> dict[str, Any]:
         response = page.request.post(
             "/api/user/learners",
-            headers={"Authorization": f"Bearer {session_id}"},
+            headers=api_headers(session_id),
             data={
                 "first_name": first,
                 "family_name": family,
@@ -163,6 +163,7 @@ def log_in_through_page(page: Page) -> Callable[[], None]:
         page.locator("md-outlined-text-field[name=username] input").fill(USERNAME)
         page.locator("md-outlined-text-field[name=password] input").fill(PASSWORD)
         page.locator("md-filled-button").click()
-        expect(page.get_by_text("Login successful")).to_be_visible()
+        # US-001: a successful login opens the home page for the person's role.
+        page.wait_for_url("**/coordinator")
 
     return log_in

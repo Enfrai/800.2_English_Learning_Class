@@ -21,6 +21,7 @@ from typing import Any
 
 from playwright.sync_api import Page, expect
 
+from api import api_headers
 from attendance_page import AttendancePage
 from learners_page import LearnersPage, unique
 
@@ -70,7 +71,7 @@ def test_st01_teacher_runs_a_class(
     learners_page.open()
     expect(learners_page.row(f"Hana {newcomer}")).to_have_count(1)
 
-    logged_in_page.get_by_role("link", name="Log out").click()
+    logged_in_page.get_by_role("button", name="Log out", exact=True).click()
     logged_in_page.wait_for_url("/")
 
 
@@ -159,7 +160,7 @@ def test_ac3_learner_ticked_on_another_laptop_says_already_signed_in(
     # Another teacher ticks the learner; this page has not reloaded.
     response = logged_in_page.request.post(
         f"/api/access/sessions/{lesson_session}/attendance",
-        headers={"Authorization": f"Bearer {session_id}"},
+        headers=api_headers(session_id),
         data={"learner_id": learner["id"]},
     )
     assert response.status == 201
@@ -231,12 +232,14 @@ def test_unknown_session_says_not_found(logged_in_page: Page) -> None:
     expect(logged_in_page.locator(".msg-error")).to_have_text("Class session not found")
 
 
-def test_logged_out_person_is_asked_to_log_in(
+def test_logged_out_person_is_sent_to_the_login_page(
     page: Page, class_session: ClassSession
 ) -> None:
-    AttendancePage(page).open(class_session())
+    page.goto(f"/sessions/{class_session()}/attendance")
 
-    expect(page.locator(".msg-error")).to_contain_text("Please log in")
+    # US-001: the server redirects before any attendance data is sent.
+    page.wait_for_url("/")
+    expect(page.get_by_role("button", name="Sign in", exact=True)).to_be_visible()
     expect(page.locator("table.data")).to_have_count(0)
 
 

@@ -51,7 +51,7 @@ automated run supports the manual result; it does not replace it.
 
 | ID | Steps | Expected result | Result | Screenshot |
 | --- | --- | --- | --- | --- |
-| ACC.L1 | Log out, then open <http://localhost:8080/learners> | "Please log in to see the learners" with a Log in link. No learner names are shown | | |
+| ACC.L1 | Choose **Log out**, then open <http://localhost:8080/learners> | The login page opens instead. No learner names are shown | | |
 | ACC.L2 | Log in, then open the Learners page in a new browser tab | The list loads in the new tab | | |
 
 ## 4. Result record
