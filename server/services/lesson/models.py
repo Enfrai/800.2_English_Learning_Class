@@ -2,7 +2,6 @@
 
 Author: Shuohui Liu
 Date: 19 Oct 2026
-Updated: 23 Oct 2026 (US-006: share_with_learners on lesson_materials)
 """
 from uuid import uuid4
 from sqlalchemy import Table, Column, String, Boolean, Integer, SmallInteger, BigInteger, Date, Time, DateTime, Text, ForeignKey, CheckConstraint, UniqueConstraint, Index, func, text
@@ -38,7 +37,7 @@ lesson_tags = Table("lesson_tags", Base.metadata,
 )
 
 lesson_materials = Table("lesson_materials", Base.metadata,
-    id_col(), ref("lesson_id","lessons.id"), value("file_name",String(255)), value("storage_key",String(500)), value("mime_type",String(100)), value("file_size",BigInteger), ref("uploaded_by"), Column("share_with_learners",Boolean,nullable=False,server_default=text("false")), Column("created_at",DateTime(timezone=True),nullable=False,server_default=func.now()), value("deleted_at",DateTime(timezone=True),nullable=True), CheckConstraint("file_size >= 0"), Index("ix_material_lesson","lesson_id")
+    id_col(), ref("lesson_id","lessons.id"), value("file_name",String(255)), value("storage_key",String(500)), value("mime_type",String(100)), value("file_size",BigInteger), ref("uploaded_by"), Column("created_at",DateTime(timezone=True),nullable=False,server_default=func.now()), value("deleted_at",DateTime(timezone=True),nullable=True), CheckConstraint("file_size >= 0"), Index("ix_material_lesson","lesson_id")
 )
 
 lesson_review_logs = Table("lesson_review_logs", Base.metadata,
