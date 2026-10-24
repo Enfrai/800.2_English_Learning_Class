@@ -17,6 +17,8 @@ downloads/
 eggs/
 .eggs/
 lib/
+# lib/ above is for Python builds; the web app keeps source code in web/src/lib.
+!web/src/lib/
 lib64/
 parts/
 sdist/
@@ -58,7 +60,10 @@ cover/
 *.mo
 *.pot
 
-.DS_Store/
+.DS_Store
+
+# Word temporary lock files
+~$*.docx
 
 # Django stuff:
 *.log
@@ -154,7 +159,11 @@ activemq-data/
 *.sage.py
 
 # Environments
+# Local/runtime secrets in any directory; keep example templates trackable.
 .env
+.env.*
+!.env.example
+!.env.*.example
 .envrc
 .venv
 env/
@@ -222,3 +231,4 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+

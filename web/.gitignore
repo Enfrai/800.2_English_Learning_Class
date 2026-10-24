@@ -1,0 +1,14 @@
+# Frontend dependencies and generated build output
+node_modules/
+.next/
+*.tsbuildinfo
+
+# The repository-wide Python lib/ rule must not hide frontend source.
+!src/lib/
+!src/lib/**
+
+# Local/runtime environment values; example templates remain versionable.
+.env
+.env.*
+!.env.example
+!.env.*.example
