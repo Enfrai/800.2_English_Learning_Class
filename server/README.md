@@ -14,7 +14,7 @@ databases started by `compose.yaml`.
 
 2. Create a virtual environment for the service and install the test
    dependencies. The steps are the same for every service with a `tests`
-   folder (`user`, `accessment`); the example uses the User service:
+   folder (`user`, `accessment`, `lesson`); the example uses the User service:
 
    ```bash
    cd server/services/user
