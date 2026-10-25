@@ -1,3 +1,9 @@
+/* Call the public QR sign-in endpoints of the Accessment Service (US-012).
+ * Learners have no staff login; same-origin cookies support US-013 material access.
+ * Author: Pei Wu
+ * Date: 25 Oct 2026
+ */
+
 // Message catalogue, UI design document section 7.
 export const SIGNED_IN = "You are signed in";
 export const NAME_NOT_FOUND = "We could not find that name. Please ask the teacher";

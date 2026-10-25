@@ -1,7 +1,8 @@
-"""Ako database models.
+"""Define attendance, QR check-in, lesson links and material access grant tables.
 
-Author: Sandhya Tiwari
-Date: 26 Oct 2026
+Author: Shuohui Liu
+Date: 19 Oct 2026
+Updated: Sandhya Tiwari, 26 Oct 2026
 """
 from uuid import uuid4
 from sqlalchemy import Table, Column, String, Boolean, Integer, SmallInteger, BigInteger, Date, Time, DateTime, Text, ForeignKey, CheckConstraint, UniqueConstraint, Index, func, text

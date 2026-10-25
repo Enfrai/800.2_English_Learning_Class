@@ -1,7 +1,8 @@
 """Serve attendance, QR sign-in and protected learner material access.
 
-Author: Sandhya Tiwari
-Date: 26 Oct 2026
+Author: Shuohui Liu
+Date: 19 Oct 2026
+Updated: Sandhya Tiwari, 26 Oct 2026
 """
 
 import os

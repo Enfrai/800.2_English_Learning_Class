@@ -1,3 +1,9 @@
+/* Learner sign-in page, opened by the QR code on a phone (UI design document 6.14, US-012).
+ * No login. Only the learner's own typed name is sent; the class list is never shown.
+ * Author: Pei Wu
+ * Date: 25 Oct 2026
+ */
+
 "use client";
 
 import MaterialsScreen from "@/components/materials/materials-screen";
@@ -92,6 +98,7 @@ export default function SignInScreen({ token }: { token: string }) {
           <div className="msg msg-success" role="status">
             {SIGNED_IN}
           </div>
+          {/* Lesson materials after sign-in (US-013, UI design document 6.15). */}
           <MaterialsScreen embedded />
           <a className="btn btn-big" href="/materials">Lesson materials</a>
         </>
