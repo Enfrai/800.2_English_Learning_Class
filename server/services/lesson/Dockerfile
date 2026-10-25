@@ -1,3 +1,7 @@
+# Build the FastAPI service image.
+# Author: Shuohui Liu
+# Date: 19 Oct 2026
+# Updated: Sandhya Tiwari, 26 Oct 2026 (folder for US-006 lesson materials)
 FROM python:3.14-slim
 WORKDIR /app
 COPY requirements.txt ./

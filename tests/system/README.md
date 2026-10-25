@@ -30,6 +30,7 @@ ports. The manual steps below are for a host-installed Python/browser only.
    export USER_DATA_VOLUME=ako-systest_user_data
    export ACCESS_DATA_VOLUME=ako-systest_access_data
    export LESSON_DATA_VOLUME=ako-systest_lesson_data
+   export LESSON_FILES_VOLUME=ako-systest_lesson_files
    docker compose up -d --build
    ```
 
@@ -56,7 +57,8 @@ ports. The manual steps below are for a host-installed Python/browser only.
 
    ```bash
    docker compose down
-   docker volume rm ako-systest_user_data ako-systest_access_data ako-systest_lesson_data
+   docker volume rm ako-systest_user_data ako-systest_access_data \
+     ako-systest_lesson_data ako-systest_lesson_files
    ```
 
 Notes:

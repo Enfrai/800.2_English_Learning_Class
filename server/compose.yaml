@@ -165,4 +165,6 @@ volumes:
   lesson_data:
     name: ${LESSON_DATA_VOLUME:-fastapi-microservices_lesson_data}
 
+  # Uploaded lesson materials (US-006), shared by lesson1 and lesson2.
   lesson_files:
+    name: ${LESSON_FILES_VOLUME:-ako-server_lesson_files}
