@@ -12,16 +12,16 @@ Author: Pei Wu
 Date: 25 Oct 2026
 """
 
+import os
 import time
 from collections.abc import Callable, Iterator
 from typing import Any
 
 import pytest
-from playwright.sync_api import Browser, Page, expect
-
 from api import BASE_URL
 from attendance_page import AttendancePage
 from learners_page import unique
+from playwright.sync_api import Browser, Page, expect
 from setup_data import CheckIn, access_sql
 from sign_in_page import PHONE_SIZE, SignInPage
 
@@ -232,7 +232,13 @@ def test_nt06_sign_in_page_has_no_accessibility_violations(
     learner = phone()
     learner.open(check_in.open(class_session()))
 
-    learner.page.add_script_tag(url=AXE_URL)
+    learner.page.add_script_tag(
+        **(
+            {"path": os.environ["AXE_SCRIPT_PATH"]}
+            if os.getenv("AXE_SCRIPT_PATH")
+            else {"url": AXE_URL}
+        )
+    )
     violations = learner.page.evaluate(
         "async () => (await axe.run()).violations.map(v => v.id + ': ' + v.help)"
     )

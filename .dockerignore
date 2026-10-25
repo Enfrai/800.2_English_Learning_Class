@@ -1,0 +1,14 @@
+# Exclude secrets, local dependencies and generated reports from test build contexts.
+# Author: Shuohui Liu
+# Date: 19 Oct 2026
+.git
+**/.venv
+**/node_modules
+**/.next
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/.env
+**/.env.*
+!**/.env.example
+test-results

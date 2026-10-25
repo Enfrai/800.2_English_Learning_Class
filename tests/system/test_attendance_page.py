@@ -15,15 +15,15 @@ Author: Pei Wu
 Date: 23 Oct 2026
 """
 
+import os
 import time
 from collections.abc import Callable
 from typing import Any
 
-from playwright.sync_api import Page, expect
-
 from api import api_headers
 from attendance_page import AttendancePage
 from learners_page import LearnersPage, unique
+from playwright.sync_api import Page, expect
 
 AddLearner = Callable[..., dict[str, Any]]
 ClassSession = Callable[..., str]
@@ -273,7 +273,13 @@ def test_nt06_attendance_page_has_no_accessibility_violations(
     attendance.checkbox(learner).check()
     attendance.expect_present_count(1)
 
-    logged_in_page.add_script_tag(url=AXE_URL)
+    logged_in_page.add_script_tag(
+        **(
+            {"path": os.environ["AXE_SCRIPT_PATH"]}
+            if os.getenv("AXE_SCRIPT_PATH")
+            else {"url": AXE_URL}
+        )
+    )
     violations = logged_in_page.evaluate(
         "async () => (await axe.run()).violations.map(v => v.id + ': ' + v.help)"
     )

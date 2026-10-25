@@ -10,7 +10,7 @@ const password = process.env.US001_E2E_PASSWORD;
 const controlPath = process.env.US002_TEST_CONTROL;
 if (!base || !password || !controlPath || !process.env.US001_TEST_RUN_ID) throw new Error("Use the owned isolated gateway runner.");
 let browser;
-before(async () => { browser = await chromium.launch({ channel: "chrome", headless: true }); });
+before(async () => { browser = await chromium.launch({ channel: process.env.BROWSER_CHANNEL || "chrome", headless: true }); });
 after(async () => { await browser?.close(); });
 const field = (page, name) => page.locator(`input[name="${name}"]`);
 

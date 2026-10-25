@@ -6,7 +6,7 @@ import { chromium } from "playwright";
 const base = process.env.US002_UI_BASE_URL;
 if (!base) throw new Error("Run via tests/run-staff-ui.mjs after a production build.");
 let browser;
-before(async () => { browser = await chromium.launch({ channel: "chrome", headless: true }); });
+before(async () => { browser = await chromium.launch({ channel: process.env.BROWSER_CHANNEL || "chrome", headless: true }); });
 after(async () => { await browser?.close(); });
 const teacher = { id: "00000000-0000-4000-8000-000000000010", username: "teacher_one", display_name: "Teacher One", role: "teacher", is_active: true };
 const coordinator = { ...teacher, id: "00000000-0000-4000-8000-000000000001", username: "coordinator_hidden", display_name: "Coordinator Hidden", role: "coordinator" };
