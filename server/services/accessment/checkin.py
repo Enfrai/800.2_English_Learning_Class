@@ -1,4 +1,4 @@
-"""Check a QR check-in token before a learner signs in (US-012).
+"""Check a QR check-in token and sign a learner in (US-012).
 
 US-011 opens a check-in window for a class session and puts a long random
 token in the QR code link. Only the token's SHA-256 hash is stored, the same
@@ -10,11 +10,14 @@ Date: 25 Oct 2026
 """
 
 import hashlib
+import hmac
 from dataclasses import dataclass
-from datetime import date, datetime
-from uuid import UUID
+from datetime import date, datetime, timedelta
+from typing import Any
+from uuid import UUID, uuid4
 
-from models import checkin_windows, class_sessions
+from attendance import mark_present
+from models import checkin_windows, class_sessions, signin_failures
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -25,6 +28,19 @@ MAX_TOKEN_LENGTH = 256
 # Message catalogue, UI design document section 7. The learner sees the same
 # message for every reason, so a guessed token reveals nothing.
 CHECKIN_CLOSED = "Check-in is closed. Please ask the teacher"
+SIGNED_IN = "You are signed in"
+# Also shown when several learners share the name: the teacher ticks the right
+# one (team decision, 25 Oct 2026). It never reveals that the name exists.
+NAME_NOT_FOUND = "We could not find that name. Please ask the teacher"
+# Not in the message catalogue yet; to be agreed with the team.
+TOO_MANY_TRIES = "Too many tries. Please ask the teacher"
+
+# NFR-11: more than 10 wrong names from one device in 10 minutes blocks it
+# for 10 minutes (Test Plan UT-67).
+MAX_WRONG_NAMES = 10
+WRONG_NAME_PERIOD = timedelta(minutes=10)
+BLOCK_TIME = timedelta(minutes=10)
+KEEP_FAILURES = timedelta(hours=1)
 
 
 def hash_token(token: str) -> str:
@@ -38,6 +54,9 @@ class OpenCheckin:
     session_id: UUID
     session_date: date
     expires_at: datetime
+    # The teacher who opened check-in. Self sign-ins are recorded under them,
+    # because attendance_records.recorded_by holds a staff id (25 Oct 2026).
+    opened_by: UUID
 
 
 class CheckinUnavailableError(Exception):
@@ -96,6 +115,7 @@ def find_open_checkin(
                 checkin_windows.c.session_id,
                 checkin_windows.c.expires_at,
                 checkin_windows.c.closed_at,
+                checkin_windows.c.opened_by,
                 class_sessions.c.session_date,
             )
             .join(class_sessions, class_sessions.c.id == checkin_windows.c.session_id)
@@ -117,4 +137,64 @@ def find_open_checkin(
         session_id=row["session_id"],
         session_date=row["session_date"],
         expires_at=row["expires_at"],
+        opened_by=row["opened_by"],
+    )
+
+
+def sign_in(
+    db: Session, checkin: OpenCheckin, learner_id: UUID, today: date
+) -> dict[str, Any]:
+    """Mark the learner present at the check-in's class (US-012 AC2).
+
+    Uses the same rule as a teacher's tick (US-004), so a second sign-in
+    raises AlreadySignedInError and no duplicate is made (AC4). Only the
+    learner, the class and the time are stored: no location or device detail
+    (Test Plan UT-66). The caller owns the transaction.
+    """
+    return mark_present(
+        db,
+        session_id=checkin.session_id,
+        learner_id=learner_id,
+        recorded_by=checkin.opened_by,
+        today=today,
+    )
+
+
+def device_key(client_address: str, secret: str) -> str:
+    """Return a keyed hash of the device's address; the address is not kept."""
+    return hmac.new(secret.encode(), client_address.encode(), "sha256").hexdigest()
+
+
+def blocked_until(db: Session, key: str, now: datetime) -> datetime | None:
+    """Return when the device may try again, or None if it is not blocked.
+
+    A device is blocked for BLOCK_TIME after MAX_WRONG_NAMES wrong names
+    within WRONG_NAME_PERIOD.
+    """
+    times = sorted(
+        db.execute(
+            select(signin_failures.c.failed_at).where(
+                signin_failures.c.key_hash == key,
+                signin_failures.c.failed_at > now - WRONG_NAME_PERIOD - BLOCK_TIME,
+            )
+        ).scalars()
+    )
+    until = None
+    for first in range(len(times) - MAX_WRONG_NAMES + 1):
+        last = times[first + MAX_WRONG_NAMES - 1]
+        if last - times[first] <= WRONG_NAME_PERIOD and last + BLOCK_TIME > now:
+            until = max(until or last + BLOCK_TIME, last + BLOCK_TIME)
+    return until
+
+
+def record_wrong_name(db: Session, key: str, now: datetime) -> None:
+    """Count a wrong name for the device and forget counts over an hour old.
+
+    The caller owns the transaction.
+    """
+    db.execute(signin_failures.insert().values(id=uuid4(), key_hash=key, failed_at=now))
+    db.execute(
+        signin_failures.delete().where(
+            signin_failures.c.failed_at < now - KEEP_FAILURES
+        )
     )

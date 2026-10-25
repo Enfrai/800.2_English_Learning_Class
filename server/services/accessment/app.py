@@ -7,7 +7,7 @@ Date: 19 Oct 2026
 import os
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import Annotated
 from uuid import UUID
 from zoneinfo import ZoneInfo
@@ -24,6 +24,19 @@ from attendance import (
     present_count,
     present_records,
     unmark,
+)
+from checkin import (
+    CHECKIN_CLOSED,
+    NAME_NOT_FOUND,
+    SIGNED_IN,
+    TOO_MANY_TRIES,
+    CheckinUnavailableError,
+    OpenCheckin,
+    blocked_until,
+    device_key,
+    find_open_checkin,
+    record_wrong_name,
+    sign_in,
 )
 from fastapi import Depends, FastAPI, Header, HTTPException
 from models import Base, class_sessions
@@ -276,3 +289,74 @@ def add_and_mark_present(
             }
     except AttendanceError as exc:
         raise attendance_http_error(exc) from exc
+
+
+# QR sign-in for learners (US-012). Public: learners have no login.
+# Author: Pei Wu, 25 Oct 2026.
+
+
+class CheckinOut(BaseModel):
+    session_date: date
+
+
+class SignInIn(BaseModel):
+    first_name: str | None = None
+    family_name: str | None = None
+
+
+class SignInOut(BaseModel):
+    message: str
+    session_date: date
+
+
+def open_checkin(token: str, now: datetime) -> OpenCheckin:
+    """Return the open check-in for a token, or the "closed" answer (AC5)."""
+    try:
+        with SessionLocal() as db:
+            return find_open_checkin(db, token, now=now, today=club_today())
+    except CheckinUnavailableError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/checkin/{token}", response_model=CheckinOut)
+def read_checkin(token: str):
+    """Tell the sign-in page which class this is (AC1)."""
+    return {"session_date": open_checkin(token, datetime.now(UTC)).session_date}
+
+
+@app.post("/checkin/{token}/sign-in", response_model=SignInOut, status_code=201)
+def learner_sign_in(
+    token: str,
+    payload: SignInIn,
+    x_real_ip: Annotated[str | None, Header()] = None,
+):
+    """Sign a learner in by the name they type (AC2 to AC5, NFR-11)."""
+    now = datetime.now(UTC)
+    checkin = open_checkin(token, now)
+    # Nginx sets X-Real-IP; only a keyed hash of it is stored, briefly.
+    key = device_key(x_real_ip or "unknown", user_client.INTERNAL_API_KEY)
+    with SessionLocal() as db:
+        if blocked_until(db, key, now) is not None:
+            raise HTTPException(status_code=429, detail=TOO_MANY_TRIES)
+    try:
+        learner = user_client.find_learner_for_sign_in(
+            payload.first_name or "", payload.family_name or ""
+        )
+    except user_client.SignInNameNotFoundError as exc:
+        with SessionLocal.begin() as db:
+            record_wrong_name(db, key, now)
+        raise HTTPException(status_code=404, detail=NAME_NOT_FOUND) from exc
+    except user_client.AmbiguousSignInNameError as exc:
+        # A real name shared by several learners: not a guess, so not counted.
+        raise HTTPException(status_code=404, detail=NAME_NOT_FOUND) from exc
+    except user_client.UserServiceError as exc:
+        raise HTTPException(status_code=503, detail="User service unavailable") from exc
+    try:
+        with SessionLocal.begin() as db:
+            sign_in(db, checkin, UUID(learner["id"]), club_today())
+    except AlreadySignedInError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except AttendanceError as exc:
+        # The class ended between the check above and now.
+        raise HTTPException(status_code=404, detail=CHECKIN_CLOSED) from exc
+    return {"message": SIGNED_IN, "session_date": checkin.session_date}

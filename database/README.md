@@ -129,6 +129,16 @@ This audit trail is a recommended implementation detail rather than an explicitl
 
 A closed or expired code cannot record attendance. Rate limiting for repeated incorrect names should use short-lived server-side counters without retaining location or device fingerprints. The original specification proposes blocking more than ten incorrect names from one device within ten minutes for ten minutes; a privacy-preserving technical mechanism needs to be agreed.
 
+### 3.5 `signin_failures` — Wrong Names at QR Sign-in (US-012)
+
+| Column | PostgreSQL Type | Constraints | Description |
+|---|---|---|---|
+| `id` | UUID | PK | Row identifier |
+| `key_hash` | VARCHAR(64) | NOT NULL | HMAC-SHA256 of the device's address, keyed with `INTERNAL_API_KEY`; the address itself is never stored |
+| `failed_at` | TIMESTAMPTZ | NOT NULL | When a name that matched no learner was typed |
+
+**Index:** (`key_hash`, `failed_at`). Ten wrong names from one device within ten minutes block it for ten minutes. Rows older than one hour are deleted on each new wrong name. A name shared by several learners is not counted. Self sign-ins are recorded in `attendance_records` with `recorded_by` set to the teacher who opened check-in (team decision, 25 Oct 2026), and store no location or device detail.
+
 ## 4. Lesson Microservice (`lesson_db`)
 
 ### 4.1 `lessons` — Lesson Library (US-006, US-007, US-008)
