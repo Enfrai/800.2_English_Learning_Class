@@ -5,7 +5,7 @@ checks the session. The lesson author and role always come from here, never
 from the request body.
 
 Author: Sandhya Tiwari
-Date: 23 Oct 2026
+Date: 25 Oct 2026
 """
 
 import json
@@ -70,4 +70,10 @@ def current_staff(authorization: str) -> Staff:
         raise LoginRequiredError("Login required")
     if status != 200:
         raise UserServiceError(f"User service answered {status}")
-    return Staff(UUID(body["id"]), body["display_name"], body["role"])
+    try:
+        staff = Staff(UUID(body["id"]), body["display_name"], body["role"])
+        if staff.role not in {"teacher", "coordinator"}:
+            raise LoginRequiredError("Login required")
+        return staff
+    except (KeyError, TypeError, ValueError) as error:
+        raise UserServiceError("Invalid User Service response") from error

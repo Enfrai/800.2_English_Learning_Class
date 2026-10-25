@@ -4,11 +4,11 @@ Author: Shuohui Liu
 Date: 19 Oct 2026  
 Updated: Sandhya Tiwari, 23 Oct 2026 (US-006)
 
-Each service imports its own `models.Base` and calls `Base.metadata.create_all(bind=engine)` at FastAPI startup. No Alembic is used. The three databases contain 3, 4, and 5 business tables respectively.
+Each service imports its own `models.Base`. The Lesson Service calls `prepare_schema` at startup; it serializes PostgreSQL initialization and adds missing US-006 sharing and US-008 reviewer columns without dropping records. No Alembic is used. The three databases contain 3, 4, and 5 business tables respectively.
 
 **Development reset only:** `docker compose down -v` removes all Compose-managed volume data, then `docker compose up -d --build` recreates databases and tables. Verify that the volumes contain no data you need before doing this. `create_all` never changes an existing table's schema.
 
-The User login endpoint preserves the demo credentials, adds five-failure temporary lockout and 30-minute session expiry, and returns a UUID user_id. The Lesson service (US-006) checks the login with the User Service for every endpoint and takes the lesson author from that login, never from the request. It loads the seven agreed topic tags at start-up. The Accessment `/check` endpoint remains a stateless demo-only policy check, not real authorization.
+The User login endpoint preserves the demo credentials, adds five-failure temporary lockout and 30-minute session expiry, and returns a UUID user_id. The Lesson service (US-006) checks the login with the User Service for every endpoint and takes the lesson author from that login, never from the request. Topic tags are entered by staff; the definitive tag list is still open in the requirements. The Accessment `/check` endpoint remains a stateless demo-only policy check, not real authorization.
 
 Check tables:
 ```sh
@@ -19,7 +19,7 @@ docker compose exec postgres-lesson psql -U lesson_app -d lessondb -c '\\dt'
 
 ## US-006 change to an existing lesson database
 
-US-006 adds the column `lesson_materials.share_with_learners`. Because `create_all` does not change existing tables, a lesson database created before US-006 needs this once (a new database gets it automatically):
+US-006 adds the column `lesson_materials.share_with_learners`. The Lesson Service now adds this column automatically and idempotently on startup. No database reset is required. The equivalent manual operation is:
 
 ```sh
 docker compose exec postgres-lesson psql -U lesson_app -d lessondb -c \
@@ -28,7 +28,7 @@ docker compose exec postgres-lesson psql -U lesson_app -d lessondb -c \
 
 ## US-008 change to an existing lesson database
 
-US-008 adds `lessons.reviewer_name` and `lessons.review_date`, so the label can show "Reviewed by [name], [date]". A lesson database created before US-008 needs this once (a new database gets the columns automatically):
+US-008 adds `lessons.reviewer_name` and `lessons.review_date`, so the label can show "Reviewed by [name], [date]". The Lesson Service now adds these columns automatically on startup. The equivalent manual operation is:
 
 ```sh
 docker compose exec postgres-lesson psql -U lesson_app -d lessondb -c \
@@ -56,4 +56,4 @@ FOR EACH STATEMENT EXECUTE FUNCTION refuse_attendance_audit_change();
 SQL
 ```
 
-The models define persistence only. QR check-in, lesson review enforcement and the rest of the learner and attendance APIs are not yet implemented.
+US-006 now implements authenticated lesson CRUD, topic tags, attachment upload/download/removal and sharing metadata. Review enforcement remains in US-008. Uploaded files are stored in the shared `lesson_files` volume, outside the code submission.

@@ -88,8 +88,10 @@ services:
   lesson1: &lesson
     <<: *api
     build: ./services/lesson
+    volumes: [lesson_files:/var/lib/ako/materials]
     environment:
       DATABASE_URL: postgresql+psycopg://lesson_app:${LESSON_DB_PASSWORD:-local_lesson_password}@postgres-lesson:5432/lessondb
+      MATERIALS_DIR: /var/lib/ako/materials
       INSTANCE_NAME: lesson1
     depends_on:
       postgres-lesson: {condition: service_healthy}
@@ -103,6 +105,7 @@ services:
     <<: *lesson
     environment:
       DATABASE_URL: postgresql+psycopg://lesson_app:${LESSON_DB_PASSWORD:-local_lesson_password}@postgres-lesson:5432/lessondb
+      MATERIALS_DIR: /var/lib/ako/materials
       INSTANCE_NAME: lesson2
 
   postgres-user:
@@ -161,3 +164,5 @@ volumes:
     name: ${ACCESS_DATA_VOLUME:-fastapi-microservices_access_data}
   lesson_data:
     name: ${LESSON_DATA_VOLUME:-fastapi-microservices_lesson_data}
+
+  lesson_files:

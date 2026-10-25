@@ -1,18 +1,16 @@
-"""Create Ako lessons with UUID keys using SQLAlchemy Core.
+"""Serve authenticated lesson management and Māori content review APIs.
 
-Author: Shuohui Liu
-Date: 19 Oct 2026
+Author: Sandhya Tiwari
+Date: 25 Oct 2026
 """
 
 import os
 from contextlib import asynccontextmanager
-from datetime import date
-from uuid import UUID
 
 from fastapi import FastAPI
+from lesson_api import create_lesson_router
 from maori_review_api import create_maori_review_router
-from models import Base, lessons
-from pydantic import BaseModel, Field
+from schema import prepare_schema
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -23,36 +21,23 @@ INSTANCE = os.getenv("INSTANCE_NAME", "unknown")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
+    prepare_schema(engine)
     yield
 
 
 app = FastAPI(title="Lesson Service", lifespan=lifespan)
-# US-008: flag Māori content and record its review.
+app.include_router(create_lesson_router(SessionLocal))
 app.include_router(create_maori_review_router(SessionLocal))
 
 
-class CreateLessonRequest(BaseModel):
-    title: str = Field(min_length=1, max_length=255)
-    lesson_date: date = Field(default_factory=date.today)
-    created_by: UUID
+@app.middleware("http")
+async def private_responses(request, call_next):
+    response = await call_next(request)
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 @app.get("/health")
 def health():
     return {"status": "ok", "instance": INSTANCE}
-
-
-@app.post("/create", status_code=201)
-def create(payload: CreateLessonRequest):
-    with SessionLocal.begin() as db:
-        row = db.execute(
-            lessons.insert()
-            .values(
-                title=payload.title,
-                lesson_date=payload.lesson_date,
-                created_by=payload.created_by,
-            )
-            .returning(lessons.c.id, lessons.c.title)
-        ).one()
-        return {"lesson_id": str(row.id), "title": row.title, "instance": INSTANCE}

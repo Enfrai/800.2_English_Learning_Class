@@ -5,11 +5,10 @@ app's lesson proxy: cookie login, Origin check, Lesson Service, User Service
 and database. A real teacher account (US-002) and the demo coordinator take
 part.
 
-Until the lesson pages (US-006) are merged, the steps are API calls; the page
-steps and the manual script follow with the pages. Lessons are created with
-the Lesson Service's demo endpoint for the same reason.
+These API checks exercise the authenticated US-006 endpoints and verify
+that uploaded materials reset the Māori review through the real gateway.
 
-Author: Pei Wu
+Author: Sandhya Tiwari
 Date: 25 Oct 2026
 """
 
@@ -19,9 +18,8 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from playwright.sync_api import APIRequestContext, APIResponse, Browser
-
 from api import BASE_URL
+from playwright.sync_api import APIRequestContext, APIResponse, Browser
 
 COORDINATOR_LOGIN = ("demo", "DemoPass123!")
 NOT_YET_REVIEWED = "Māori content – not yet reviewed"
@@ -117,17 +115,21 @@ def teacher(new_teacher: Callable[[], Person]) -> Person:
 def new_lesson(coordinator: Person) -> Callable[[Person], str]:
     """Create a lesson written by the given person and return its id.
 
-    Uses the Lesson Service's demo endpoint until US-006 adds lesson pages.
+    Creates through the authenticated US-006 API as the lesson author.
     """
 
     def create(author: Person) -> str:
-        response = coordinator.call(
+        response = author.call(
             "POST",
-            "/api/lesson/create",
-            {"title": "Te reo Māori greetings", "created_by": author.user_id},
+            "/api/staff/lesson/lessons",
+            {
+                "title": "Te reo Māori greetings",
+                "lesson_date": "2026-10-25",
+                "tags": ["greetings"],
+            },
         )
         assert response.status == 201, response.status
-        return response.json()["lesson_id"]
+        return response.json()["id"]
 
     return create
 
@@ -155,12 +157,25 @@ def test_st09_teacher_flags_and_coordinator_reviews(
     assert teacher.review(lesson_id).json()["label"] == "Reviewed by Aroha, 8 Oct 2026"
 
 
-@pytest.mark.skip(
-    reason="ST-09 last step: adding a file needs the US-006 material upload, "
-    "which is not merged yet. The reset rule itself is covered by unit test UT-47."
-)
-def test_st09_adding_a_file_returns_the_label_to_not_yet_reviewed() -> None:
-    pass
+def test_st09_adding_a_file_returns_the_label_to_not_yet_reviewed(
+    teacher: Person, coordinator: Person, new_lesson: Callable[[Person], str]
+) -> None:
+    lesson_id = new_lesson(teacher)
+    assert teacher.tick(lesson_id).status == 200
+    assert coordinator.record_review(lesson_id, "Aroha", "2026-10-08").status == 200
+    response = teacher.request.post(
+        f"/api/staff/lesson/lessons/{lesson_id}/materials",
+        headers={"Origin": BASE_URL},
+        multipart={
+            "file": {
+                "name": "handout.pdf",
+                "mimeType": "application/pdf",
+                "buffer": b"%PDF-1.7 test",
+            }
+        },
+    )
+    assert response.status == 201
+    assert teacher.review(lesson_id).json()["label"] == NOT_YET_REVIEWED
 
 
 # US-008 AC3 and Test Plan UT-46, through the whole system

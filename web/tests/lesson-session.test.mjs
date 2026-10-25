@@ -40,3 +40,9 @@ test('backend role denial remains 403 and no-store',async()=>{upstreamStatus=403
  });
  test('download disposition is retained',async()=>{const r=await fetch(base+'/api/staff/lesson/materials/abcdef00-0000-0000-0000-000000000001/download',{headers:{Cookie:`ako_session=${token}`}});assert.equal(r.status,200);assert.equal(r.headers.get('content-disposition'),'attachment; filename=fixture.pdf');});
  test('delete 204 keeps an empty body',async()=>{upstreamStatus=204;try{const r=await fetch(base+'/api/staff/lesson/lessons/abcdef00-0000-0000-0000-000000000001',{method:'DELETE',headers:{Cookie:`ako_session=${token}`,Origin:base}});assert.equal(r.status,204);assert.equal(await r.text(),'');}finally{upstreamStatus=200;}});
+
+test('oversized adapter request is rejected before reaching Lesson',async()=>{
+ seen=[];
+ const response=await fetch(base+path,{method:'POST',headers:{Cookie:`ako_session=${token}`,Origin:base,'Content-Type':'application/octet-stream'},body:Buffer.alloc(11*1024*1024+1)});
+ assert.equal(response.status,413);assert.equal(seen.length,0);
+});
