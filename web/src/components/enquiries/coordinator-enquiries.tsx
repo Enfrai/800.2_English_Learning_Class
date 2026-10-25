@@ -81,15 +81,16 @@ export default function CoordinatorEnquiries() {
 
   return <section className={styles.screen} aria-labelledby="enquiries-title">
     <h1 id="enquiries-title">Enquiries</h1>
-    {displayState === "login" && <p role="alert">Please log in to view enquiries. <a href="/">Log in</a></p>}
-    {displayState === "forbidden" && <p role="alert">You do not have permission</p>}
+    <p className="sub">Review interest in classes and contact prospective learners.</p>
+    {displayState === "login" && <p className="msg msg-error" role="alert">Please log in to view enquiries. <a href="/">Log in</a></p>}
+    {displayState === "forbidden" && <p className="msg msg-error" role="alert">You do not have permission</p>}
     {displayState === "loading" && <p role="status">Loading enquiries…</p>}
-    {displayState === "error" && <div role="alert"><p>Unable to load enquiries. Please try again.</p><button className="btn" onClick={() => navigate(offset)}>Retry</button></div>}
+    {displayState === "error" && <div className="msg msg-error" role="alert"><p>Unable to load enquiries. Please try again.</p><button className="btn" onClick={() => navigate(offset)}>Retry</button></div>}
     {displayState === "ready" && <>
-      <p role="status">Page {offset / PAGE_SIZE + 1}. Newest enquiries first.</p>
-      {rows.length === 0 && <p>No enquiries on this page.</p>}
+      <p className="sub" role="status">Page {offset / PAGE_SIZE + 1}. Newest enquiries first.</p>
+      {rows.length === 0 && <p className="msg msg-info">No enquiries on this page.</p>}
       <ul className={styles.list} aria-label="Enquiries">
-        {rows.map(row => <li key={row.id} className={styles.card}>
+        {rows.map(row => <li key={row.id} className={`card ${styles.card}`}>
           <h2>{row.name}</h2>
           <dl><dt>Contact</dt><dd>{row.contact}</dd>
             <dt>Message</dt><dd className={styles.message}>{row.message || "No message"}</dd>

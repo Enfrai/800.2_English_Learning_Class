@@ -12,7 +12,7 @@ if (!base || !password || !controlPath || !process.env.US001_TEST_RUN_ID) throw 
 let browser;
 before(async () => { browser = await chromium.launch({ channel: "chrome", headless: true }); });
 after(async () => { await browser?.close(); });
-const field = (page, name) => page.locator(`md-outlined-text-field[name="${name}"] input`);
+const field = (page, name) => page.locator(`input[name="${name}"]`);
 
 // Controls are external test processes restricted to the uniquely owned DB, never production endpoints.
 function record(username) {

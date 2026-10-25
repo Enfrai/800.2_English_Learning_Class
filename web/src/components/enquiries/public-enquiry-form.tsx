@@ -90,7 +90,7 @@ export default function PublicEnquiryForm() {
   }
 
   function error(field: Field) {
-    return errors[field] && <p id={`${id}-${field}-error`} className={styles.error} role="alert">{errors[field]}</p>;
+    return errors[field] && <p id={`${id}-${field}-error`} className="msg msg-error" role="alert">{errors[field]}</p>;
   }
   function accessibility(field: Field) {
     return { "aria-invalid": Boolean(errors[field]), "aria-describedby": errors[field] ? `${id}-${field}-error` : undefined };
@@ -101,16 +101,23 @@ export default function PublicEnquiryForm() {
     <form ref={formRef} onSubmit={submit} noValidate aria-busy={busy}>
       <fieldset disabled={busy}>
         <legend>Your enquiry</legend>
+        <div className="field">
         <label htmlFor={`${id}-name`}>Name (required)</label>
-        <input id={`${id}-name`} name="name" autoComplete="name" required value={values.name} {...accessibility("name")} onChange={e => setValues({ ...values, name: e.target.value })} />
+        <input id={`${id}-name`} name="name" type="text" autoComplete="name" required value={values.name} {...accessibility("name")} onChange={e => setValues({ ...values, name: e.target.value })} />
         {error("name")}
+        </div>
+        <div className="field">
         <label htmlFor={`${id}-type`}>Email/Phone</label>
         <select id={`${id}-type`} value={values.contact_type} onChange={e => { setValues({ ...values, contact_type: e.target.value as "email" | "phone" }); setErrors({ ...errors, contact: undefined }); }}>
           <option value="email">Email</option><option value="phone">Phone</option>
         </select>
+        </div>
+        <div className="field">
         <label htmlFor={`${id}-contact`}>Contact (required)</label>
         <input id={`${id}-contact`} name="contact" type={values.contact_type === "email" ? "email" : "tel"} autoComplete={values.contact_type === "email" ? "email" : "tel"} required value={values.contact} {...accessibility("contact")} onChange={e => setValues({ ...values, contact: e.target.value })} />
         {error("contact")}
+        </div>
+        <div className="field">
         <label htmlFor={`${id}-message`}>Message (optional, maximum 500 characters)</label>
         <textarea id={`${id}-message`} name="message" rows={4} value={values.message} {...accessibility("message")} onChange={e => {
           const message = e.target.value;
@@ -118,15 +125,16 @@ export default function PublicEnquiryForm() {
           setErrors({ ...errors, message: Array.from(message).length > 500 ? MESSAGE_ERROR : undefined });
         }} />
         {error("message")}
-        <label className={styles.consent} htmlFor={`${id}-consent`}>
+        </div>
+        <label className="check" htmlFor={`${id}-consent`}>
           <input id={`${id}-consent`} name="consent" type="checkbox" required checked={values.consent} {...accessibility("consent")} onChange={e => setValues({ ...values, consent: e.target.checked })} />
           I agree that the club may contact me about classes. (Required)
         </label>
         {error("consent")}
-        <button type="submit" disabled={busy}>{busy ? "Sending…" : "Send enquiry"}</button>
+        <button className="btn" type="submit" disabled={busy}>{busy ? "Sending…" : "Send enquiry"}</button>
       </fieldset>
       {busy && <p role="status">Sending your enquiry…</p>}
-      {notice && <p className={success ? styles.success : styles.error} role={success ? "status" : "alert"}>{notice}</p>}
+      {notice && <p className={`msg msg-${success ? "success" : "error"}`} role={success ? "status" : "alert"}>{notice}</p>}
     </form>
   </section>;
 }

@@ -1,26 +1,22 @@
+/* Share the Ako staff navigation and preserve session lifecycle and permissions.
+ * Author: Shuohui Liu
+ * Date: 19 Oct 2026
+ */
+
 "use client";
 
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { clearSessionId, homeFor, readSession, type Session } from "@/lib/session";
 
 import { SessionContext } from "./session-context";
 
-const LogoutButton = dynamic(() => import("./logout-button"), { ssr: false });
-
-/**
- * `layout="kit"` is for the (staff) pages styled with the Ako UI kit: the navy
- * menu bar from UI design document section 4. The default keeps the panel
- * layout of the (auth) pages, which load the Material styles instead.
- */
 export default function SessionShell({
   children,
-  layout = "panel",
 }: {
   children: ReactNode;
-  layout?: "panel" | "kit";
+  layout?: "kit";
 }) {
   const router = useRouter();
   const path = usePathname();
@@ -149,45 +145,30 @@ export default function SessionShell({
   const home = homeFor(session.role);
   const denied = (path.startsWith("/account-management") || path.startsWith("/coordinator") || path.startsWith("/enquiries")) && session.role !== "coordinator"
     || path.startsWith("/teacher") && session.role !== "teacher";
-  if (layout === "kit") {
-    // A section stays current on its sub-pages, e.g. a session's attendance.
-    const current = (href: string) =>
-      (href === home ? path === home : path.startsWith(href)) ? "page" : undefined;
-    return <>
-      <header className="bar">
-        <Link className="logo" href={home}>Ako</Link>
-        <nav aria-label={session.role === "teacher" ? "Teacher menu" : "Coordinator menu"}>
-          <Link href={home} aria-current={current(home)}>Home</Link>
-          <Link href="/sessions" aria-current={current("/sessions")}>Class sessions</Link>
-          <Link href="/learners" aria-current={current("/learners")}>Learners</Link>
-          <Link href="/lessons" aria-current={current("/lessons")}>Lessons</Link>
-          {session.role === "coordinator" && <Link href="/enquiries" aria-current={path === "/enquiries" ? "page" : undefined}>Enquiries</Link>}
-          {session.role === "coordinator" && <Link href="/account-management">Account management</Link>}
-        </nav>
-        <div className="who">
-          {session.display_name} ({session.role}) ·{" "}
-          <button type="button" className="btn btn-secondary" disabled={leaving} onClick={() => void logoutAction.current()}>
-            {leaving ? "Logging out…" : "Log out"}
-          </button>
-        </div>
-      </header>
-      <main className="page">
-        {error && <div className="msg msg-error" role="alert">{error}</div>}
-        {denied ? <div className="msg msg-error" role="alert">You do not have permission</div> : <SessionContext.Provider value={session}>{children}</SessionContext.Provider>}
-      </main>
-    </>;
-  }
-  return <main className="page"><section className="panel home-panel">
-    <nav aria-label={session.role === "teacher" ? "Teacher menu" : "Coordinator menu"}>
-      <Link href={home} aria-current={path === home ? "page" : undefined}>Home</Link>
-      <Link href="/learners">Learners</Link>
-      <Link href="/sessions">Class sessions</Link>
-      <Link href="/lessons">Lessons</Link>
-      {session.role === "coordinator" && <Link href="/enquiries" aria-current={path === "/enquiries" ? "page" : undefined}>Enquiries</Link>}
-      {session.role === "coordinator" && <Link href="/account-management" aria-current={path === "/account-management" ? "page" : undefined}>Account management</Link>}
-      <LogoutButton disabled={leaving} onClick={() => void logoutAction.current()} />
-    </nav>
-    {error && <p className="result error" role="alert">{error}</p>}
-    {denied ? <p role="alert">You do not have permission</p> : <SessionContext.Provider value={session}>{children}</SessionContext.Provider>}
-  </section></main>;
+  // A section stays current on its sub-pages, e.g. a session's attendance.
+  const current = (href: string) =>
+    (href === home ? path === home : path.startsWith(href)) ? "page" : undefined;
+  return <>
+    <header className="bar">
+      <Link className="logo" href={home}>Ako</Link>
+      <nav aria-label={session.role === "teacher" ? "Teacher menu" : "Coordinator menu"}>
+        <Link href={home} aria-current={current(home)}>Home</Link>
+        <Link href="/sessions" aria-current={current("/sessions")}>Class sessions</Link>
+        <Link href="/learners" aria-current={current("/learners")}>Learners</Link>
+        <Link href="/lessons" aria-current={current("/lessons")}>Lessons</Link>
+        {session.role === "coordinator" && <Link href="/enquiries" aria-current={path === "/enquiries" ? "page" : undefined}>Enquiries</Link>}
+        {session.role === "coordinator" && <Link href="/account-management" aria-current={current("/account-management")}>Account management</Link>}
+      </nav>
+      <div className="who">
+        {session.display_name} ({session.role}) ·{" "}
+        <button type="button" className="btn btn-secondary" disabled={leaving} onClick={() => void logoutAction.current()}>
+          {leaving ? "Logging out…" : "Log out"}
+        </button>
+      </div>
+    </header>
+    <main className="page">
+      {error && <div className="msg msg-error" role="alert">{error}</div>}
+      {denied ? <div className="msg msg-error" role="alert">You do not have permission</div> : <SessionContext.Provider value={session}>{children}</SessionContext.Provider>}
+    </main>
+  </>;
 }

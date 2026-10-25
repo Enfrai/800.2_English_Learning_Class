@@ -1,8 +1,13 @@
+/* Manage staff accounts with the shared Ako controls and feedback styles.
+ * Author: Shuohui Liu
+ * Date: 19 Oct 2026
+ */
+
 "use client";
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { FilledButton, TextField } from "./material";
+import { Button, TextField } from "./ako-controls";
 import styles from "./staff-management.module.css";
 
 // Keep the browser model limited to public fields; credentials never belong here.
@@ -194,17 +199,17 @@ export default function StaffManagement() {
 
   return <section className={styles.staff} aria-labelledby="staff-heading">
     <h1 id="staff-heading">Account management</h1>
-    <p className="subtitle">Create and manage Teacher accounts.</p>
-    {notice && <p className={`result ${notice.kind}`} role={notice.kind === "error" ? "alert" : "status"}>{notice.message}</p>}
+    <p className="sub">Create and manage Teacher accounts.</p>
+    {notice && <p className={`msg msg-${notice.kind}`} role={notice.kind === "error" ? "alert" : "status"}>{notice.message}</p>}
     {!blocked && <>
-      {loadError && <p className="result error" role="alert">{loadError}</p>}
+      {loadError && <p className="msg msg-error" role="alert">{loadError}</p>}
       <section aria-labelledby="create-heading" className={styles.section}>
         <h2 id="create-heading">Add Teacher</h2>
         <form onSubmit={createTeacher} noValidate aria-label="Add Teacher" aria-busy={busy}>
           <TextField label="Name" name="display_name" maxLength={150} required disabled={disabled} value={name} onInput={e => setName((e.target as HTMLInputElement).value)} />
           <TextField label="Username" name="username" maxLength={100} autocomplete="off" required disabled={disabled} value={username} onInput={e => setUsername((e.target as HTMLInputElement).value)} />
           <TextField label="Temporary Password" name="temporary_password" type="password" autocomplete="new-password" required disabled={disabled} value={password} onInput={e => setPassword((e.target as HTMLInputElement).value)} />
-          <FilledButton type="submit" disabled={disabled}>{busy ? "Saving…" : "Create Teacher"}</FilledButton>
+          <Button type="submit" disabled={disabled}>{busy ? "Saving…" : "Create Teacher"}</Button>
         </form>
       </section>
       {editing && <section className={styles.section} aria-labelledby="edit-heading">
@@ -213,33 +218,33 @@ export default function StaffManagement() {
         <form onSubmit={renameTeacher} noValidate aria-label="Edit Teacher name" aria-busy={busy}>
           <TextField label="Name" name="edit_display_name" maxLength={150} required disabled={disabled} value={editName} onInput={e => setEditName((e.target as HTMLInputElement).value)} />
           <div className={styles.actions}>
-            <FilledButton type="submit" disabled={disabled}>Save name</FilledButton>
-            <FilledButton type="button" disabled={busy} onClick={() => setEditing(null)}>Cancel edit</FilledButton>
+            <Button type="submit" disabled={disabled}>Save name</Button>
+            <Button className="btn-secondary" type="button" disabled={busy} onClick={() => setEditing(null)}>Cancel edit</Button>
           </div>
         </form>
       </section>}
-      {confirming && <section className={styles.confirmation} aria-labelledby="confirm-heading">
+      {confirming && <section className={`card ${styles.confirmation}`} aria-labelledby="confirm-heading">
         <h2 id="confirm-heading">{confirming.role === "teacher" ? "Deactivate Teacher?" : "Deactivate Coordinator?"}</h2>
         <p>Deactivate {confirming.display_name} ({confirming.username})? They will no longer be able to sign in. Their lessons and attendance history will be kept.
           {confirming.role === "coordinator" && " At least one coordinator must stay active."}</p>
         <div className={styles.actions}>
-          <FilledButton type="button" disabled={disabled} onClick={() => void deactivateTeacher()}>Confirm deactivation</FilledButton>
-          <FilledButton type="button" disabled={busy} onClick={() => setConfirming(null)}>Cancel deactivation</FilledButton>
+          <Button className="btn-danger" type="button" disabled={disabled} onClick={() => void deactivateTeacher()}>Confirm deactivation</Button>
+          <Button className="btn-secondary" type="button" disabled={busy} onClick={() => setConfirming(null)}>Cancel deactivation</Button>
         </div>
       </section>}
       <section className={styles.section} aria-labelledby="list-heading" aria-busy={loading}>
         <div className={styles.listHeader}>
           <h2 id="list-heading">Teacher accounts</h2>
-          <FilledButton type="button" disabled={busy || loading} onClick={() => void refreshList()}>Refresh list</FilledButton>
+          <Button className="btn-secondary" type="button" disabled={busy || loading} onClick={() => void refreshList()}>Refresh list</Button>
         </div>
         {loading && <p role="status">Loading Teacher accounts…</p>}
         {!loading && loaded && teachers.length === 0 && <p role="status">No Teacher accounts yet.</p>}
         <ul className={styles.list} aria-label="Teacher accounts">
-          {teachers.map(teacher => <li key={teacher.id} className={styles.card}>
-            <div className={styles.details}><h3>{teacher.display_name}</h3><p>Username: {teacher.username}</p><p>Status: <strong>{teacher.is_active ? "Active" : "Inactive"}</strong></p></div>
+          {teachers.map(teacher => <li key={teacher.id} className={`card ${styles.card}`}>
+            <div className={styles.details}><h3>{teacher.display_name}</h3><p>Username: {teacher.username}</p><p>Status: <span className={`badge ${teacher.is_active ? "badge-reviewed" : "badge-inactive"}`}>{teacher.is_active ? "Active" : "Inactive"}</span></p></div>
             <div className={styles.actions}>
-              <FilledButton type="button" disabled={disabled} aria-label={`Edit ${teacher.username}`} onClick={() => { setEditing(teacher); setEditName(teacher.display_name); setConfirming(null); setNotice(null); }}>Edit name</FilledButton>
-              {teacher.is_active && <FilledButton type="button" disabled={disabled} aria-label={`Deactivate ${teacher.username}`} onClick={() => { setConfirming(teacher); setEditing(null); setNotice(null); }}>Deactivate</FilledButton>}
+              <Button className="btn-secondary" type="button" disabled={disabled} aria-label={`Edit ${teacher.username}`} onClick={() => { setEditing(teacher); setEditName(teacher.display_name); setConfirming(null); setNotice(null); }}>Edit name</Button>
+              {teacher.is_active && <Button className="btn-secondary" type="button" disabled={disabled} aria-label={`Deactivate ${teacher.username}`} onClick={() => { setConfirming(teacher); setEditing(null); setNotice(null); }}>Deactivate</Button>}
             </div>
           </li>)}
         </ul>
@@ -247,10 +252,10 @@ export default function StaffManagement() {
       <section className={styles.section} aria-labelledby="coordinator-list-heading">
         <h2 id="coordinator-list-heading">Coordinator accounts</h2>
         <ul className={styles.list} aria-label="Coordinator accounts">
-          {coordinators.map(account => <li key={account.id} className={styles.card}>
-            <div className={styles.details}><h3>{account.display_name}</h3><p>Username: {account.username}</p><p>Status: <strong>{account.is_active ? "Active" : "Inactive"}</strong></p></div>
+          {coordinators.map(account => <li key={account.id} className={`card ${styles.card}`}>
+            <div className={styles.details}><h3>{account.display_name}</h3><p>Username: {account.username}</p><p>Status: <span className={`badge ${account.is_active ? "badge-reviewed" : "badge-inactive"}`}>{account.is_active ? "Active" : "Inactive"}</span></p></div>
             <div className={styles.actions}>
-              {account.is_active && <FilledButton type="button" disabled={disabled} aria-label={`Deactivate ${account.username}`} onClick={() => { setConfirming(account); setEditing(null); setNotice(null); }}>Deactivate</FilledButton>}
+              {account.is_active && <Button className="btn-secondary" type="button" disabled={disabled} aria-label={`Deactivate ${account.username}`} onClick={() => { setConfirming(account); setEditing(null); setNotice(null); }}>Deactivate</Button>}
             </div>
           </li>)}
         </ul>
