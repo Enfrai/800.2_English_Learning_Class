@@ -1,7 +1,7 @@
 """Ako database models.
 
-Author: Shuohui Liu
-Date: 19 Oct 2026
+Author: Sandhya Tiwari
+Date: 26 Oct 2026
 """
 from uuid import uuid4
 from sqlalchemy import Table, Column, String, Boolean, Integer, SmallInteger, BigInteger, Date, Time, DateTime, Text, ForeignKey, CheckConstraint, UniqueConstraint, Index, func, text
@@ -69,3 +69,17 @@ APPEND_ONLY_AUDIT_SQL = (
 # One statement per DDL: psycopg runs one statement per call.
 for _statement in APPEND_ONLY_AUDIT_SQL:
     event.listen(attendance_audits, "after_create", DDL(_statement))
+
+
+# Cross-service references deliberately have no foreign key into lessondb.
+session_lesson_links = Table("session_lesson_links", Base.metadata,
+    Column("session_id", UUID(as_uuid=True), ForeignKey("class_sessions.id"), primary_key=True),
+    ref("lesson_id", nullable=True),
+)
+learner_material_grants = Table("learner_material_grants", Base.metadata,
+    Column("token_hash", String(64), primary_key=True),
+    ref("session_id", "class_sessions.id"),
+    value("issued_at", DateTime(timezone=True)),
+    value("expires_at", DateTime(timezone=True)),
+    Index("ix_material_grants_expiry", "expires_at"),
+)

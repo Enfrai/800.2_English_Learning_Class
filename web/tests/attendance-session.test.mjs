@@ -1,4 +1,3 @@
-/** Test the server-only cookie/Bearer adapter against an owned loopback stub. */
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
@@ -31,3 +30,13 @@ test('same-origin mutation preserves request body',async()=>{seen=[];const r=awa
 test('explicit browser Bearer does not override cookie identity',async()=>{seen=[];const r=await fetch(base+path,{headers:{Cookie:`ako_session=${token}`,Authorization:'Bearer another'}});assert.equal(r.status,401);assert.equal(seen.length,0);});
 test('unrelated upstream paths cannot be proxied',async()=>{seen=[];const r=await fetch(base+'/api/staff/access/admin',{headers:{Cookie:`ako_session=${token}`}});assert.equal(r.status,404);assert.equal(seen.length,0);});
 test('backend role denial remains 403 and no-store',async()=>{upstreamStatus=403;const r=await fetch(base+path,{headers:{Cookie:`ako_session=${token}`}});assert.equal(r.status,403);assert.equal(r.headers.get('cache-control'),'no-store');upstreamStatus=200;});
+
+test('class lesson selection uses the staff cookie bridge and same-origin protection',async()=>{
+  const lessonPath=path.replace('/attendance','/lesson');
+  seen=[];
+  const denied=await fetch(base+lessonPath,{method:'PUT',headers:{Cookie:`ako_session=${token}`},body:'{}'});
+  assert.equal(denied.status,403);assert.equal(seen.length,0);
+  const response=await fetch(base+lessonPath,{method:'PUT',headers:{Cookie:`ako_session=${token}`,Origin:base,'Content-Type':'application/json'},body:'{"lesson_id":null}'});
+  assert.equal(response.status,200);assert.equal(seen[0].authorization,`Bearer ${token}`);
+  assert.equal(seen[0].body,'{"lesson_id":null}');
+});
