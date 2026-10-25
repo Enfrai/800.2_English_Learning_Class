@@ -26,7 +26,7 @@ export async function middleware(request: NextRequest) {
     const path = request.nextUrl.pathname;
     let allowed = ["teacher", "coordinator"].includes(user.role);
     if (path.startsWith("/teacher")) allowed = user.role === "teacher";
-    if (path.startsWith("/coordinator") || path.startsWith("/account-management")) allowed = user.role === "coordinator";
+    if (path.startsWith("/coordinator") || path.startsWith("/account-management") || path.startsWith("/enquiries")) allowed = user.role === "coordinator";
     if (allowed && path.startsWith("/account-management")) {
       const access = await fetch(`${userApi}/account-management/access`, { headers, cache: "no-store", signal: AbortSignal.timeout(5000) });
       if (access.status === 401) return login();
@@ -50,4 +50,4 @@ export async function middleware(request: NextRequest) {
   }
 }
 
-export const config = { matcher: ["/teacher/:path*", "/coordinator/:path*", "/account-management/:path*", "/forbidden", "/learners/:path*", "/sessions/:path*", "/lessons/:path*"] };
+export const config = { matcher: ["/enquiries/:path*", "/teacher/:path*", "/coordinator/:path*", "/account-management/:path*", "/forbidden", "/learners/:path*", "/sessions/:path*", "/lessons/:path*"] };

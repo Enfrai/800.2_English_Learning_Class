@@ -1,4 +1,4 @@
-/* Render the Material 3 login form and call the User Service through Nginx.
+/* Render the Ako UI kit login form and call the User Service through Nginx.
  * Author: Shuohui Liu
  * Date: 19 Oct 2026
  */
@@ -8,7 +8,7 @@
 import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clearSessionId, homeFor, type Role } from "@/lib/session";
-import { CircularProgress, FilledButton, TextField } from "./material";
+import { Button, TextField } from "./ako-controls";
 
 type LoginResult = {
   sessionid: string;
@@ -69,12 +69,12 @@ export default function LoginForm() {
   }
 
   return (
-    <main className="page">
-      <section className="panel" aria-labelledby="login-title">
-        <div className="brand-mark" aria-hidden="true">E</div>
-        <p className="eyebrow">ENGLISH LEARNING CLASS</p>
+    <main className="page login-page">
+      <section className="card login-panel" aria-labelledby="login-title">
+        <div className="login-brand" aria-hidden="true">Ako</div>
+        <p className="login-eyebrow">ENGLISH LEARNING CLASS</p>
         <h1 id="login-title">Welcome back</h1>
-        <p className="subtitle">Sign in to continue your learning journey.</p>
+        <p className="sub">Sign in to continue your learning journey.</p>
         <form onSubmit={handleLogin} aria-busy={loading}>
           <TextField
             label="Username"
@@ -95,19 +95,17 @@ export default function LoginForm() {
             value={password}
             onInput={(event) => setPassword((event.target as HTMLInputElement).value)}
           />
-          <FilledButton type="submit" disabled={loading}>
+          <Button type="submit" disabled={loading}>
             {loading ? "Signing in…" : "Sign in"}
-          </FilledButton>
-          {loading && <div className="progress" role="status" aria-label="Signing in">
-            <CircularProgress indeterminate aria-hidden="true" />
-          </div>}
+          </Button>
+          {loading && <p role="status">Signing in…</p>}
         </form>
         {message && (
-          <p className={`result ${failed ? "error" : "success"}`} role={failed ? "alert" : "status"}>
+          <p className={`msg msg-${failed ? "error" : "success"}`} role={failed ? "alert" : "status"}>
             {message}
           </p>
         )}
-        <p className="note">@Yoobee Inc</p>
+        <p className="login-note">@Yoobee Inc</p>
       </section>
     </main>
   );

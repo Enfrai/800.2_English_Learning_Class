@@ -14,12 +14,12 @@ async function open(t) {
   t.after(() => context.close());
   const page = await context.newPage();
   await page.goto(base);
-  await page.locator('md-outlined-text-field[name="username"] input').waitFor();
+  await page.locator('input[name="username"]').waitFor();
   return { context, page };
 }
 async function fill(page, username, value = password) {
-  await page.locator('md-outlined-text-field[name="username"] input').fill(username);
-  await page.locator('md-outlined-text-field[name="password"] input').fill(value);
+  await page.locator('input[name="username"]').fill(username);
+  await page.locator('input[name="password"]').fill(value);
 }
 async function login(page, username = "e2e_teacher", heading = "Teacher home") {
   await fill(page, username);
@@ -59,8 +59,8 @@ test("AC2: exact incorrect-password text and login URL", async (t) => {
   const { page } = await open(t);
   await fill(page, "e2e_teacher", "incorrect");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await page.locator("p.result.error").waitFor();
-  assert.equal(await page.locator("p.result.error").textContent(), "Username or password is incorrect");
+  await page.locator("p.msg.msg-error").waitFor();
+  assert.equal(await page.locator("p.msg.msg-error").textContent(), "Username or password is incorrect");
   assert.equal(new URL(page.url()).pathname, "/");
 });
 

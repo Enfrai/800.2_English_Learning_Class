@@ -10,7 +10,7 @@ before(async () => { browser = await chromium.launch({ channel: "chrome", headle
 after(async () => { await browser?.close(); });
 const teacher = { id: "00000000-0000-4000-8000-000000000010", username: "teacher_one", display_name: "Teacher One", role: "teacher", is_active: true };
 const coordinator = { ...teacher, id: "00000000-0000-4000-8000-000000000001", username: "coordinator_hidden", display_name: "Coordinator Hidden", role: "coordinator" };
-const field = (page, name) => page.locator(`md-outlined-text-field[name="${name}"] input`);
+const field = (page, name) => page.locator(`input[name="${name}"]`);
 
 async function screen(t, options = {}) {
   const context = await browser.newContext({ viewport: options.viewport });
@@ -168,7 +168,7 @@ test("Repeated submit events produce one write while pending", async t => {
     form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
   });
   await page.getByRole("button", { name: "Saving…", exact: true }).waitFor();
-  assert.equal(await page.locator('md-outlined-text-field[name="username"]').evaluate(el => el.disabled), true);
+  assert.equal(await page.locator('input[name="username"]').evaluate(el => el.disabled), true);
   await page.getByRole("heading", { name: "New Teacher", exact: true }).waitFor();
   assert.equal(state.requests.length, 1);
 });
@@ -241,4 +241,67 @@ test("AC5: a Coordinator can be deactivated while another stays active", async t
   await page.getByRole("status").filter({ hasText: "Coordinator account deactivated." }).waitFor();
   assert.equal(await page.getByRole("button", { name: "Deactivate coordinator_two", exact: true }).count(), 0);
   await page.getByRole("button", { name: "Deactivate coordinator_hidden", exact: true }).waitFor();
+});
+
+
+// Exercise the real middleware and Staff layout for the newly integrated route.
+for (const role of ["anonymous", "teacher", "coordinator"]) {
+  test(`enquiries route protection: ${role}`, async t => {
+    const context = await browser.newContext();
+    t.after(() => context.close());
+    if (role !== "anonymous") await context.addCookies([{name:"ako_session", value:`ui-${role}`, url:base, httpOnly:true, sameSite:"Lax"}]);
+    let reads = 0;
+    await context.route("**/api/user/**", route => {
+      const path = new URL(route.request().url()).pathname;
+      if (path === "/api/user/session") return route.fulfill({json:{user_id:coordinator.id,display_name:"UI fixture",role},headers:{"X-Session-Expires-At":new Date(Date.now()+1800000).toISOString()}});
+      if (path === "/api/user/enquiries") { reads++; return route.fulfill({json:[]}); }
+      return route.fulfill({status:404,json:{}});
+    });
+    const page = await context.newPage();
+    const response = await page.goto(`${base}/enquiries`);
+    if (role === "anonymous") {
+      assert.equal(new URL(page.url()).pathname, "/");
+    } else if (role === "teacher") {
+      assert.equal(response.status(), 403);
+      await page.getByText("You do not have permission", {exact:true}).waitFor();
+    } else {
+      assert.equal(response.status(), 200);
+      await page.getByText("No enquiries on this page.").waitFor();
+      assert.equal(await page.getByRole("link", {name:"Enquiries",exact:true}).count(), 1);
+    }
+    assert.equal(reads, role === "coordinator" ? 1 : 0);
+  });
+}
+
+
+test("Account management, login and learners share typography, controls and navigation", async t => {
+  const { page, context } = await screen(t, { viewport: { width: 1280, height: 900 } });
+  await page.getByRole("heading", { name: "Teacher One", exact: true }).waitFor();
+  const appearance = async (selector) => page.locator(selector).first().evaluate(el => {
+    const s = getComputedStyle(el);
+    return { font: s.fontFamily, size: s.fontSize, color: s.color, background: s.backgroundColor, radius: s.borderRadius, border: s.borderTopWidth, minHeight: s.minHeight };
+  });
+  const accountHeading = await appearance("h1");
+  const accountField = await appearance('input[name="username"]');
+  const accountButton = await appearance('button[type="submit"]');
+  const accountBar = await appearance("header.bar");
+  assert.equal(await page.getByRole("link", { name: "Account management", exact: true }).getAttribute("aria-current"), "page");
+  if (process.env.UI_SCREENSHOT_DIR) await page.screenshot({ path: `${process.env.UI_SCREENSHOT_DIR}/accounts-desktop.png`, fullPage: true });
+  await context.route("**/api/user/learners", route => route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
+  await page.goto(`${base}/learners`);
+  await page.getByRole("heading", { name: "Learners", exact: true }).waitFor();
+  assert.deepEqual(await appearance("h1"), accountHeading);
+  assert.deepEqual(await appearance("header.bar"), accountBar);
+  assert.deepEqual(await appearance("button.btn:not(.btn-secondary)"), accountButton);
+  await page.getByRole("button", { name: "Add learner", exact: true }).click();
+  assert.deepEqual(await appearance('input[type="text"]'), accountField);
+  if (process.env.UI_SCREENSHOT_DIR) await page.screenshot({ path: `${process.env.UI_SCREENSHOT_DIR}/learners-desktop.png`, fullPage: true });
+  await page.goto(base);
+  await page.getByLabel("Password", { exact: true }).waitFor();
+  assert.deepEqual(await appearance("h1"), accountHeading);
+  assert.deepEqual(await appearance('input[name="username"]'), accountField);
+  assert.deepEqual(await appearance('button[type="submit"]'), accountButton);
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+  if (process.env.UI_SCREENSHOT_DIR) await page.screenshot({ path: `${process.env.UI_SCREENSHOT_DIR}/login-mobile.png`, fullPage: true });
 });

@@ -1,0 +1,8 @@
+/* Keep the public form layout independent while using shared Ako controls.
+ * Author: Shuohui Liu
+ * Date: 19 Oct 2026
+ */
+.form { max-width: 40rem; width: 100%; overflow-wrap: anywhere; }
+.form fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.form legend { margin-bottom: var(--space-3); }
+.form textarea { resize: vertical; }

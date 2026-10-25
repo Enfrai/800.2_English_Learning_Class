@@ -1,4 +1,4 @@
-/* Load the Material 3 login screen without server-rendering browser components.
+/* Load the Ako login screen with a client-side loading state.
  * Author: Shuohui Liu
  * Date: 19 Oct 2026
  */

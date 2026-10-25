@@ -1,6 +1,5 @@
 /* Root layout for logged-in staff pages, styled with the Ako UI kit.
- * The login page has its own root layout in (auth), so the two style sheets
- * never load on the same page.
+ * Authentication pages share the same Ako tokens and component styles.
  * Author: Pei Wu
  * Date: 23 Oct 2026
  */
