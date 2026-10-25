@@ -29,12 +29,14 @@ async function upload(page){
 }
 test("Coordinator can toggle import and refresh list after successful import",async t=>{
  const {page,stats}=await open(t);await page.getByRole("cell",{name:"Fiction Existing",exact:true}).waitFor();
+ assert.equal(await page.locator("header.bar").count(),1);
  await upload(page);await page.getByText("1 learners imported",{exact:true}).waitFor();await page.getByRole("cell",{name:"Fiction Imported",exact:true}).waitFor();
  assert.ok(stats().reads >= 2);assert.equal(stats().uploads,1);
  await page.getByRole("button",{name:"Close CSV import",exact:true}).click();assert.equal(await page.getByLabel("CSV file",{exact:true}).count(),0);
 });
 test("Teacher retains list, add and edit without import entry",async t=>{
  const {page,stats}=await open(t,"teacher");await page.getByRole("cell",{name:"Fiction Existing",exact:true}).waitFor();
+ assert.equal(await page.locator("header.bar").count(),1);
  assert.equal(await page.getByRole("button",{name:"Import CSV",exact:true}).count(),0);
  await page.getByRole("button",{name:"Add learner",exact:true}).click();await page.getByRole("heading",{name:"Add learner",exact:true}).waitFor();
  await page.getByRole("button",{name:"Cancel",exact:true}).click();await page.getByRole("button",{name:"Edit Fiction Existing",exact:true}).click();

@@ -279,7 +279,7 @@ function ClassList({
                   />
                 </div>
               </td>
-              <td>
+              <td style={{ overflowWrap: "anywhere" }}>
                 {/* Clicking the name ticks the box; it also names the box for screen readers. */}
                 <label htmlFor={checkboxId}>{fullName(learner)}</label>
               </td>

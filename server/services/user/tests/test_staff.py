@@ -255,21 +255,142 @@ def test_deactivate_preserves_account_and_revokes_session(
     assert pg.session_rows()[0]["revoked_at"] == revoked
 
 
-@pytest.mark.parametrize("action", ["rename", "deactivate"])
-def test_coordinator_is_not_a_mutation_target(
-    pg: PgContext, coordinator: tuple[UUID, str], action: str
+def test_coordinator_name_is_not_a_mutation_target(
+    pg: PgContext, coordinator: tuple[UUID, str]
 ) -> None:
-    path = f"/staff/{coordinator[0]}"
-    if action == "rename":
-        response = pg.clients[0].patch(
-            path, json={"display_name": "No"}, headers=headers(coordinator[1])
-        )
-    else:
-        response = pg.clients[0].post(
-            path + "/deactivate", headers=headers(coordinator[1])
-        )
+    response = pg.clients[0].patch(
+        f"/staff/{coordinator[0]}",
+        json={"display_name": "No"},
+        headers=headers(coordinator[1]),
+    )
     assert response.status_code == 403
     assert pg.validate(coordinator[1]).status_code == 200
+
+
+# AC5 / Test Plan UT-12: at least one Coordinator must stay active.
+
+LAST_COORDINATOR = {"detail": "At least one coordinator must stay active"}
+
+
+def is_active(pg: PgContext, user_id: UUID) -> bool:
+    with pg.engine.connect() as db:
+        return db.scalar(select(pg.users.c.is_active).where(pg.users.c.id == user_id))
+
+
+def keep_only_active_coordinator(pg: PgContext, user_id: UUID) -> None:
+    """AC5's "Given": the test database is shared, so retire other Coordinators."""
+    with pg.engine.begin() as db:
+        db.execute(
+            pg.users.update()
+            .where(pg.users.c.role == "coordinator", pg.users.c.id != user_id)
+            .values(is_active=False)
+        )
+
+
+def deactivate(pg: PgContext, target: UUID, actor_token: str, replica: int = 0) -> Any:
+    return pg.clients[replica].post(
+        f"/staff/{target}/deactivate", headers=headers(actor_token)
+    )
+
+
+def test_only_active_coordinator_cannot_deactivate_their_account(
+    pg: PgContext, coordinator: tuple[UUID, str]
+) -> None:
+    keep_only_active_coordinator(pg, coordinator[0])
+
+    response = deactivate(pg, coordinator[0], coordinator[1])
+
+    assert response.status_code == 409
+    assert response.json() == LAST_COORDINATOR
+    assert is_active(pg, coordinator[0])
+    assert pg.validate(coordinator[1]).status_code == 200
+
+
+def test_inactive_coordinators_do_not_count_as_staying_active(
+    pg: PgContext, coordinator: tuple[UUID, str]
+) -> None:
+    add_coordinator(pg)
+    keep_only_active_coordinator(pg, coordinator[0])
+
+    response = deactivate(pg, coordinator[0], coordinator[1])
+
+    assert response.status_code == 409
+    assert response.json() == LAST_COORDINATOR
+
+
+def test_coordinator_can_be_deactivated_while_another_stays_active(
+    pg: PgContext, coordinator: tuple[UUID, str]
+) -> None:
+    keep_only_active_coordinator(pg, coordinator[0])
+    other = add_coordinator(pg)
+
+    response = deactivate(pg, other[0], coordinator[1])
+
+    assert response.status_code == 200
+    assert response.json()["role"] == "coordinator"
+    assert response.json()["is_active"] is False
+    assert pg.validate(other[1]).status_code == 401
+    # Now only one is left, so it cannot deactivate itself.
+    assert deactivate(pg, coordinator[0], coordinator[1]).json() == LAST_COORDINATOR
+
+
+def test_coordinator_can_deactivate_own_account_while_another_stays_active(
+    pg: PgContext, coordinator: tuple[UUID, str]
+) -> None:
+    other = add_coordinator(pg)
+
+    response = deactivate(pg, coordinator[0], coordinator[1])
+
+    assert response.status_code == 200
+    assert not is_active(pg, coordinator[0])
+    assert pg.validate(coordinator[1]).status_code == 401
+    assert is_active(pg, other[0])
+
+
+def test_two_coordinators_deactivating_themselves_at_once_leave_one_active(
+    pg: PgContext, coordinator: tuple[UUID, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    keep_only_active_coordinator(pg, coordinator[0])
+    other = add_coordinator(pg)
+    staff = importlib.import_module("staff")
+    original = staff.deactivate_teacher
+    held, release, waiting = Event(), Event(), Event()
+
+    def hold_first(*args: Any) -> Any:
+        row = original(*args)
+        if not held.is_set():
+            held.set()
+            assert release.wait(5)
+        return row
+
+    def query(
+        conn: Any, cursor: Any, statement: str, params: Any, context: Any, many: bool
+    ) -> None:
+        if "FOR UPDATE" in statement and "users" in statement:
+            waiting.set()
+
+    monkeypatch.setattr(staff, "deactivate_teacher", hold_first)
+    event.listen(pg.b.engine, "before_cursor_execute", query)
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            first = pool.submit(deactivate, pg, coordinator[0], coordinator[1], 0)
+            try:
+                assert held.wait(5)
+                # Each removes only itself, so without locking every active
+                # Coordinator the two requests would not wait for each other.
+                second = pool.submit(deactivate, pg, other[0], other[1], 1)
+                assert waiting.wait(5)
+            finally:
+                release.set()
+            first_status = first.result(timeout=10).status_code
+            second_response = second.result(timeout=10)
+    finally:
+        event.remove(pg.b.engine, "before_cursor_execute", query)
+
+    assert first_status == 200
+    assert second_response.status_code == 409
+    assert second_response.json() == LAST_COORDINATOR
+    assert is_active(pg, other[0])
 
 
 @pytest.mark.parametrize("origin", [None, "http://evil.example"])

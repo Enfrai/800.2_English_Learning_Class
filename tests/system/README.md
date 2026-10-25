@@ -8,8 +8,6 @@ that testers follow and sign off are in `docs/system_test/`.
 | --- | --- |
 | `test_learners_page.py` | ST-11, and the Learners page parts of NT-05, NT-06, NT-07, NT-08, NT-10 |
 | `test_attendance_page.py` | ST-01, US-004 AC1 to AC5, and the attendance page parts of NT-01, NT-06, NT-07, NT-10 |
-| `test_lessons_page.py` | ST-10, US-006 AC1 to AC6, UT-42 in the browser, NFR-10, and the lesson page parts of NT-06 |
-| `test_lesson_materials_page.py` | Teacher access to lesson materials AC1 to AC3: file counts, open and download, no names for visitors, log out ends the session |
 
 ## Running the tests
 
@@ -21,7 +19,6 @@ that testers follow and sign off are in `docs/system_test/`.
    export USER_DATA_VOLUME=ako-systest_user_data
    export ACCESS_DATA_VOLUME=ako-systest_access_data
    export LESSON_DATA_VOLUME=ako-systest_lesson_data
-   export LESSON_FILES_VOLUME=ako-systest_lesson_files
    docker compose up -d --build
    ```
 
@@ -48,15 +45,12 @@ that testers follow and sign off are in `docs/system_test/`.
 
    ```bash
    docker compose down
-   docker volume rm ako-systest_user_data ako-systest_access_data ako-systest_lesson_data ako-systest_lesson_files
+   docker volume rm ako-systest_user_data ako-systest_access_data ako-systest_lesson_data
    ```
 
 Notes:
 
-- The lesson tests log in as the test teachers `teacher1` and `teacher2`
-  (US-006), so start the system with `TEST_TEACHER_PASSWORD` set (the
-  default in `compose.yaml` is fine).
-- The other tests log in as the demo coordinator. A new login ends the previous
+- The tests log in as the demo coordinator. A new login ends the previous
   demo session, so a browser where you are logged in as demo is logged out.
 - The accessibility check loads axe-core from cdnjs, so it needs internet.
 - Until US-014 adds "Start today's class", the attendance tests create class

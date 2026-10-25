@@ -1,6 +1,0 @@
-# Development and test dependencies.
-# Author: Sandhya Tiwari
-# Date: 23 Oct 2026
--r requirements.txt
-pytest>=8,<9
-httpx>=0.27,<1

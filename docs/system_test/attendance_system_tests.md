@@ -65,7 +65,7 @@ above. ST-02 (reopen today's class) is tested with US-014.
 | AT-3 | Open today's session in two browser windows. Tick Ben Class in the first window if he is not ticked. In the second window (not reloaded), tick Ben Class | "Already signed in" in Ben's row, next to the box. No second record: the count does not rise | | |
 | AT-4 | Open yesterday's session | "Only a coordinator can correct past attendance". Tick boxes cannot be changed. No "Learner not on the list" form | | |
 | AT-5 | Open `http://localhost:8080/sessions/00000000-0000-0000-0000-000000000000/attendance` | "Class session not found" | | |
-| AT-6 | Log out, then open today's session again | "Please log in to take attendance" with a Log in link. No names are shown | | |
+| AT-6 | Choose **Log out**, then open today's session again | The login page opens instead. No names are shown | | |
 
 ### 3.3 Non-functional checks on the attendance page
 

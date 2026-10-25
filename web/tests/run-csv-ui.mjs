@@ -28,7 +28,7 @@ try {
   await mkdir(join(temp,"src/app/test-csv"));
   await writeFile(join(temp,"src/app/test-csv/page.tsx"),'import CsvUpload from "@/components/learners/csv-upload"; export default function Page(){return <CsvUpload/>}');
   await mkdir(join(temp,"src/app/test-learners"));
-  await writeFile(join(temp,"src/app/test-learners/page.tsx"),'import LearnersScreen from "@/components/learners/learners-screen"; import SessionShell from "@/components/session-shell"; export default function Page(){return <SessionShell><LearnersScreen/></SessionShell>}');
+  await writeFile(join(temp,"src/app/test-learners/page.tsx"),'import LearnersScreen from "@/components/learners/learners-screen"; import SessionShell from "@/components/session-shell"; export default function Page(){return <SessionShell layout="kit"><LearnersScreen/></SessionShell>}');
   const reservation = createServer().listen(0,"127.0.0.1"); await once(reservation,"listening");
   const port = reservation.address().port; await new Promise(resolve=>reservation.close(resolve));
   server = spawn(process.execPath,[join(web,"node_modules/next/dist/bin/next"),"dev","--hostname","127.0.0.1","--port",String(port)],{cwd:temp,env:{...process.env,NEXT_TELEMETRY_DISABLED:"1"},stdio:["ignore","pipe","pipe"]});
