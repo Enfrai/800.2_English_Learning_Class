@@ -161,7 +161,7 @@ A closed or expired code cannot record attendance. Rate limiting for repeated in
 | `updated_at` | TIMESTAMPTZ | NOT NULL | Update time |
 | `deleted_at` | TIMESTAMPTZ | NULL | Soft deletion time |
 
-**Rules:** Teachers edit their own lessons; coordinators may edit any lesson, pending team confirmation. Unreviewed Māori content must not be shown to learners; staff still see it (team decision, 23 Oct 2026). Only a coordinator records a review. Adding, replacing or removing a material of a reviewed lesson resets it to `pending` (US-008 AC4).
+**Rules:** Teachers edit their own lessons; coordinators may edit any lesson (confirmed by US-006). Unreviewed Māori content must not be shown to learners; staff still see it (team decision, 23 Oct 2026). Only a coordinator records a review. Adding, replacing or removing a material of a reviewed lesson resets it to `pending` (US-008 AC4).
 
 ### 4.2 `tags` — Lesson Topics
 
@@ -190,11 +190,12 @@ Primary key: `(lesson_id, tag_id)`.
 | `storage_key` | VARCHAR(500) | NOT NULL | Relative path/object-storage key |
 | `mime_type` | VARCHAR(100) | NOT NULL | MIME type |
 | `file_size` | BIGINT | NOT NULL, CHECK >= 0 | File size in bytes |
+| `share_with_learners` | BOOLEAN | NOT NULL, DEFAULT FALSE | Per-file sharing preference; staff authentication is still required until US-013 |
 | `uploaded_by` | UUID | NOT NULL; User-service reference | Uploader |
 | `created_at` | TIMESTAMPTZ | NOT NULL | Upload time |
 | `deleted_at` | TIMESTAMPTZ | NULL | Soft deletion time |
 
-Store file content outside PostgreSQL, with metadata in this table. Supported types and maximum sizes need agreement.
+Store file content outside PostgreSQL in the shared `lesson_files` Docker volume, with metadata in this table. US-006 permits PDF, DOCX, JPG/JPEG and PNG, up to 10,485,760 bytes each. Random storage keys prevent filename collisions. Deletes retain database tombstones and disable downloads. The Lesson Service applies an additive, idempotent upgrade for `share_with_learners`; old rows default to false.
 
 ### 4.5 `lesson_review_logs` — Māori Content Review History (Recommended)
 

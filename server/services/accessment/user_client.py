@@ -164,3 +164,55 @@ def find_learner_for_sign_in(first_name: str, family_name: str) -> dict[str, Any
     if status == 409:
         raise AmbiguousSignInNameError("Several learners have this name")
     raise UserServiceError(f"User service answered {status}")
+
+
+def staff_names(authorization: str) -> dict[UUID, str]:
+    """Return every staff member's display name, by id (coordinators only).
+
+    Used to show who made each attendance correction (US-015 AC4).
+
+    Raises:
+        LoginRequiredError: the session is missing or has ended.
+        UserServiceError: the User Service could not answer or refused.
+    """
+    status, body = _request("GET", "/staff", authorization)
+    if status == 401:
+        raise LoginRequiredError("Login required")
+    if status != 200:
+        raise UserServiceError(f"User service answered {status}")
+    return {UUID(row["id"]): row["display_name"] for row in body}
+
+
+def learner_names(authorization: str, learner_ids: set[UUID]) -> dict[UUID, str]:
+    """Return "First Family" for each learner id that still exists.
+
+    Active learners come from one list call; a learner no longer on the list
+    is looked up by id, so history still names them.
+
+    Raises:
+        LoginRequiredError: the session is missing or has ended.
+        UserServiceError: the User Service could not answer.
+    """
+    names: dict[UUID, str] = {}
+    if not learner_ids:
+        return names
+    status, body = _request("GET", "/learners", authorization)
+    if status == 401:
+        raise LoginRequiredError("Login required")
+    if status != 200:
+        raise UserServiceError(f"User service answered {status}")
+    for row in body:
+        names[UUID(row["id"])] = f"{row['first_name']} {row['family_name']}"
+    for learner_id in learner_ids - names.keys():
+        status, row = _request("GET", f"/learners/{learner_id}", authorization)
+        if status == 200:
+            names[learner_id] = f"{row['first_name']} {row['family_name']}"
+        elif status == 401:
+            raise LoginRequiredError("Login required")
+        elif status != 404:
+            raise UserServiceError(f"User service answered {status}")
+    return {
+        learner_id: names[learner_id]
+        for learner_id in learner_ids
+        if learner_id in names
+    }

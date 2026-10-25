@@ -3,6 +3,7 @@
 | Version | Date        | Type     | Who | Comment                                     |
 | ------- | ----------- | -------- | --- | ------------------------------------------- |
 | 1.0     | 23 Oct 2026 | Creation | Pei | Manual scripts for ST-01 and related NTs    |
+| 1.1     | 25 Oct 2026 | Update   | Pei | AT-4: past classes open the correction view |
 
 ## 1. Purpose
 
@@ -63,7 +64,7 @@ above. ST-02 (reopen today's class) is tested with US-014.
 | AT-1 | Enter `ana` and `CLASS`. Choose **Add and mark present** | "Ana Class is already on the class list and is now marked present". No second Ana Class row | | |
 | AT-2 | Leave both names empty. Choose **Add and mark present** | "First name is required" and "Family name is required" under the fields | | |
 | AT-3 | Open today's session in two browser windows. Tick Ben Class in the first window if he is not ticked. In the second window (not reloaded), tick Ben Class | "Already signed in" in Ben's row, next to the box. No second record: the count does not rise | | |
-| AT-4 | Open yesterday's session | "Only a coordinator can correct past attendance". Tick boxes cannot be changed. No "Learner not on the list" form | | |
+| AT-4 | Open yesterday's session | The coordinator's correction view opens: "You are correcting a past class. Every change is logged with your name and the time". No "Learner not on the list" form. Corrections and the teacher's view are tested in `corrections_system_tests.md` | | |
 | AT-5 | Open `http://localhost:8080/sessions/00000000-0000-0000-0000-000000000000/attendance` | "Class session not found" | | |
 | AT-6 | Choose **Log out**, then open today's session again | The login page opens instead. No names are shown | | |
 

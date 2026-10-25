@@ -38,6 +38,14 @@ from checkin import (
     sign_in,
     wrong_name_limits,
 )
+from corrections import (
+    CorrectionError,
+    NotCoordinatorError,
+    SessionNotPastError,
+    change_history,
+    correct_attendance,
+    corrected_learners,
+)
 from fastapi import Depends, FastAPI, Header, HTTPException
 from models import Base, class_sessions
 from pydantic import BaseModel
@@ -125,6 +133,8 @@ class AttendanceList(BaseModel):
     editable: bool
     present_count: int
     records: list[AttendanceOut]
+    # Learners whose attendance was corrected later (US-015), present or not.
+    corrected_learner_ids: list[UUID]
 
 
 class AttendanceChange(BaseModel):
@@ -204,6 +214,7 @@ def read_attendance(session_id: UUID, request: LoggedInStaff):
             "editable": session_date >= club_today(),
             "present_count": present_count(db, session_id),
             "records": present_records(db, session_id),
+            "corrected_learner_ids": corrected_learners(db, session_id),
         }
 
 
@@ -363,3 +374,97 @@ def learner_sign_in(
         # The class ended between the check above and now.
         raise HTTPException(status_code=404, detail=CHECKIN_CLOSED) from exc
     return {"message": SIGNED_IN, "session_date": checkin.session_date}
+
+
+# Correcting a past class (US-015). Coordinators only.
+# Author: Pei Wu, 25 Oct 2026.
+
+
+class CorrectionIn(BaseModel):
+    learner_id: UUID
+    present: bool
+    reason: str | None = None
+
+
+class CorrectionOut(BaseModel):
+    learner_id: UUID
+    learner_name: str | None
+    old_status: str
+    new_status: str
+    corrected_by: UUID
+    corrected_by_name: str | None
+    reason: str | None
+    created_at: datetime
+
+
+def require_coordinator(request: StaffRequest) -> None:
+    # Checked before any lookup, so a teacher learns nothing about the class.
+    if request.staff.role != "coordinator":
+        raise HTTPException(status_code=403, detail=str(NotCoordinatorError()))
+
+
+def correction_http_error(exc: CorrectionError) -> HTTPException:
+    if isinstance(exc, NotCoordinatorError):
+        return HTTPException(status_code=403, detail=str(exc))
+    if isinstance(exc, SessionNotPastError):
+        return HTTPException(status_code=409, detail=str(exc))
+    return HTTPException(status_code=400, detail=str(exc))
+
+
+@app.post("/sessions/{session_id}/corrections", response_model=AttendanceChange)
+def correct_learner(session_id: UUID, payload: CorrectionIn, request: LoggedInStaff):
+    """Mark a learner present or not present at a past class (AC1, AC2)."""
+    require_coordinator(request)
+    try:
+        if not user_client.learner_exists(request.authorization, payload.learner_id):
+            raise HTTPException(status_code=404, detail="Learner not found")
+    except USER_SERVICE_ERRORS as exc:
+        raise user_service_http_error(exc) from exc
+    try:
+        with SessionLocal.begin() as db:
+            record = correct_attendance(
+                db,
+                session_id=session_id,
+                learner_id=payload.learner_id,
+                present=payload.present,
+                corrected_by=request.staff.id,
+                corrector_role=request.staff.role,
+                today=club_today(),
+                reason=payload.reason,
+            )
+            return {
+                "attendance": record,
+                "present_count": present_count(db, session_id),
+            }
+    except CorrectionError as exc:
+        raise correction_http_error(exc) from exc
+    except AttendanceError as exc:
+        raise attendance_http_error(exc) from exc
+
+
+@app.get("/sessions/{session_id}/corrections", response_model=list[CorrectionOut])
+def read_corrections(session_id: UUID, request: LoggedInStaff):
+    """The change history of a class, oldest first, with names (AC4)."""
+    require_coordinator(request)
+    try:
+        with SessionLocal() as db:
+            history = change_history(db, session_id)
+    except AttendanceError as exc:
+        raise attendance_http_error(exc) from exc
+    if not history:
+        return []
+    try:
+        staff = user_client.staff_names(request.authorization)
+        learners = user_client.learner_names(
+            request.authorization, {entry["learner_id"] for entry in history}
+        )
+    except USER_SERVICE_ERRORS as exc:
+        raise user_service_http_error(exc) from exc
+    return [
+        {
+            **entry,
+            "learner_name": learners.get(entry["learner_id"]),
+            "corrected_by_name": staff.get(entry["corrected_by"]),
+        }
+        for entry in history
+    ]

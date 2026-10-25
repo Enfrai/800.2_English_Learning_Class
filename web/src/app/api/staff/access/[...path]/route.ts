@@ -4,7 +4,8 @@ import { NextRequest, NextResponse } from "next/server";
 const accessApi = process.env.ACCESS_API_URL || "http://nginx/api/access";
 const noStore = { "Cache-Control": "no-store" };
 const uuid = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
-const route = new RegExp(`^sessions/${uuid}/attendance(?:/(?:${uuid}|new-learner))?$`);
+// US-015 adds sessions/{id}/corrections.
+const route = new RegExp(`^sessions/${uuid}/(?:attendance(?:/(?:${uuid}|new-learner))?|corrections)$`);
 
 /** Bridge only the existing Attendance routes; backend /me still validates session/role. */
 async function forward(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
