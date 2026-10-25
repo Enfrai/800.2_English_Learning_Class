@@ -1,4 +1,4 @@
-"""Serve authenticated lesson management and Māori content review APIs.
+"""Serve lesson search/copy, authenticated management and Māori content review.
 
 Author: Sandhya Tiwari
 Date: 25 Oct 2026
@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from lesson_api import create_lesson_router
+from lesson_copy import create_copy_router
 from maori_review_api import create_maori_review_router
 from schema import prepare_schema
 from sqlalchemy import create_engine
@@ -27,6 +28,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Lesson Service", lifespan=lifespan)
 app.include_router(create_lesson_router(SessionLocal))
+app.include_router(create_copy_router(SessionLocal))
 app.include_router(create_maori_review_router(SessionLocal))
 
 
@@ -41,3 +43,4 @@ async def private_responses(request, call_next):
 @app.get("/health")
 def health():
     return {"status": "ok", "instance": INSTANCE}
+

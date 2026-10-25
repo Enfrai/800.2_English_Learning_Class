@@ -1,7 +1,8 @@
-"""Run test suites, retain logs/reports, and return a failing exit code on errors.
+"""Run test suites including lesson search/copy and retain logs and reports.
 
 Author: Shuohui Liu
 Date: 19 Oct 2026
+Updated: Sandhya Tiwari, 26 Oct 2026
 """
 
 import json
@@ -123,6 +124,8 @@ def web() -> list[dict]:
             "tests/lesson-session.test.mjs",
         ],
         "staff-ui": ["node", "tests/run-staff-ui.mjs"],
+        "lessons-unit": ["npm", "run", "test:lessons-unit"],
+        "lessons-ui": ["node", "tests/run-lessons-ui.mjs"],
         "public-enquiry": ["node", "tests/public-enquiry-form.mjs"],
         "coordinator-enquiries": ["node", "tests/coordinator-enquiries.mjs"],
         "csv-ui": ["node", "tests/run-csv-ui.mjs"],
@@ -182,3 +185,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

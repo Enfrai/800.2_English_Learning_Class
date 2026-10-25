@@ -57,3 +57,13 @@ SQL
 ```
 
 US-006 now implements authenticated lesson CRUD, topic tags, attachment upload/download/removal and sharing metadata. Review enforcement remains in US-008. Uploaded files are stored in the shared `lesson_files` volume, outside the code submission.
+
+
+## US-007 lesson copies
+
+No schema migration is needed. `lessons.source_lesson_id` records the immediate
+source; a new lesson gets the current staff author, chosen date, independent
+metadata and tag associations. Each copied material gets a new row and storage
+key, with `share_with_learners=false`. Māori copies retain the flag but start
+with `review_status=pending` and empty review fields. Existing source tombstones
+keep the lineage reference valid when the source is deleted.

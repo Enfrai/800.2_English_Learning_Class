@@ -1,4 +1,4 @@
-# US-006 — Lesson library
+# US-006 / US-007 — Lesson library
 
 Staff can create lessons with a title, date and one or more topic tags,
 attach PDF/DOCX/JPG/JPEG/PNG materials, view/download other volunteers'
@@ -50,7 +50,8 @@ The library, new lesson, detail and edit pages use the shared Ako UI kit.
 - A rejected file leaves form fields intact. If metadata was already saved
   before an upload failed, the UI says so. Retrying updates that same lesson
   rather than creating a duplicate.
-- Search/copy are US-007; linking a lesson to a class session is US-014.
+- US-007 adds title/topic search and independent copies from unsaved drafts.
+  Linking a lesson to a class session remains US-014.
 
 ## API
 
@@ -61,7 +62,8 @@ All file downloads remain authenticated.
 | Method | Service path | Purpose |
 | --- | --- | --- |
 | GET | `/tags` | Existing topic suggestions |
-| GET / POST | `/lessons` | List / create |
+| GET / POST | `/lessons` | Search/list (`q`, `tag`) / create |
+| GET / POST | `/lessons/{id}/copy` | Open unsaved copy draft / save new independent lesson |
 | GET / PUT / DELETE | `/lessons/{id}` | Read / update / soft-delete |
 | POST | `/lessons/{id}/materials` | Multipart file upload |
 | GET | `/materials/{id}/download` | Download with original name |
@@ -119,3 +121,13 @@ to use that browser instead. They check validation, retained form state,
 upload retry, original-name download, sharing, ownership controls, editing,
 confirmation/cancel, deletion and mobile layout. They do not replace the
 real PostgreSQL and full system tests.
+
+## US-007 verification
+
+Search is case-insensitive over titles/tags only. Copies retain tags, notes and
+files, clear the date, and save under the current staff member. Copied materials
+use independent storage, default to staff-only sharing, and require a new Māori
+review when applicable. The source remains unchanged.
+
+See [US-007 tests and operation](../../../docs/system_test/lesson_search_copy_system_tests.md)
+for acceptance coverage, local/Chrome tests, and isolated Docker test commands.
