@@ -134,10 +134,10 @@ A closed or expired code cannot record attendance. Rate limiting for repeated in
 | Column | PostgreSQL Type | Constraints | Description |
 |---|---|---|---|
 | `id` | UUID | PK | Row identifier |
-| `key_hash` | VARCHAR(64) | NOT NULL | HMAC-SHA256 of the device's address, keyed with `INTERNAL_API_KEY`; the address itself is never stored |
+| `key_hash` | VARCHAR(64) | NOT NULL | HMAC-SHA256, keyed with `INTERNAL_API_KEY`, of the phone's random sign-in id or of its address; neither is stored |
 | `failed_at` | TIMESTAMPTZ | NOT NULL | When a name that matched no learner was typed |
 
-**Index:** (`key_hash`, `failed_at`). Ten wrong names from one device within ten minutes block it for ten minutes. Rows older than one hour are deleted on each new wrong name. A name shared by several learners is not counted. Self sign-ins are recorded in `attendance_records` with `recorded_by` set to the teacher who opened check-in (team decision, 25 Oct 2026), and store no location or device detail.
+**Index:** (`key_hash`, `failed_at`). The sign-in page keeps a random id per phone, because phones on the library Wi-Fi share one address. Ten wrong names from one phone within ten minutes block that phone for ten minutes; fifty from one address block the address, so a changing id does not help. Without a valid id, ten from the address block it. Rows older than one hour are deleted on each new wrong name. A name shared by several learners is not counted. Self sign-ins are recorded in `attendance_records` with `recorded_by` set to the teacher who opened check-in (team decision, 25 Oct 2026), and store no location or device detail.
 
 ## 4. Lesson Microservice (`lesson_db`)
 

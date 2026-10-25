@@ -36,8 +36,11 @@ NAME_NOT_FOUND = "We could not find that name. Please ask the teacher"
 TOO_MANY_TRIES = "Too many tries. Please ask the teacher"
 
 # NFR-11: more than 10 wrong names from one device in 10 minutes blocks it
-# for 10 minutes (Test Plan UT-67).
+# for 10 minutes (Test Plan UT-67). Phones on the library Wi-Fi share one
+# address, so a device is told apart by a random id from the sign-in page;
+# the address has a much higher limit, so changing the id does not help.
 MAX_WRONG_NAMES = 10
+MAX_WRONG_NAMES_PER_ADDRESS = 50
 WRONG_NAME_PERIOD = timedelta(minutes=10)
 BLOCK_TIME = timedelta(minutes=10)
 KEEP_FAILURES = timedelta(hours=1)
@@ -160,16 +163,37 @@ def sign_in(
     )
 
 
-def device_key(client_address: str, secret: str) -> str:
-    """Return a keyed hash of the device's address; the address is not kept."""
-    return hmac.new(secret.encode(), client_address.encode(), "sha256").hexdigest()
+def device_key(value: str, secret: str) -> str:
+    """Return a keyed hash of an address or device id; the value is not kept."""
+    return hmac.new(secret.encode(), value.encode(), "sha256").hexdigest()
 
 
-def blocked_until(db: Session, key: str, now: datetime) -> datetime | None:
-    """Return when the device may try again, or None if it is not blocked.
+def wrong_name_limits(
+    client_address: str | None, device_id: str | None, secret: str
+) -> list[tuple[str, int]]:
+    """Return the (key, limit) pairs a sign-in attempt is counted against.
 
-    A device is blocked for BLOCK_TIME after MAX_WRONG_NAMES wrong names
-    within WRONG_NAME_PERIOD.
+    A valid device id from the sign-in page gets its own limit of 10, and
+    the address gets 50. Without a valid id the address gets the limit of 10.
+    """
+    address_key = device_key(f"address:{client_address or 'unknown'}", secret)
+    try:
+        device = UUID(device_id or "")
+    except ValueError:
+        return [(address_key, MAX_WRONG_NAMES)]
+    return [
+        (device_key(f"device:{device}", secret), MAX_WRONG_NAMES),
+        (address_key, MAX_WRONG_NAMES_PER_ADDRESS),
+    ]
+
+
+def blocked_until(
+    db: Session, key: str, now: datetime, limit: int = MAX_WRONG_NAMES
+) -> datetime | None:
+    """Return when the key may try again, or None if it is not blocked.
+
+    A key is blocked for BLOCK_TIME after ``limit`` wrong names within
+    WRONG_NAME_PERIOD.
     """
     times = sorted(
         db.execute(
@@ -180,8 +204,8 @@ def blocked_until(db: Session, key: str, now: datetime) -> datetime | None:
         ).scalars()
     )
     until = None
-    for first in range(len(times) - MAX_WRONG_NAMES + 1):
-        last = times[first + MAX_WRONG_NAMES - 1]
+    for first in range(len(times) - limit + 1):
+        last = times[first + limit - 1]
         if last - times[first] <= WRONG_NAME_PERIOD and last + BLOCK_TIME > now:
             until = max(until or last + BLOCK_TIME, last + BLOCK_TIME)
     return until

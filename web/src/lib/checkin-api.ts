@@ -25,17 +25,49 @@ export type SignInResult =
   | { kind: "too-many"; message: string }
   | { kind: "failed" };
 
+const DEVICE_ID_KEY = "ako.signin-device";
+
+function randomUuid(): string {
+  // crypto.randomUUID needs HTTPS; getRandomValues works on plain HTTP too.
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+/**
+ * A random id for this phone, so wrong names are counted per phone rather
+ * than per Wi-Fi address (NFR-11). It is not built from device details.
+ */
+function deviceId(): string {
+  try {
+    const saved = window.localStorage.getItem(DEVICE_ID_KEY);
+    if (saved) return saved;
+    const created = randomUuid();
+    window.localStorage.setItem(DEVICE_ID_KEY, created);
+    return created;
+  } catch {
+    // Storage blocked: the server falls back to the stricter address limit.
+    return "";
+  }
+}
+
 function checkinUrl(token: string): string {
   return `/api/access/checkin/${encodeURIComponent(token)}`;
 }
 
-async function send(url: string, init?: RequestInit): Promise<Response | null> {
+async function send(
+  url: string,
+  init?: RequestInit,
+  headers: Record<string, string> = {},
+): Promise<Response | null> {
   try {
     return await fetch(url, {
       ...init,
       credentials: "omit",
       cache: "no-store",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...headers },
     });
   } catch {
     return null;
@@ -65,10 +97,15 @@ export async function signIn(
   firstName: string,
   familyName: string,
 ): Promise<SignInResult> {
-  const response = await send(`${checkinUrl(token)}/sign-in`, {
-    method: "POST",
-    body: JSON.stringify({ first_name: firstName, family_name: familyName }),
-  });
+  const id = deviceId();
+  const response = await send(
+    `${checkinUrl(token)}/sign-in`,
+    {
+      method: "POST",
+      body: JSON.stringify({ first_name: firstName, family_name: familyName }),
+    },
+    id ? { "X-Device-Id": id } : {},
+  );
   if (!response) return { kind: "failed" };
   if (response.status === 201) {
     const body = (await response.json()) as { session_date: string };

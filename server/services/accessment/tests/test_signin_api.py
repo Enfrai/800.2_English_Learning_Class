@@ -79,11 +79,21 @@ class SignInApi:
         )
         return token, session_id
 
-    def sign_in(self, token: str, first: str, family: str, device: str) -> Any:
+    def sign_in(
+        self,
+        token: str,
+        first: str,
+        family: str,
+        device: str,
+        phone_id: str | None = None,
+    ) -> Any:
+        headers = {"X-Real-IP": device}
+        if phone_id:
+            headers["X-Device-Id"] = phone_id
         return self.client.post(
             f"/checkin/{token}/sign-in",
             json={"first_name": first, "family_name": family},
-            headers={"X-Real-IP": device},
+            headers=headers,
         )
 
     def count(self, table: Any) -> int:
@@ -242,3 +252,33 @@ def test_eleventh_try_is_blocked_even_with_a_real_name(
     assert blocked.json() == {"detail": "Too many tries. Please ask the teacher"}
     assert other_device.status_code == 201
     assert api.users.calls == 11
+
+
+def test_one_phone_is_blocked_but_classmates_on_the_same_wifi_are_not(
+    api: SignInApi, aroha: str
+) -> None:
+    token, _ = api.open_check_in()
+    wifi, phone, classmate = "198.51.100.20", str(uuid4()), str(uuid4())
+    for n in range(10):
+        api.sign_in(token, f"Guess{n}", "X", wifi, phone)
+
+    blocked = api.sign_in(token, "Aroha", "Ngata", wifi, phone)
+    allowed = api.sign_in(token, "Aroha", "Ngata", wifi, classmate)
+
+    assert blocked.status_code == 429
+    assert allowed.status_code == 201
+
+
+def test_changing_the_phone_id_every_time_still_hits_the_address_limit(
+    api: SignInApi, aroha: str
+) -> None:
+    token, _ = api.open_check_in()
+    wifi = "198.51.100.21"
+    for n in range(50):
+        assert (
+            api.sign_in(token, f"Guess{n}", "X", wifi, str(uuid4())).status_code == 404
+        )
+
+    response = api.sign_in(token, "Aroha", "Ngata", wifi, str(uuid4()))
+
+    assert response.status_code == 429

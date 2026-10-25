@@ -33,10 +33,10 @@ from checkin import (
     CheckinUnavailableError,
     OpenCheckin,
     blocked_until,
-    device_key,
     find_open_checkin,
     record_wrong_name,
     sign_in,
+    wrong_name_limits,
 )
 from fastapi import Depends, FastAPI, Header, HTTPException
 from models import Base, class_sessions
@@ -329,14 +329,16 @@ def learner_sign_in(
     token: str,
     payload: SignInIn,
     x_real_ip: Annotated[str | None, Header()] = None,
+    x_device_id: Annotated[str | None, Header()] = None,
 ):
     """Sign a learner in by the name they type (AC2 to AC5, NFR-11)."""
     now = datetime.now(UTC)
     checkin = open_checkin(token, now)
-    # Nginx sets X-Real-IP; only a keyed hash of it is stored, briefly.
-    key = device_key(x_real_ip or "unknown", user_client.INTERNAL_API_KEY)
+    # Nginx sets X-Real-IP; the sign-in page sends a random X-Device-Id.
+    # Only keyed hashes of them are stored, briefly.
+    limits = wrong_name_limits(x_real_ip, x_device_id, user_client.INTERNAL_API_KEY)
     with SessionLocal() as db:
-        if blocked_until(db, key, now) is not None:
+        if any(blocked_until(db, key, now, limit) for key, limit in limits):
             raise HTTPException(status_code=429, detail=TOO_MANY_TRIES)
     try:
         learner = user_client.find_learner_for_sign_in(
@@ -344,7 +346,8 @@ def learner_sign_in(
         )
     except user_client.SignInNameNotFoundError as exc:
         with SessionLocal.begin() as db:
-            record_wrong_name(db, key, now)
+            for key, _ in limits:
+                record_wrong_name(db, key, now)
         raise HTTPException(status_code=404, detail=NAME_NOT_FOUND) from exc
     except user_client.AmbiguousSignInNameError as exc:
         # A real name shared by several learners: not a guess, so not counted.

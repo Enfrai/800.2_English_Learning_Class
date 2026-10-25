@@ -29,6 +29,7 @@ from checkin import (
     hash_token,
     record_wrong_name,
     sign_in,
+    wrong_name_limits,
 )
 from models import attendance_records, checkin_windows, signin_failures
 from sqlalchemy import select
@@ -272,3 +273,49 @@ def test_wrong_names_older_than_an_hour_are_deleted(db: Session) -> None:
 
     times = list(db.execute(select(signin_failures.c.failed_at)).scalars())
     assert times == [START + timedelta(hours=1, minutes=1)]
+
+
+# Counting per phone, not per Wi-Fi address (NFR-11)
+
+DEVICE = "3f2c8f6e-1d2a-4c1e-9a6b-6f1d2e3c4b5a"
+
+
+def test_a_phone_with_an_id_has_its_own_limit_and_the_address_a_higher_one() -> None:
+    limits = wrong_name_limits("203.0.113.20", DEVICE, "secret")
+
+    assert [limit for _, limit in limits] == [10, 50]
+    keys = [key for key, _ in limits]
+    assert keys[0] != keys[1]
+    assert DEVICE not in keys[0] and "203.0.113.20" not in keys[1]
+
+
+@pytest.mark.parametrize("device_id", [None, "", "not-a-uuid", "x" * 300])
+def test_without_a_valid_phone_id_the_address_gets_the_strict_limit(
+    device_id: str | None,
+) -> None:
+    limits = wrong_name_limits("203.0.113.21", device_id, "secret")
+
+    assert [limit for _, limit in limits] == [10]
+    assert limits[0][0] == wrong_name_limits("203.0.113.21", None, "secret")[0][0]
+
+
+def test_phones_on_one_address_count_separately(db: Session) -> None:
+    other = "8b1e2d3c-4f5a-4b6c-8d7e-9f0a1b2c3d4e"
+    phone_key, _ = wrong_name_limits("203.0.113.22", DEVICE, "secret")[0]
+    other_key, _ = wrong_name_limits("203.0.113.22", other, "secret")[0]
+    for n in range(10):
+        record_wrong_name(db, phone_key, START + timedelta(seconds=n))
+
+    assert blocked_until(db, phone_key, START + timedelta(seconds=20)) is not None
+    assert blocked_until(db, other_key, START + timedelta(seconds=20)) is None
+
+
+def test_address_is_blocked_after_fifty_wrong_names(db: Session) -> None:
+    address_key, limit = wrong_name_limits("203.0.113.23", DEVICE, "secret")[1]
+    for n in range(49):
+        record_wrong_name(db, address_key, START + timedelta(seconds=n))
+    assert blocked_until(db, address_key, START + timedelta(minutes=1), limit) is None
+
+    record_wrong_name(db, address_key, START + timedelta(seconds=49))
+
+    assert blocked_until(db, address_key, START + timedelta(minutes=1), limit)
