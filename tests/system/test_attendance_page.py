@@ -9,10 +9,13 @@ session is created by the ``class_session`` fixture instead. Teacher
 accounts come with US-002, so the demo coordinator stands in for the
 teacher; both roles may take attendance.
 
+Past classes (US-015) are tested in test_corrections_page.py.
+
 The manual version is docs/system_test/attendance_system_tests.md.
 
 Author: Pei Wu
 Date: 23 Oct 2026
+Updated: Pei Wu, 25 Oct 2026 (past-class test moved to test_corrections_page.py)
 """
 
 import time
@@ -30,7 +33,6 @@ ClassSession = Callable[..., str]
 
 LIST_LOAD_SECONDS = 3  # US-004 AC5, NT-07
 AXE_URL = "https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js"
-PAST_ATTENDANCE_LOCKED = "Only a coordinator can correct past attendance"
 
 
 def full_name(learner: dict[str, Any]) -> str:
@@ -208,20 +210,7 @@ def test_ac5_nt07_list_of_50_learners_shows_within_3_seconds(
     assert seconds <= LIST_LOAD_SECONDS, f"List took {seconds:.2f}s"
 
 
-# Sessions that cannot be changed (US-015 AC3) and access
-
-
-def test_past_session_is_read_only_for_teachers(
-    logged_in_page: Page, add_learner: AddLearner, class_session: ClassSession
-) -> None:
-    learner = full_name(add_learner("Past", unique("Session")))
-    attendance = AttendancePage(logged_in_page)
-
-    attendance.open(class_session(days_ago=1))
-
-    expect(attendance.past_warning).to_have_text(PAST_ATTENDANCE_LOCKED)
-    expect(attendance.checkbox(learner)).to_be_disabled()
-    expect(attendance.add_and_mark_button).to_have_count(0)
+# Access
 
 
 def test_unknown_session_says_not_found(logged_in_page: Page) -> None:

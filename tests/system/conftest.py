@@ -12,12 +12,14 @@ The tests drive a real browser against a running Ako system started with
 
 Author: Pei Wu
 Date: 23 Oct 2026
+Updated: Pei Wu, 25 Oct 2026 (teacher login and in-class ticks for US-015)
 """
 
 import os
 import time
 from collections.abc import Callable, Iterator
 from typing import Any
+from uuid import UUID, uuid4
 
 import pytest
 from playwright.sync_api import Browser, Page, expect, sync_playwright
@@ -76,6 +78,36 @@ def logged_in_page(page: Page, session_id: str) -> Page:
 
 
 @pytest.fixture
+def teacher_page(browser: Browser, page: Page, session_id: str) -> Iterator[Page]:
+    """A second browser window where a new teacher account is logged in.
+
+    The demo coordinator creates the account through US-002, so each test
+    has its own teacher.
+    """
+    username = f"teacher_{uuid4().hex[:10]}"
+    password = f"Temp-{uuid4().hex[:8]}"
+    response = page.request.post(
+        "/api/user/staff",
+        headers=api_headers(session_id),
+        data={
+            "display_name": "Test Teacher",
+            "username": username,
+            "temporary_password": password,
+        },
+    )
+    assert response.status == 201, response.status
+    context = browser.new_context(
+        base_url=BASE_URL, viewport={"width": 1280, "height": 900}
+    )
+    login = context.request.post(
+        "/api/user/login", data={"username": username, "password": password}
+    )
+    assert login.ok, f"Teacher login failed with status {login.status}"
+    yield context.new_page()
+    context.close()
+
+
+@pytest.fixture
 def learners_page(logged_in_page: Page) -> LearnersPage:
     """The Learners page, opened by a logged-in coordinator."""
     learners = LearnersPage(logged_in_page)
@@ -124,6 +156,26 @@ def class_session() -> Callable[..., str]:
         ).splitlines()[0]
 
     return create
+
+
+@pytest.fixture
+def ticked_in_class() -> Callable[[str, str], None]:
+    """Record a learner as present at a class, as a teacher's tick would.
+
+    Past classes cannot be ticked through the page, so the record is
+    inserted into the Accessment database.
+    """
+
+    def tick(session_id: str, learner_id: str) -> None:
+        # UUID() checks both ids before they go into the SQL text.
+        access_sql(
+            "INSERT INTO attendance_records "
+            "(id, session_id, learner_id, status, recorded_by) VALUES "
+            f"(gen_random_uuid(), '{UUID(session_id)}', '{UUID(learner_id)}', "
+            "'present', gen_random_uuid())"
+        )
+
+    return tick
 
 
 @pytest.fixture
