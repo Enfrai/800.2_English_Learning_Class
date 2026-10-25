@@ -263,3 +263,54 @@ def test_refused_key_is_reported_as_unavailable_not_as_unknown_name(
 
     with pytest.raises(user_client.UserServiceError):
         user_client.find_learner_for_sign_in("Aroha", "Ngata")
+
+
+# Names for the correction history (US-015)
+
+
+def test_staff_names_are_read_by_id(user_service: FakeUserService) -> None:
+    coordinator_id = uuid4()
+    user_service.answers[("GET", "/staff")] = (
+        200,
+        [{"id": str(coordinator_id), "display_name": "Cy Coordinator"}],
+    )
+
+    assert user_client.staff_names(AUTHORIZATION) == {coordinator_id: "Cy Coordinator"}
+    assert user_service.requests[0]["authorization"] == AUTHORIZATION
+
+
+@pytest.mark.parametrize(
+    ("status", "error"),
+    [(401, user_client.LoginRequiredError), (403, user_client.UserServiceError)],
+)
+def test_staff_names_report_login_and_refusal(
+    user_service: FakeUserService, status: int, error: type
+) -> None:
+    user_service.answers[("GET", "/staff")] = (status, {"detail": "x"})
+
+    with pytest.raises(error):
+        user_client.staff_names(AUTHORIZATION)
+
+
+def test_learner_names_include_learners_no_longer_on_the_list(
+    user_service: FakeUserService,
+) -> None:
+    listed, former, deleted = uuid4(), uuid4(), uuid4()
+    user_service.answers[("GET", "/learners")] = (
+        200,
+        [{"id": str(listed), "first_name": "Aroha", "family_name": "Ngata"}],
+    )
+    user_service.answers[("GET", f"/learners/{former}")] = (
+        200,
+        {"id": str(former), "first_name": "Ana", "family_name": "Silva"},
+    )
+    user_service.answers[("GET", f"/learners/{deleted}")] = (404, {"detail": "x"})
+
+    names = user_client.learner_names(AUTHORIZATION, {listed, former, deleted})
+
+    assert names == {listed: "Aroha Ngata", former: "Ana Silva"}
+
+
+def test_learner_names_for_no_ids_make_no_call(user_service: FakeUserService) -> None:
+    assert user_client.learner_names(AUTHORIZATION, set()) == {}
+    assert user_service.requests == []
