@@ -1,20 +1,21 @@
-/* Scoped Material-theme layout: do not change existing login or session styles. */
+/* Layout only: controls and cards come from the shared Ako UI kit.
+ * Author: Shuohui Liu
+ * Date: 19 Oct 2026
+ */
 .staff { min-width: 0; width: 100%; }
-.staff h2 { font-size: 1.2rem; font-weight: 500; }
-.section { margin-top: 28px; }
+.section { margin-top: var(--space-5); }
 .section form { max-width: 480px; }
-.listHeader { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.listHeader > md-filled-button { width: auto; }
-.list { list-style: none; padding: 0; display: grid; gap: 16px; }
-.card { border: 1px solid var(--md-sys-color-outline); border-radius: 16px; padding: 20px; display: grid; gap: 12px; }
+.listHeader { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-4); margin-bottom: var(--space-4); }
+.listHeader h2 { margin: 0; }
+.list { list-style: none; padding: 0; display: grid; gap: var(--space-4); }
+.card { display: grid; gap: var(--space-3); min-width: 0; }
 .details { min-width: 0; overflow-wrap: anywhere; }
-.details h3 { margin: 0; font-size: 1.1rem; }
-.details p { margin: 8px 0; font-size: 1rem; }
-.actions { display: flex; flex-wrap: wrap; gap: 12px; }
-.actions > md-filled-button { width: auto; flex: 1 1 140px; }
-.confirmation { padding: 20px; margin-top: 28px; border-radius: 16px; background: var(--md-sys-color-primary-container); }
-.confirmation p { line-height: 1.5; overflow-wrap: anywhere; }
+.details h3 { margin: 0; font-size: var(--fs-body); }
+.details p { margin: var(--space-2) 0; font-size: var(--fs-table); }
+.actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.confirmation { margin-top: var(--space-5); }
+.confirmation h2 { margin-top: 0; }
+.confirmation p { overflow-wrap: anywhere; }
 @media (max-width: 480px) {
   .listHeader { align-items: stretch; flex-direction: column; }
-  .card, .confirmation { padding: 16px; }
 }
