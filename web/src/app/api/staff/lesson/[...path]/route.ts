@@ -4,7 +4,8 @@ import { NextRequest, NextResponse } from "next/server";
 const lessonApi = process.env.LESSON_API_URL || "http://nginx/api/lesson";
 const noStore = { "Cache-Control": "no-store" };
 const uuid = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
-const route = new RegExp(`^(?:tags|lessons(?:/${uuid}(?:/materials)?)?|materials/${uuid}(?:/download)?)$`);
+// US-008 adds /lessons/{id}/review and /lessons/{id}/maori-content.
+const route = new RegExp(`^(?:tags|lessons(?:/${uuid}(?:/materials|/review|/maori-content)?)?|materials/${uuid}(?:/download)?)$`);
 
 /** Bridge only the existing Lesson routes; backend /me still validates session/role. */
 async function forward(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
