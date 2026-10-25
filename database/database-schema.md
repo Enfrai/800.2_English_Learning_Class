@@ -35,4 +35,25 @@ docker compose exec postgres-lesson psql -U lesson_app -d lessondb -c \
   "ALTER TABLE lessons ADD COLUMN IF NOT EXISTS reviewer_name VARCHAR(150), ADD COLUMN IF NOT EXISTS review_date DATE"
 ```
 
+## US-015 change to an existing accessment database
+
+US-015 makes the attendance change log append-only: a trigger refuses any `UPDATE`, `DELETE` or `TRUNCATE` on `attendance_audits` (Test Plan UT-35). A new database gets it automatically. An accessment database created before US-015 needs this once; running it again does no harm:
+
+```sh
+docker compose exec -T postgres-access psql -U access_app -d accessdb <<'SQL'
+CREATE OR REPLACE FUNCTION refuse_attendance_audit_change() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+    RAISE EXCEPTION 'attendance_audits is append-only';
+END
+$$;
+CREATE OR REPLACE TRIGGER attendance_audits_append_only
+BEFORE UPDATE OR DELETE ON attendance_audits
+FOR EACH ROW EXECUTE FUNCTION refuse_attendance_audit_change();
+CREATE OR REPLACE TRIGGER attendance_audits_no_truncate
+BEFORE TRUNCATE ON attendance_audits
+FOR EACH STATEMENT EXECUTE FUNCTION refuse_attendance_audit_change();
+SQL
+```
+
 The models define persistence only. QR check-in, lesson review enforcement and the rest of the learner and attendance APIs are not yet implemented.
