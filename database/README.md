@@ -287,3 +287,12 @@ Similarly, the requirements do not explicitly mandate a Lesson-to-ClassSession r
 Use separate PostgreSQL databases and Alembic migration histories for the three FastAPI services. Keep SQLAlchemy models inside their owning services. Route APIs through the existing gateway, authenticate users centrally, and enforce resource-level permissions in the receiving service. Deploy with Docker Compose for a reproducible local setup. Prefer building and testing the MVP tables before implementing QR check-in or public enquiries.
 
 **Source:** *Requirements Specification – Ako*, 13 October 2026, especially Sections 4–8. Detailed acceptance criteria are stated to be in the separate `MSE800_User_Stories_Oct19.docx` and were not available in this design pass.
+
+## US-013 learner access
+
+The Accessment database adds `session_lesson_links` (one lesson UUID per session)
+and `learner_material_grants` (hashed token, session UUID, issued/expiry times).
+Grants last 24 hours, contain no learner identity, and are created atomically with
+successful QR attendance. Expired rows are cleaned when issuing a new grant.
+See [schema notes](database-schema.md) and
+[US-013 tests and operation](../docs/system_test/materials_system_tests.md).

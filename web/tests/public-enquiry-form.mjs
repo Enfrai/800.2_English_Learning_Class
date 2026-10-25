@@ -29,7 +29,7 @@ try {
   let ready = false;
   for(let i=0;i<90;i++) { try { if((await fetch(base)).ok) {ready=true;break;} } catch {} await new Promise(r=>setTimeout(r,500)); }
   assert.ok(ready, logs);
-  browser = await chromium.launch({ channel:'chrome', headless:true });
+  browser = await chromium.launch({ channel: process.env.BROWSER_CHANNEL || "chrome", headless:true });
   async function run(name, test) {
     const page = await browser.newPage({viewport:{width:360,height:800}});
     let calls = [];

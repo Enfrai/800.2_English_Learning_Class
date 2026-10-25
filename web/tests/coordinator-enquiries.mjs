@@ -40,7 +40,7 @@ export default function Page(){
   let ready = false;
   for(let i=0;i<90;i++) { try { if((await fetch(base)).ok) {ready=true;break;} } catch {} await new Promise(r=>setTimeout(r,500)); }
   assert.ok(ready, logs);
-  browser = await chromium.launch({ channel:'chrome', headless:true });
+  browser = await chromium.launch({ channel: process.env.BROWSER_CHANNEL || "chrome", headless:true });
   const record = (i=1) => ({id:String(i),name:`Visitor ${i}`,contact:`visitor${i}@example.test`,message:'Hello',created_at:'2026-10-24T01:00:00Z'});
   async function run(name, test, token='coordinator') {
     const page = await browser.newPage({viewport:{width:360,height:800}});

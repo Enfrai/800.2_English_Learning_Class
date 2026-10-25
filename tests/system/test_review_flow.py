@@ -8,8 +8,9 @@ part.
 These API checks exercise the authenticated US-006 endpoints and verify
 that uploaded materials reset the Māori review through the real gateway.
 
-Author: Sandhya Tiwari
+Author: Pei Wu
 Date: 25 Oct 2026
+Updated: Sandhya Tiwari, 26 Oct 2026 (US-006 lesson endpoints and the file step)
 """
 
 from collections.abc import Callable, Iterator
