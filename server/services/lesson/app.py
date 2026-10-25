@@ -10,6 +10,7 @@ from datetime import date
 from uuid import UUID
 
 from fastapi import FastAPI
+from maori_review_api import create_maori_review_router
 from models import Base, lessons
 from pydantic import BaseModel, Field
 from sqlalchemy import create_engine
@@ -27,6 +28,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Lesson Service", lifespan=lifespan)
+# US-008: flag Māori content and record its review.
+app.include_router(create_maori_review_router(SessionLocal))
 
 
 class CreateLessonRequest(BaseModel):

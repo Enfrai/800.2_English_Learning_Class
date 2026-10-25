@@ -8,6 +8,7 @@ that testers follow and sign off are in `docs/system_test/`.
 | --- | --- |
 | `test_learners_page.py` | ST-11, and the Learners page parts of NT-05, NT-06, NT-07, NT-08, NT-10 |
 | `test_attendance_page.py` | ST-01, US-004 AC1 to AC5, and the attendance page parts of NT-01, NT-06, NT-07, NT-10 |
+| `test_review_flow.py` | ST-09 and the review part of NT-10 (US-008), through the API until the lesson pages (US-006) are merged; the file step is skipped until then |
 
 ## Running the tests
 

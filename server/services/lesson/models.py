@@ -25,7 +25,7 @@ def value(name, typ, nullable=False, unique=False):
 
 
 lessons = Table("lessons", Base.metadata,
-    id_col(), value("title",String(255)), value("description",Text,nullable=True), value("lesson_date",Date), ref("created_by"), ref("source_lesson_id","lessons.id",nullable=True), Column("has_maori_content",Boolean,nullable=False,server_default=text("false")), Column("review_status",String(20),nullable=False,server_default=text("'not_required'")), ref("reviewed_by",nullable=True), value("reviewed_at",DateTime(timezone=True),nullable=True), *timestamps(), value("deleted_at",DateTime(timezone=True),nullable=True), CheckConstraint("review_status IN ('not_required','pending','reviewed','rejected')"), CheckConstraint("has_maori_content OR review_status = 'not_required'"), Index("ix_lessons_date","lesson_date"), Index("ix_lessons_creator","created_by")
+    id_col(), value("title",String(255)), value("description",Text,nullable=True), value("lesson_date",Date), ref("created_by"), ref("source_lesson_id","lessons.id",nullable=True), Column("has_maori_content",Boolean,nullable=False,server_default=text("false")), Column("review_status",String(20),nullable=False,server_default=text("'not_required'")), ref("reviewed_by",nullable=True), value("reviewed_at",DateTime(timezone=True),nullable=True), value("reviewer_name",String(150),nullable=True), value("review_date",Date,nullable=True), *timestamps(), value("deleted_at",DateTime(timezone=True),nullable=True), CheckConstraint("review_status IN ('not_required','pending','reviewed','rejected')"), CheckConstraint("has_maori_content OR review_status = 'not_required'"), Index("ix_lessons_date","lesson_date"), Index("ix_lessons_creator","created_by")
 )
 
 tags = Table("tags", Base.metadata,
