@@ -147,7 +147,7 @@ export default function SessionShell({
 
   if (!session) return <main className="page"><p role={error ? "alert" : "status"}>{error || "Checking your session…"}</p></main>;
   const home = homeFor(session.role);
-  const denied = (path.startsWith("/account-management") || path.startsWith("/coordinator")) && session.role !== "coordinator"
+  const denied = (path.startsWith("/account-management") || path.startsWith("/coordinator") || path.startsWith("/enquiries")) && session.role !== "coordinator"
     || path.startsWith("/teacher") && session.role !== "teacher";
   if (layout === "kit") {
     // A section stays current on its sub-pages, e.g. a session's attendance.
@@ -161,6 +161,7 @@ export default function SessionShell({
           <Link href="/sessions" aria-current={current("/sessions")}>Class sessions</Link>
           <Link href="/learners" aria-current={current("/learners")}>Learners</Link>
           <Link href="/lessons" aria-current={current("/lessons")}>Lessons</Link>
+          {session.role === "coordinator" && <Link href="/enquiries" aria-current={path === "/enquiries" ? "page" : undefined}>Enquiries</Link>}
           {session.role === "coordinator" && <Link href="/account-management">Account management</Link>}
         </nav>
         <div className="who">
@@ -182,6 +183,7 @@ export default function SessionShell({
       <Link href="/learners">Learners</Link>
       <Link href="/sessions">Class sessions</Link>
       <Link href="/lessons">Lessons</Link>
+      {session.role === "coordinator" && <Link href="/enquiries" aria-current={path === "/enquiries" ? "page" : undefined}>Enquiries</Link>}
       {session.role === "coordinator" && <Link href="/account-management" aria-current={path === "/account-management" ? "page" : undefined}>Account management</Link>}
       <LogoutButton disabled={leaving} onClick={() => void logoutAction.current()} />
     </nav>
