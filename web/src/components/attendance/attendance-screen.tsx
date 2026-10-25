@@ -19,6 +19,7 @@ import {
   unmarkPresent,
 } from "@/lib/attendance-api";
 import { type Learner, LearnerFieldError, listLearners } from "@/lib/learners-api";
+import { formatSessionDate } from "@/lib/dates";
 
 type LoadState = "loading" | "ready" | "login-required" | "not-found" | "failed";
 type Message = { kind: "info" | "warning" | "error" | "success"; text: string };
@@ -41,16 +42,6 @@ function byFamilyThenFirstName(a: ListedLearner, b: ListedLearner): number {
 
 function formatTime(isoTime: string): string {
   return new Date(isoTime).toLocaleTimeString("en-NZ", { hour: "numeric", minute: "2-digit" });
-}
-
-function formatSessionDate(isoDate: string): string {
-  const [year, month, day] = isoDate.split("-").map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString("en-NZ", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
 }
 
 function MessageBox({ message }: { message: Message | null }) {
