@@ -12,7 +12,15 @@ that testers follow and sign off are in `docs/system_test/`.
 | `test_sign_in_page.py` | ST-14 sign-in part, US-012 AC1 to AC6, and the sign-in parts of NT-06 and NT-11, on a 360 px phone |
 | `test_review_flow.py` | ST-09 and the review part of NT-10 (US-008), through the API until the lesson pages (US-006) are merged; the file step is skipped until then |
 
-## Running the tests
+## Recommended: isolated Docker tests
+
+From the repository root, run `python3 tests/run_docker_tests.py --suite system`,
+or `docker compose -f compose.test.yaml -p ako-tests run --build --rm test-system`.
+See [Docker testing instructions](../docker/README.md) for all suites, reports
+and cleanup. This mode uses temporary databases, bundled Chromium and no host
+ports. The manual steps below are for a host-installed Python/browser only.
+
+## Running the tests manually
 
 1. Start Ako with throwaway database volumes, so test learners never mix
    with your own data (Test Plan section 3):

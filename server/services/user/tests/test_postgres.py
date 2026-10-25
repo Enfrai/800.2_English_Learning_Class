@@ -1,4 +1,4 @@
-"""Real PostgreSQL tests; run only through the identity-checked container runner."""
+"""Real PostgreSQL tests for the isolated Compose or identity-checked host runner."""
 
 import hashlib
 import importlib.util
@@ -25,6 +25,30 @@ from run_postgres import verify_container
 
 @pytest.fixture(scope="module")
 def postgres_url() -> str:
+    compose_url = os.getenv("AKO_COMPOSE_TEST_DATABASE_URL")
+    if compose_url:
+        url = make_url(compose_url)
+        if not (
+            os.getenv("AKO_TEST_COMPOSE") == "1"
+            and url.drivername == "postgresql+psycopg"
+            and url.host == "test-db"
+            and url.username == "ako_test"
+            and url.database is not None
+            and url.database.startswith("ako_test_")
+        ):
+            raise RuntimeError(
+                "Refusing a database outside the isolated Compose runner"
+            )
+        engine = create_engine(compose_url)
+        try:
+            with engine.connect() as db:
+                assert db.scalar(text("SELECT current_database()")) == url.database
+                assert (
+                    170000 <= int(db.scalar(text("SHOW server_version_num"))) < 180000
+                )
+        finally:
+            engine.dispose()
+        return compose_url
     value = os.getenv("US001_TEST_PG_URL")
     if not value:
         pytest.skip("Use tests/run_postgres.py for isolated PostgreSQL tests")
