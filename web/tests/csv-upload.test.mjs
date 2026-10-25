@@ -5,7 +5,7 @@ import { chromium } from "playwright";
 const base=process.env.US017_UI_URL;
 if(!base)throw new Error("Run with node tests/run-csv-ui.mjs");
 let browser;
-before(async()=>{browser=await chromium.launch({channel:"chrome",headless:true});});
+before(async()=>{browser=await chromium.launch({channel: process.env.BROWSER_CHANNEL || "chrome",headless:true});});
 after(async()=>{await browser?.close();});
 const header="first_name,family_name,first_language,contact\r\n";
 const result={imported_count:10,message:"10 learners imported",duplicates:[],errors:[]};

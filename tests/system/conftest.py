@@ -16,21 +16,21 @@ Updated: Pei Wu, 25 Oct 2026 (teacher login and in-class ticks for US-015)
 """
 
 import os
+import re
 import time
 from collections.abc import Callable, Iterator
+from pathlib import Path
 from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
-from playwright.sync_api import Browser, Page, expect, sync_playwright
-
 from api import BASE_URL, api_headers
 from learners_page import LearnersPage
+from playwright.sync_api import Browser, Page, expect, sync_playwright
 from setup_data import CLUB_TIMEZONE, CheckIn, access_sql
 
 USERNAME = os.environ.get("DEMO_USERNAME", "demo")
 PASSWORD = os.environ.get("DEMO_PASSWORD", "DemoPass123!")
-SESSION_KEY = "ako.sessionid"
 API_PAUSE_SECONDS = 0.06  # Nginx allows 20 API requests a second.
 
 # The first page load after a build can be slow.
@@ -48,13 +48,30 @@ def browser() -> Iterator[Browser]:
 
 
 @pytest.fixture
-def page(browser: Browser) -> Iterator[Page]:
+def page(browser: Browser, request: pytest.FixtureRequest) -> Iterator[Page]:
     """A fresh browser window with no login, closed after the test."""
     context = browser.new_context(
         base_url=BASE_URL, viewport={"width": 1280, "height": 900}
     )
     page = context.new_page()
+    report_root = os.getenv("AKO_TEST_REPORTS")
+    if report_root:
+        context.tracing.start(screenshots=True, snapshots=True, sources=True)
     yield page
+    if report_root:
+        report = getattr(request.node, "test_call_report", None)
+        if report is not None and report.failed:
+            name = re.sub(r"[^A-Za-z0-9_.-]", "_", request.node.nodeid)
+            artifacts = Path(report_root) / "system" / "failures"
+            artifacts.mkdir(parents=True, exist_ok=True)
+            try:
+                page.screenshot(path=str(artifacts / f"{name}.png"), full_page=True)
+                context.tracing.stop(path=str(artifacts / f"{name}.zip"))
+            except Exception:
+                # A browser crash must not hide the original test failure.
+                pass
+        else:
+            context.tracing.stop()
     context.close()
 
 
@@ -62,7 +79,9 @@ def page(browser: Browser) -> Iterator[Page]:
 def session_id(page: Page) -> str:
     """Log in through the API. A new login ends any earlier demo session."""
     response = page.request.post(
-        "/api/user/login", data={"username": USERNAME, "password": PASSWORD}
+        "/api/user/login",
+        data={"username": USERNAME, "password": PASSWORD},
+        headers={"Origin": BASE_URL},
     )
     assert response.ok, f"Login failed with status {response.status}"
     return response.json()["sessionid"]
@@ -71,9 +90,9 @@ def session_id(page: Page) -> str:
 @pytest.fixture
 def logged_in_page(page: Page, session_id: str) -> Page:
     """A browser window where the demo coordinator is logged in."""
-    page.context.add_init_script(
-        f"window.localStorage.setItem({SESSION_KEY!r}, {session_id!r})"
-    )
+    # page.request shares cookies with the browser context. The login fixture
+    # already installed the HttpOnly session cookie; no localStorage token.
+    assert session_id
     return page
 
 
@@ -193,10 +212,19 @@ def log_in_through_page(page: Page) -> Callable[[], None]:
 
     def log_in() -> None:
         page.goto("/")
-        page.get_by_label("Username").fill(USERNAME)
-        page.get_by_label("Password").fill(PASSWORD)
-        page.get_by_role("button", name="Sign in").click()
+        page.get_by_label("Username", exact=True).fill(USERNAME)
+        page.get_by_label("Password", exact=True).fill(PASSWORD)
+        page.get_by_role("button", name="Sign in", exact=True).click()
         # US-001: a successful login opens the home page for the person's role.
         page.wait_for_url("**/coordinator")
 
     return log_in
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    """Make the call outcome available to the page fixture before it closes."""
+    outcome = yield
+    report = outcome.get_result()
+    if report.when == "call":
+        item.test_call_report = report

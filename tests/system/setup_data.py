@@ -1,7 +1,8 @@
 """Set up data that the pages cannot create yet, in the running system.
 
 Class sessions (US-014) and QR check-in (US-011) are not built yet, so tests
-insert them into the Accessment database through ``docker compose``.
+insert them into the Accessment database through a guarded test connection
+(in Compose test mode) or ``docker compose exec`` (manual host mode).
 
 Author: Pei Wu
 Date: 25 Oct 2026
@@ -28,6 +29,32 @@ def access_sql(sql: str) -> str:
     Only for set-up the pages cannot do yet (US-011, US-014). Callers build
     the SQL from values they generated or checked, never from user input.
     """
+    url = os.getenv("TEST_ACCESS_DATABASE_URL")
+    if url:
+        from sqlalchemy import create_engine, text
+        from sqlalchemy.engine import make_url
+
+        target = make_url(url)
+        if not (
+            os.getenv("AKO_TEST_COMPOSE") == "1"
+            and target.host == "postgres-access"
+            and target.database == "accessdb"
+            and target.username == "access_app"
+        ):
+            raise RuntimeError(
+                "Direct setup SQL is restricted to the isolated test stack"
+            )
+        engine = create_engine(url)
+        try:
+            with engine.begin() as db:
+                result = db.execute(text(sql))
+                return (
+                    "\n".join(str(row[0]) for row in result)
+                    if result.returns_rows
+                    else ""
+                )
+        finally:
+            engine.dispose()
     result = subprocess.run(
         [
             "docker",

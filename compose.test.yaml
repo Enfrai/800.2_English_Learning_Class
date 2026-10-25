@@ -1,0 +1,167 @@
+# Independent test infrastructure: no host ports, persistent DB volumes or Docker socket.
+# Author: Shuohui Liu
+# Date: 19 Oct 2026
+
+name: ako-tests
+
+x-db: &db
+  image: postgres:17-alpine
+  tmpfs: [/var/lib/postgresql/data]
+  networks: [test]
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+    interval: 2s
+    timeout: 3s
+    retries: 30
+
+x-api: &api
+  networks: [test]
+  healthcheck:
+    test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+    interval: 3s
+    timeout: 5s
+    retries: 30
+
+x-browser: &browser
+  shm_size: 1gb
+  init: true
+  networks: [test]
+  volumes: [./test-results:/reports]
+
+services:
+  test-db:
+    <<: *db
+    environment:
+      POSTGRES_USER: ako_test
+      POSTGRES_PASSWORD: test_only_password
+      POSTGRES_DB: postgres
+
+  test-backend:
+    build:
+      context: .
+      dockerfile: tests/docker/Dockerfile
+      target: backend
+    environment:
+      AKO_TEST_COMPOSE: "1"
+      TEST_DATABASE_URL: postgresql+psycopg://ako_test:test_only_password@test-db:5432/postgres
+    depends_on:
+      test-db: {condition: service_healthy}
+    networks: [test]
+    volumes: [./test-results:/reports]
+    init: true
+
+  test-web:
+    <<: *browser
+    build:
+      context: .
+      dockerfile: tests/docker/Dockerfile
+      target: web
+    environment:
+      BROWSER_CHANNEL: chromium
+      UI_SCREENSHOT_DIR: /reports/web
+
+  postgres-user:
+    <<: *db
+    environment: {POSTGRES_USER: user_app, POSTGRES_PASSWORD: test_only_password, POSTGRES_DB: userdb}
+  postgres-access:
+    <<: *db
+    environment: {POSTGRES_USER: access_app, POSTGRES_PASSWORD: test_only_password, POSTGRES_DB: accessdb}
+  postgres-lesson:
+    <<: *db
+    environment: {POSTGRES_USER: lesson_app, POSTGRES_PASSWORD: test_only_password, POSTGRES_DB: lessondb}
+
+  user1: &user
+    <<: *api
+    build: ./server/services/user
+    environment:
+      DATABASE_URL: postgresql+psycopg://user_app:test_only_password@postgres-user:5432/userdb
+      DEMO_USERNAME: demo
+      DEMO_PASSWORD: DemoPass123!
+      INTERNAL_API_KEY: ako_test_internal_key
+    networks:
+      test:
+        aliases: [user-service]
+    depends_on:
+      postgres-user: {condition: service_healthy}
+  user2:
+    <<: *user
+    depends_on:
+      user1: {condition: service_healthy}
+
+  access1: &access
+    <<: *api
+    build: ./server/services/accessment
+    environment:
+      DATABASE_URL: postgresql+psycopg://access_app:test_only_password@postgres-access:5432/accessdb
+      INTERNAL_API_KEY: ako_test_internal_key
+    depends_on:
+      postgres-access: {condition: service_healthy}
+      user1: {condition: service_healthy}
+      user2: {condition: service_healthy}
+  access2:
+    <<: *access
+    depends_on:
+      access1: {condition: service_healthy}
+
+  lesson1: &lesson
+    <<: *api
+    build: ./server/services/lesson
+    environment:
+      DATABASE_URL: postgresql+psycopg://lesson_app:test_only_password@postgres-lesson:5432/lessondb
+    depends_on:
+      postgres-lesson: {condition: service_healthy}
+      user1: {condition: service_healthy}
+      user2: {condition: service_healthy}
+  lesson2:
+    <<: *lesson
+    depends_on:
+      lesson1: {condition: service_healthy}
+
+  web:
+    build: ./web
+    networks: [test]
+    environment:
+      USER_API_URL: http://nginx/api/user
+      ACCESS_API_URL: http://nginx/api/access
+      LESSON_API_URL: http://nginx/api/lesson
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+
+  nginx:
+    image: nginx:1.28-alpine
+    networks: [test]
+    volumes: [./server/nginx/nginx.conf:/etc/nginx/nginx.conf:ro]
+    depends_on:
+      web: {condition: service_healthy}
+      user1: {condition: service_healthy}
+      user2: {condition: service_healthy}
+      access1: {condition: service_healthy}
+      access2: {condition: service_healthy}
+      lesson1: {condition: service_healthy}
+      lesson2: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/health"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  test-system:
+    <<: *browser
+    build:
+      context: .
+      dockerfile: tests/docker/Dockerfile
+      target: system
+    environment:
+      BASE_URL: http://nginx
+      BROWSER_CHANNEL: chromium
+      AKO_TEST_COMPOSE: "1"
+      TEST_ACCESS_DATABASE_URL: postgresql+psycopg://access_app:test_only_password@postgres-access:5432/accessdb
+      AKO_TEST_REPORTS: /reports
+    depends_on:
+      nginx: {condition: service_healthy}
+
+networks:
+  test:

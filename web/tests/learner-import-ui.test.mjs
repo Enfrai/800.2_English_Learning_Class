@@ -5,7 +5,7 @@ import { chromium } from "playwright";
 let browser;
 const base=process.env.US017_UI_URL;
 if(!base)throw new Error("Run node tests/run-csv-ui.mjs");
-before(async()=>{browser=await chromium.launch({channel:"chrome",headless:true});});
+before(async()=>{browser=await chromium.launch({channel: process.env.BROWSER_CHANNEL || "chrome",headless:true});});
 after(async()=>{await browser?.close();});
 const learner={id:"00000000-0000-4000-8000-000000000001",first_name:"Fiction",family_name:"Existing",first_language:null,contact:null,is_active:true};
 async function open(t,role="coordinator",importStatus=200,refreshFails=false){

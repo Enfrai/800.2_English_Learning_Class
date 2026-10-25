@@ -9,13 +9,13 @@ Author: Pei Wu
 Date: 23 Oct 2026
 """
 
+import os
 import time
 from collections.abc import Callable
 
-from playwright.sync_api import Page, expect
-
 from api import api_headers
 from learners_page import LearnersPage, unique
+from playwright.sync_api import Page, expect
 
 LIST_UPDATE_SECONDS = 2  # ST-11
 LIST_LOAD_SECONDS = 3  # NT-07
@@ -252,7 +252,13 @@ def test_nt06_page_with_open_form_has_no_accessibility_violations(
     learners_page.add_button.click()
     page = learners_page.page
 
-    page.add_script_tag(url=AXE_URL)
+    page.add_script_tag(
+        **(
+            {"path": os.environ["AXE_SCRIPT_PATH"]}
+            if os.getenv("AXE_SCRIPT_PATH")
+            else {"url": AXE_URL}
+        )
+    )
     violations = page.evaluate(
         "async () => (await axe.run()).violations.map(v => v.id + ': ' + v.help)"
     )
