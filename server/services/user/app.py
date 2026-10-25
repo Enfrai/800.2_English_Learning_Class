@@ -18,7 +18,7 @@ from uuid import UUID
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import create_engine, delete, select
+from sqlalchemy import create_engine, delete, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 from starlette.middleware.base import RequestResponseEndpoint
@@ -54,6 +54,7 @@ from staff import create_staff_router
 engine = create_engine(os.environ["DATABASE_URL"], pool_pre_ping=True)
 SessionLocal = sessionmaker(engine)
 INSTANCE = os.getenv("INSTANCE_NAME", "unknown")
+STARTUP_LOCK_KEY = 800_2
 ROUNDS = 600_000
 MAX_LOGIN_ATTEMPTS = 5
 LOCKOUT_DURATION = timedelta(minutes=10)
@@ -80,31 +81,55 @@ def verify_password(password: str, encoded: str) -> bool:
         return False
 
 
+def seed_user(
+    db: Session, username: str, password: str, display_name: str, role: str
+) -> None:
+    """Add a starting account once. Existing accounts are never changed."""
+    if db.execute(select(users.c.id).where(users.c.username == username)).first():
+        return
+    salt = secrets.token_bytes(16)
+    try:
+        with db.begin_nested():
+            db.execute(
+                users.insert().values(
+                    username=username,
+                    password_hash=password_hash(password, salt),
+                    display_name=display_name,
+                    role=role,
+                )
+            )
+    except IntegrityError:
+        # Another replica may have seeded the same username.
+        pass
+
+
+# Test teacher accounts for US-006 until US-001 adds teacher accounts.
+# Two are needed to test that a teacher cannot change another's lesson.
+TEST_TEACHERS = (("teacher1", "Test Teacher One"), ("teacher2", "Test Teacher Two"))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
-    username = os.getenv("DEMO_USERNAME", "demo")
+    # Both replicas start at the same time. Without this lock they can both try
+    # to create the tables on a new database, and one fails to start.
+    with engine.begin() as connection:
+        connection.execute(
+            text("SELECT pg_advisory_xact_lock(:key)"), {"key": STARTUP_LOCK_KEY}
+        )
+        Base.metadata.create_all(bind=connection)
     with SessionLocal.begin() as db:
-        if (
-            db.execute(select(users.c.id).where(users.c.username == username)).first()
-            is None
-        ):
-            salt = secrets.token_bytes(16)
-            try:
-                with db.begin_nested():
-                    db.execute(
-                        users.insert().values(
-                            username=username,
-                            password_hash=password_hash(
-                                os.getenv("DEMO_PASSWORD", "DemoPass123!"), salt
-                            ),
-                            display_name="Demo Coordinator",
-                            role="coordinator",
-                        )
-                    )
-            except IntegrityError:
-                # Another replica may have seeded the same username.
-                pass
+        seed_user(
+            db,
+            os.getenv("DEMO_USERNAME", "demo"),
+            os.getenv("DEMO_PASSWORD", "DemoPass123!"),
+            "Demo Coordinator",
+            "coordinator",
+        )
+        teacher_password = os.getenv("TEST_TEACHER_PASSWORD", "")
+        # Leave the variable empty to start without test teachers.
+        if teacher_password:
+            for username, display_name in TEST_TEACHERS:
+                seed_user(db, username, teacher_password, display_name, "teacher")
     yield
 
 

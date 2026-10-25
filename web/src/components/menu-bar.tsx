@@ -1,6 +1,7 @@
 /* Navy menu bar shown on every logged-in page (UI design document section 4).
  * Author: Pei Wu
  * Date: 23 Oct 2026
+ * Updated: Sandhya Tiwari, 24 Oct 2026 (log out ends the session on the server)
  */
 
 "use client";
@@ -20,7 +21,11 @@ const MENU_ITEMS = [
 export default function MenuBar() {
   const pathname = usePathname();
 
-  function logOut() {
+  async function logOut() {
+    const response = await fetch("/api/user/logout", {
+      method: "POST", credentials: "same-origin", cache: "no-store",
+    });
+    if (!response.ok && response.status !== 401) return;
     clearSessionId();
     window.location.assign("/");
   }
@@ -51,7 +56,7 @@ export default function MenuBar() {
           href="/"
           onClick={(event) => {
             event.preventDefault();
-            logOut();
+            void logOut();
           }}
         >
           Log out

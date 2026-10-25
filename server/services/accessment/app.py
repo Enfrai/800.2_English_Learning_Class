@@ -2,6 +2,7 @@
 
 Author: Shuohui Liu
 Date: 19 Oct 2026
+Updated: Sandhya Tiwari, 23 Oct 2026 (replicas no longer race to create tables)
 """
 
 import os
@@ -28,19 +29,27 @@ from attendance import (
 from fastapi import Depends, FastAPI, Header, HTTPException
 from models import Base, class_sessions
 from pydantic import BaseModel
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, select, text
 from sqlalchemy.orm import sessionmaker
 
 engine = create_engine(os.environ["DATABASE_URL"], pool_pre_ping=True)
 SessionLocal = sessionmaker(engine)
 INSTANCE = os.getenv("INSTANCE_NAME", "unknown")
+# Any fixed number; it only has to be the same for every replica of this service.
+STARTUP_LOCK_KEY = 800_2
 # Attendance rules use the club's local date, not the server's UTC date.
 CLUB_TIMEZONE = ZoneInfo(os.getenv("CLUB_TIMEZONE", "Pacific/Auckland"))
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
+    # Both replicas start at the same time. Without this lock they can both try
+    # to create the tables on a new database, and one fails to start.
+    with engine.begin() as connection:
+        connection.execute(
+            text("SELECT pg_advisory_xact_lock(:key)"), {"key": STARTUP_LOCK_KEY}
+        )
+        Base.metadata.create_all(bind=connection)
     yield
 
 
