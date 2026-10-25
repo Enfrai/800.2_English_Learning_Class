@@ -143,13 +143,15 @@ A closed or expired code cannot record attendance. Rate limiting for repeated in
 | `source_lesson_id` | UUID | FK → `lessons.id`, NULL | Original lesson if copied |
 | `has_maori_content` | BOOLEAN | NOT NULL, DEFAULT FALSE | Māori content flag |
 | `review_status` | VARCHAR(20) | NOT NULL, CHECK, DEFAULT 'not_required' | `not_required`, `pending`, `reviewed`, `rejected` |
-| `reviewed_by` | UUID | NULL; User-service reference | Reviewer |
-| `reviewed_at` | TIMESTAMPTZ | NULL | Review time |
+| `reviewed_by` | UUID | NULL; User-service reference | Coordinator who recorded the review |
+| `reviewed_at` | TIMESTAMPTZ | NULL | When the review was recorded |
+| `reviewer_name` | VARCHAR(150) | NULL | Reviewer's name as typed, e.g. a Kaiārahi outside the system (US-008) |
+| `review_date` | DATE | NULL | Date of the review, not in the future (US-008) |
 | `created_at` | TIMESTAMPTZ | NOT NULL | Creation time |
 | `updated_at` | TIMESTAMPTZ | NOT NULL | Update time |
 | `deleted_at` | TIMESTAMPTZ | NULL | Soft deletion time |
 
-**Rules:** Teachers edit their own lessons; coordinators may edit any lesson, pending team confirmation. Unreviewed Māori content must not be shown to learners. Resetting review status to `pending` after relevant edits is recommended and should be confirmed.
+**Rules:** Teachers edit their own lessons; coordinators may edit any lesson, pending team confirmation. Unreviewed Māori content must not be shown to learners; staff still see it (team decision, 23 Oct 2026). Only a coordinator records a review. Adding, replacing or removing a material of a reviewed lesson resets it to `pending` (US-008 AC4).
 
 ### 4.2 `tags` — Lesson Topics
 
