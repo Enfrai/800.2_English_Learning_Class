@@ -31,6 +31,7 @@ from auth import (
     require_coordinator,
     unauthenticated,
 )
+from enquiries import create_enquiries_router, create_enquiry_listing_router
 from learner_import import router as learner_import_router
 from learners import (
     AmbiguousLearnerNameError,
@@ -115,6 +116,8 @@ app.state.session_factory = SessionLocal
 app.state.session_security = SessionSecurity.from_environment()
 app.include_router(create_staff_router(password_hash))
 app.include_router(learner_import_router)
+app.include_router(create_enquiries_router())
+app.include_router(create_enquiry_listing_router())
 
 
 @app.middleware("http")
@@ -125,6 +128,7 @@ async def authentication_cache_control(
     if (
         request.url.path in AUTH_PATHS
         or request.url.path == "/learners/import"
+        or request.url.path == "/enquiries"
         or request.url.path == "/staff"
         or request.url.path.startswith("/staff/")
     ):

@@ -1,0 +1,9 @@
+/* Scoped layout complements the existing staff layout's Ako UI Kit. */
+.screen { max-width: 100%; overflow-wrap: anywhere; }
+.list { padding: 0; list-style: none; display: grid; gap: 16px; }
+.card { border: 1px solid var(--line, #b9c3cf); border-radius: 6px; padding: 16px; min-width: 0; }
+.card h2 { margin-top: 0; }
+.card dt { font-weight: 700; }
+.card dd { margin: 0 0 12px; }
+.message { white-space: pre-wrap; }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; }

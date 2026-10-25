@@ -242,3 +242,33 @@ test("AC5: a Coordinator can be deactivated while another stays active", async t
   assert.equal(await page.getByRole("button", { name: "Deactivate coordinator_two", exact: true }).count(), 0);
   await page.getByRole("button", { name: "Deactivate coordinator_hidden", exact: true }).waitFor();
 });
+
+
+// Exercise the real middleware and Staff layout for the newly integrated route.
+for (const role of ["anonymous", "teacher", "coordinator"]) {
+  test(`enquiries route protection: ${role}`, async t => {
+    const context = await browser.newContext();
+    t.after(() => context.close());
+    if (role !== "anonymous") await context.addCookies([{name:"ako_session", value:`ui-${role}`, url:base, httpOnly:true, sameSite:"Lax"}]);
+    let reads = 0;
+    await context.route("**/api/user/**", route => {
+      const path = new URL(route.request().url()).pathname;
+      if (path === "/api/user/session") return route.fulfill({json:{user_id:coordinator.id,display_name:"UI fixture",role},headers:{"X-Session-Expires-At":new Date(Date.now()+1800000).toISOString()}});
+      if (path === "/api/user/enquiries") { reads++; return route.fulfill({json:[]}); }
+      return route.fulfill({status:404,json:{}});
+    });
+    const page = await context.newPage();
+    const response = await page.goto(`${base}/enquiries`);
+    if (role === "anonymous") {
+      assert.equal(new URL(page.url()).pathname, "/");
+    } else if (role === "teacher") {
+      assert.equal(response.status(), 403);
+      await page.getByText("You do not have permission", {exact:true}).waitFor();
+    } else {
+      assert.equal(response.status(), 200);
+      await page.getByText("No enquiries on this page.").waitFor();
+      assert.equal(await page.getByRole("link", {name:"Enquiries",exact:true}).count(), 1);
+    }
+    assert.equal(reads, role === "coordinator" ? 1 : 0);
+  });
+}

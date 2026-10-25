@@ -1,0 +1,14 @@
+/* Ako UI Kit colours and sizing, scoped so any public page can host the form. */
+.form { color: var(--ink, #1c2733); font: 18px/1.45 var(--font, system-ui); max-width: 40rem; width: 100%; overflow-wrap: anywhere; }
+.form * { box-sizing: border-box; }
+.form fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 12px; }
+.form legend { margin-bottom: 12px; }
+.form input:not([type=checkbox]), .form select, .form textarea { width: 100%; min-width: 0; min-height: 44px; padding: 9px 12px; font: inherit; color: inherit; background: white; border: 2px solid var(--field-border, #7e8c9b); border-radius: 6px; }
+.form textarea { resize: vertical; }
+.form button { min-height: 44px; padding: 10px 20px; font: inherit; background: var(--navy, #1f4e79); color: white; border: 2px solid var(--navy, #1f4e79); border-radius: 6px; cursor: pointer; }
+.form button:disabled { opacity: .65; cursor: wait; }
+.form :focus-visible { outline: 3px solid #1f4e79; outline-offset: 3px; }
+.consent { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; }
+.consent input { flex-shrink: 0; width: 24px; height: 24px; }
+.error { color: var(--err-text, #7b1d14); background: var(--err-bg, #fde8e8); padding: 12px; margin: 0; }
+.success { color: var(--ok-text, #1b5a37); background: var(--ok-bg, #e4f4e8); padding: 12px; }
