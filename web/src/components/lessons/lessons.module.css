@@ -1,0 +1,16 @@
+.heading { overflow-wrap: anywhere; }
+.toolbar { margin-bottom: var(--space-4); }
+.table { overflow-x: auto; }
+.table td { overflow-wrap: anywhere; }
+.form { max-width: 760px; }
+.materials { padding: 0; list-style: none; display: grid; gap: var(--space-3); }
+.material { min-width: 0; overflow-wrap: anywhere; }
+.material p { margin: var(--space-2) 0; }
+.description { white-space: pre-wrap; overflow-wrap: anywhere; }
+.confirmation { margin: var(--space-4) 0; }
+.confirmation h2 { margin-top: 0; }
+.file { width: 100%; min-height: var(--control-h); font: inherit; }
+.fieldError { margin-top: var(--space-2); }
+@media print {
+  .materials a { color: #000; }
+}

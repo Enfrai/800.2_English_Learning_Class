@@ -23,16 +23,44 @@ async function forward(request: NextRequest, context: { params: Promise<{ path: 
       return NextResponse.json({ detail: "Origin not allowed" }, { status: 403, headers: noStore });
     }
   }
+  let body: ArrayBuffer | undefined;
+  if (request.method !== "GET") {
+    const limit = 11 * 1024 * 1024;
+    if (Number(request.headers.get("content-length") || 0) > limit) {
+      return NextResponse.json({ detail: "Upload exceeds 10 MB file limit" }, { status: 413, headers: noStore });
+    }
+    const reader = request.body?.getReader();
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    try {
+      if (reader) while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        size += value.byteLength;
+        if (size > limit) {
+          await reader.cancel();
+          return NextResponse.json({ detail: "Upload exceeds 10 MB file limit" }, { status: 413, headers: noStore });
+        }
+        chunks.push(value);
+      }
+      const combined = new Uint8Array(size);
+      let offset = 0;
+      for (const chunk of chunks) { combined.set(chunk, offset); offset += chunk.byteLength; }
+      body = combined.buffer;
+    } catch {
+      return NextResponse.json({ detail: "Unable to read request" }, { status: 400, headers: noStore });
+    }
+  }
   try {
     const response = await fetch(`${lessonApi}/${path}${request.nextUrl.search}`, {
       method: request.method,
       headers: { Authorization: `Bearer ${cookies[0].value}`, ...(request.headers.get("content-type") ? { "Content-Type": request.headers.get("content-type")! } : {}) },
-      body: request.method === "GET" ? undefined : await request.arrayBuffer(),
+      body,
       cache: "no-store", redirect: "error", signal: AbortSignal.timeout(10000),
     });
     return new NextResponse(response.status === 204 ? null : await response.arrayBuffer(), {
       status: response.status,
-      headers: { ...noStore, "Content-Type": response.headers.get("content-type") || "application/json", ...(response.headers.get("content-disposition") ? { "Content-Disposition": response.headers.get("content-disposition")! } : {}) },
+      headers: { ...noStore, "X-Content-Type-Options": "nosniff", "Content-Type": response.headers.get("content-type") || "application/json", ...(response.headers.get("content-disposition") ? { "Content-Disposition": response.headers.get("content-disposition")! } : {}) },
     });
   } catch {
     return NextResponse.json({ detail: "Lesson service unavailable" }, { status: 502, headers: noStore });
