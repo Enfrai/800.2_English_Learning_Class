@@ -69,6 +69,8 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://access_app:${ACCESS_DB_PASSWORD:-local_access_password}@postgres-access:5432/accessdb
       INSTANCE_NAME: access1
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      LESSON_SERVICE_URL: ${LESSON_SERVICE_URL:-http://lesson-service:8000}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-local_internal_key}
     depends_on:
       postgres-access: {condition: service_healthy}
@@ -83,14 +85,20 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://access_app:${ACCESS_DB_PASSWORD:-local_access_password}@postgres-access:5432/accessdb
       INSTANCE_NAME: access2
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      LESSON_SERVICE_URL: ${LESSON_SERVICE_URL:-http://lesson-service:8000}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-local_internal_key}
 
   lesson1: &lesson
     <<: *api
     build: ./services/lesson
+    networks:
+      backend:
+        aliases: [lesson-service]
     volumes: [lesson_files:/var/lib/ako/materials]
     environment:
       DATABASE_URL: postgresql+psycopg://lesson_app:${LESSON_DB_PASSWORD:-local_lesson_password}@postgres-lesson:5432/lessondb
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-local_internal_key}
       MATERIALS_DIR: /var/lib/ako/materials
       INSTANCE_NAME: lesson1
     depends_on:
@@ -105,6 +113,7 @@ services:
     <<: *lesson
     environment:
       DATABASE_URL: postgresql+psycopg://lesson_app:${LESSON_DB_PASSWORD:-local_lesson_password}@postgres-lesson:5432/lessondb
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-local_internal_key}
       MATERIALS_DIR: /var/lib/ako/materials
       INSTANCE_NAME: lesson2
 
