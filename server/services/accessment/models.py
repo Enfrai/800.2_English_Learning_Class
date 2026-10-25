@@ -39,3 +39,10 @@ attendance_audits = Table("attendance_audits", Base.metadata,
 checkin_windows = Table("checkin_windows", Base.metadata,
     id_col(), ref("session_id","class_sessions.id"), value("token_hash",String(255),unique=True), ref("opened_by"), Column("opened_at",DateTime(timezone=True),nullable=False,server_default=func.now()), value("expires_at",DateTime(timezone=True)), value("closed_at",DateTime(timezone=True),nullable=True), CheckConstraint("expires_at > opened_at AND expires_at <= opened_at + INTERVAL '4 hours'"), Index("ix_checkin_session","session_id")
 )
+
+# US-012: wrong names typed at QR sign-in, for the 10-in-10-minutes limit.
+# key_hash is an HMAC of the device's address, never the address itself, and
+# rows older than an hour are deleted.
+signin_failures = Table("signin_failures", Base.metadata,
+    id_col(), value("key_hash",String(64)), Column("failed_at",DateTime(timezone=True),nullable=False), Index("ix_signin_failures_key","key_hash","failed_at")
+)

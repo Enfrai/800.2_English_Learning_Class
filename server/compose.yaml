@@ -45,6 +45,7 @@ services:
       DEMO_USERNAME: ${DEMO_USERNAME:-demo}
       DEMO_PASSWORD: ${DEMO_PASSWORD:-DemoPass123!}
       INSTANCE_NAME: user1
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-local_internal_key}
     depends_on:
       postgres-user: {condition: service_healthy}
     healthcheck:
@@ -60,6 +61,7 @@ services:
       DEMO_USERNAME: ${DEMO_USERNAME:-demo}
       DEMO_PASSWORD: ${DEMO_PASSWORD:-DemoPass123!}
       INSTANCE_NAME: user2
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-local_internal_key}
 
   access1: &access
     <<: *api
@@ -67,6 +69,7 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://access_app:${ACCESS_DB_PASSWORD:-local_access_password}@postgres-access:5432/accessdb
       INSTANCE_NAME: access1
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-local_internal_key}
     depends_on:
       postgres-access: {condition: service_healthy}
     healthcheck:
@@ -80,6 +83,7 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://access_app:${ACCESS_DB_PASSWORD:-local_access_password}@postgres-access:5432/accessdb
       INSTANCE_NAME: access2
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-local_internal_key}
 
   lesson1: &lesson
     <<: *api

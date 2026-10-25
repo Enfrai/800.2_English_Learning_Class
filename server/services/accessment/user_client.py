@@ -18,6 +18,8 @@ from uuid import UUID
 # Inside Docker, "user-service" reaches user1 and user2 in turn.
 USER_SERVICE_URL = os.getenv("USER_SERVICE_URL", "http://user-service:8000").rstrip("/")
 TIMEOUT_SECONDS = 5
+# Shared with the User Service for calls made without a login (US-012).
+INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY", "")
 
 
 class UserServiceError(Exception):
@@ -37,6 +39,14 @@ class LearnerFieldError(Exception):
         self.message = message
 
 
+class SignInNameNotFoundError(Exception):
+    """No active learner has the typed name (US-012)."""
+
+
+class AmbiguousSignInNameError(Exception):
+    """Several active learners have the typed name (US-012)."""
+
+
 @dataclass(frozen=True)
 class Staff:
     id: UUID
@@ -45,13 +55,23 @@ class Staff:
 
 
 def _request(
-    method: str, path: str, authorization: str, body: dict[str, Any] | None = None
+    method: str,
+    path: str,
+    authorization: str | None,
+    body: dict[str, Any] | None = None,
+    *,
+    internal: bool = False,
 ) -> tuple[int, Any]:
+    headers = {"Content-Type": "application/json"}
+    if authorization is not None:
+        headers["Authorization"] = authorization
+    if internal:
+        headers["X-Internal-Key"] = INTERNAL_API_KEY
     request = urllib.request.Request(
         f"{USER_SERVICE_URL}{path}",
         method=method,
         data=json.dumps(body).encode() if body is not None else None,
-        headers={"Authorization": authorization, "Content-Type": "application/json"},
+        headers=headers,
     )
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
@@ -115,4 +135,32 @@ def add_or_find_learner(
         raise LearnerFieldError(body["detail"]["field"], body["detail"]["message"])
     if status == 401:
         raise LoginRequiredError("Login required")
+    raise UserServiceError(f"User service answered {status}")
+
+
+def find_learner_for_sign_in(first_name: str, family_name: str) -> dict[str, Any]:
+    """Return the learner matching a typed name, for QR sign-in (US-012).
+
+    The learner has no login, so this call proves the service with the shared
+    internal key. Only the matched learner comes back, never the class list.
+
+    Raises:
+        SignInNameNotFoundError: no active learner has this name.
+        AmbiguousSignInNameError: several active learners have this name.
+        UserServiceError: the User Service could not answer, or refused the
+            key. A misconfigured key is never reported as "not found".
+    """
+    status, body = _request(
+        "POST",
+        "/internal/learners/match",
+        None,
+        {"first_name": first_name, "family_name": family_name},
+        internal=True,
+    )
+    if status == 200:
+        return body
+    if status == 404:
+        raise SignInNameNotFoundError("Learner not found")
+    if status == 409:
+        raise AmbiguousSignInNameError("Several learners have this name")
     raise UserServiceError(f"User service answered {status}")
