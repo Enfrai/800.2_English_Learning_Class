@@ -6,6 +6,7 @@
 
 "use client";
 
+import MaterialsScreen from "@/components/materials/materials-screen";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { type FieldErrors, TextField, checkNames } from "@/components/learners/learner-form";
 import {
@@ -97,10 +98,9 @@ export default function SignInScreen({ token }: { token: string }) {
           <div className="msg msg-success" role="status">
             {SIGNED_IN}
           </div>
-          {/* Lesson materials are US-013 (Later, UI design document 6.15). */}
-          <button type="button" className="btn btn-later" style={{ width: "100%" }} disabled>
-            Lesson materials (later)
-          </button>
+          {/* Lesson materials after sign-in (US-013, UI design document 6.15). */}
+          <MaterialsScreen embedded />
+          <a className="btn btn-big" href="/materials">Lesson materials</a>
         </>
       )}
 

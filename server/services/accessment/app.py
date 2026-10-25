@@ -1,7 +1,8 @@
-"""Implement the demo permission check with the Ako database schema.
+"""Serve attendance, QR sign-in and protected learner material access.
 
 Author: Shuohui Liu
 Date: 19 Oct 2026
+Updated: Sandhya Tiwari, 26 Oct 2026
 """
 
 import os
@@ -46,10 +47,11 @@ from corrections import (
     correct_attendance,
     corrected_learners,
 )
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Response
+from learner_materials import create_materials_router, issue_grant
 from models import Base, class_sessions
 from pydantic import BaseModel
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, select, text
 from sqlalchemy.orm import sessionmaker
 
 engine = create_engine(os.environ["DATABASE_URL"], pool_pre_ping=True)
@@ -61,11 +63,24 @@ CLUB_TIMEZONE = ZoneInfo(os.getenv("CLUB_TIMEZONE", "Pacific/Auckland"))
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
+    with engine.begin() as connection:
+        if engine.dialect.name == "postgresql":
+            connection.execute(text("SELECT pg_advisory_xact_lock(800013)"))
+        Base.metadata.create_all(bind=connection)
     yield
 
 
 app = FastAPI(title="Accessment Service", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def learner_private_responses(request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith(("/learner/", "/checkin/")):
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
+
 
 
 class CheckRequest(BaseModel):
@@ -118,6 +133,7 @@ def staff_request(
 
 
 LoggedInStaff = Annotated[StaffRequest, Depends(staff_request)]
+app.include_router(create_materials_router(lambda: SessionLocal(), LoggedInStaff))
 
 
 class AttendanceOut(BaseModel):
@@ -339,6 +355,7 @@ def read_checkin(token: str):
 def learner_sign_in(
     token: str,
     payload: SignInIn,
+    response: Response,
     x_real_ip: Annotated[str | None, Header()] = None,
     x_device_id: Annotated[str | None, Header()] = None,
 ):
@@ -368,6 +385,7 @@ def learner_sign_in(
     try:
         with SessionLocal.begin() as db:
             sign_in(db, checkin, UUID(learner["id"]), club_today())
+            issue_grant(db, checkin.session_id, response, secure=os.getenv("COOKIE_SECURE", "false").lower() == "true")
     except AlreadySignedInError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except AttendanceError as exc:
@@ -468,3 +486,4 @@ def read_corrections(session_id: UUID, request: LoggedInStaff):
         }
         for entry in history
     ]
+

@@ -7,6 +7,7 @@
 
 "use client";
 
+import SessionLesson from "@/components/materials/session-lesson";
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { type FieldErrors, TextField, checkNames } from "@/components/learners/learner-form";
 import { useSession } from "@/components/session-context";
@@ -218,6 +219,7 @@ export default function AttendanceScreen({ sessionId }: { sessionId: string }) {
   return (
     <>
       <h1>Attendance</h1>
+      <SessionLesson sessionId={sessionId} />
       {loadState === "loading" && <p role="status">Loading the class list…</p>}
       {loadState === "failed" && (
         <div className="msg msg-error" role="alert">
