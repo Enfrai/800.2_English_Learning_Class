@@ -287,3 +287,13 @@ Similarly, the requirements do not explicitly mandate a Lesson-to-ClassSession r
 Use separate PostgreSQL databases and Alembic migration histories for the three FastAPI services. Keep SQLAlchemy models inside their owning services. Route APIs through the existing gateway, authenticate users centrally, and enforce resource-level permissions in the receiving service. Deploy with Docker Compose for a reproducible local setup. Prefer building and testing the MVP tables before implementing QR check-in or public enquiries.
 
 **Source:** *Requirements Specification – Ako*, 13 October 2026, especially Sections 4–8. Detailed acceptance criteria are stated to be in the separate `MSE800_User_Stories_Oct19.docx` and were not available in this design pass.
+
+
+## US-014 implementation notes
+
+Each club date has one `class_sessions` row, enforced by unique index
+`uq_class_sessions_date`. `session_lesson_links` associates one optional saved
+lesson with a classroom without modifying the Lesson database. Classroom and
+attendance changes share a row lock, and any attendance record blocks deletion.
+See [schema upgrades](database-schema.md) and
+[US-014 tests](../docs/system_test/class_sessions_system_tests.md).

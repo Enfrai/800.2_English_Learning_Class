@@ -1,4 +1,6 @@
-/** Test the server-only cookie/Bearer adapter against an owned loopback stub. */
+/** Test the attendance and classroom cookie/Bearer adapter against a loopback stub.
+ * Updated: Shuohui Liu, 26 Oct 2026
+ */
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
@@ -31,3 +33,27 @@ test('same-origin mutation preserves request body',async()=>{seen=[];const r=awa
 test('explicit browser Bearer does not override cookie identity',async()=>{seen=[];const r=await fetch(base+path,{headers:{Cookie:`ako_session=${token}`,Authorization:'Bearer another'}});assert.equal(r.status,401);assert.equal(seen.length,0);});
 test('unrelated upstream paths cannot be proxied',async()=>{seen=[];const r=await fetch(base+'/api/staff/access/admin',{headers:{Cookie:`ako_session=${token}`}});assert.equal(r.status,404);assert.equal(seen.length,0);});
 test('backend role denial remains 403 and no-store',async()=>{upstreamStatus=403;const r=await fetch(base+path,{headers:{Cookie:`ako_session=${token}`}});assert.equal(r.status,403);assert.equal(r.headers.get('cache-control'),'no-store');upstreamStatus=200;});
+
+test('session list and classroom detail pass the cookie bridge',async()=>{
+  for(const suffix of ['', '/abcdef00-0000-0000-0000-000000000001']){
+    seen=[];
+    const reply=await fetch(base+'/api/staff/access/sessions'+suffix,{headers:{Cookie:`ako_session=${token}`}});
+    assert.equal(reply.status,200);assert.equal(seen[0].authorization,`Bearer ${token}`);
+  }
+});
+test('class creation and lesson linking require same-origin writes',async()=>{
+  for(const [suffix,method] of [['/today','POST'],['','POST'],['/abcdef00-0000-0000-0000-000000000001/lesson','PUT']]){
+    seen=[];
+    const url=base+'/api/staff/access/sessions'+suffix;
+    assert.equal((await fetch(url,{method,headers:{Cookie:`ako_session=${token}`},body:'{}'})).status,403);
+    assert.equal(seen.length,0);
+    assert.equal((await fetch(url,{method,headers:{Cookie:`ako_session=${token}`,Origin:base},body:'{}'})).status,200);
+  }
+});
+test('deleting a class preserves an empty 204 response',async()=>{
+  upstreamStatus=204;
+  try{
+    const reply=await fetch(base+'/api/staff/access/sessions/abcdef00-0000-0000-0000-000000000001',{method:'DELETE',headers:{Cookie:`ako_session=${token}`,Origin:base}});
+    assert.equal(reply.status,204);assert.equal(await reply.text(),'');
+  }finally{upstreamStatus=200;}
+});

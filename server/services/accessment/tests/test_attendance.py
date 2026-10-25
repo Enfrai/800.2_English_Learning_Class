@@ -5,6 +5,7 @@ UT-29 ("Add and mark present") is in test_user_client.py.
 
 Author: Pei Wu
 Date: 23 Oct 2026
+Updated: Shuohui Liu, 26 Oct 2026
 """
 
 from collections.abc import Callable
@@ -12,9 +13,6 @@ from datetime import date, timedelta
 from uuid import UUID, uuid4
 
 import pytest
-from sqlalchemy import func, select
-from sqlalchemy.orm import Session
-
 from attendance import (
     AlreadySignedInError,
     NotMarkedPresentError,
@@ -27,6 +25,8 @@ from attendance import (
     unmark,
 )
 from models import attendance_records
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
 NewSession = Callable[..., UUID]
 
@@ -105,10 +105,10 @@ def test_same_learner_can_be_present_at_two_different_sessions(
     db: Session, new_session: NewSession, today: date
 ) -> None:
     learner_id = uuid4()
-    first_session, second_session = new_session(), new_session()
+    first_session, second_session = new_session(), new_session(today - timedelta(days=1))
 
     tick(db, first_session, learner_id, today)
-    tick(db, second_session, learner_id, today)
+    tick(db, second_session, learner_id, today - timedelta(days=1))
 
     assert present_count(db, first_session) == 1
     assert present_count(db, second_session) == 1
@@ -160,10 +160,10 @@ def test_unticking_a_learner_who_is_not_present_is_reported(
 def test_present_count_is_correct(
     db: Session, new_session: NewSession, today: date, present: int
 ) -> None:
-    session_id, other_session = new_session(), new_session()
+    session_id, other_session = new_session(), new_session(today - timedelta(days=1))
     for _ in range(present):
         tick(db, session_id, uuid4(), today)
-    tick(db, other_session, uuid4(), today)
+    tick(db, other_session, uuid4(), today - timedelta(days=1))
 
     assert present_count(db, session_id) == present
 

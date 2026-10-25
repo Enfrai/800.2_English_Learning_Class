@@ -1,4 +1,4 @@
-"""Run test suites, retain logs/reports, and return a failing exit code on errors.
+"""Run isolated test suites including class-session unit and browser tests.
 
 Author: Shuohui Liu
 Date: 19 Oct 2026
@@ -123,6 +123,8 @@ def web() -> list[dict]:
             "tests/lesson-session.test.mjs",
         ],
         "staff-ui": ["node", "tests/run-staff-ui.mjs"],
+        "sessions-unit": ["npm", "run", "test:sessions-unit"],
+        "sessions-ui": ["node", "tests/run-sessions-ui.mjs"],
         "public-enquiry": ["node", "tests/public-enquiry-form.mjs"],
         "coordinator-enquiries": ["node", "tests/coordinator-enquiries.mjs"],
         "csv-ui": ["node", "tests/run-csv-ui.mjs"],
@@ -182,3 +184,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

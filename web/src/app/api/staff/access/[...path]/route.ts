@@ -1,3 +1,7 @@
+/* Forward authenticated classroom and attendance requests through the staff adapter.
+ * Updated: Shuohui Liu, 26 Oct 2026
+ */
+
 import { NextRequest, NextResponse } from "next/server";
 
 // Fixed deployment target, never a client-supplied destination or redirect.
@@ -5,9 +9,11 @@ const accessApi = process.env.ACCESS_API_URL || "http://nginx/api/access";
 const noStore = { "Cache-Control": "no-store" };
 const uuid = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 // US-015 adds sessions/{id}/corrections.
-const route = new RegExp(`^sessions/${uuid}/(?:attendance(?:/(?:${uuid}|new-learner))?|corrections)$`);
+const route = new RegExp(`^sessions(?:/today|/${uuid}(?:/(?:attendance(?:/(?:${uuid}|new-learner))?|corrections|lesson))?)?$`);
 
-/** Bridge only the existing Attendance routes; backend /me still validates session/role. */
+/** Bridge attendance and class-session routes; backend /me validates session/role.
+ * Updated: Shuohui Liu, 26 Oct 2026
+ */
 async function forward(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   const path = (await context.params).path.join("/");
   if (!route.test(path)) return NextResponse.json({ detail: "Not found" }, { status: 404, headers: noStore });
@@ -30,7 +36,7 @@ async function forward(request: NextRequest, context: { params: Promise<{ path: 
       body: request.method === "GET" ? undefined : await request.text(),
       cache: "no-store", redirect: "error", signal: AbortSignal.timeout(10000),
     });
-    return new NextResponse(await response.arrayBuffer(), {
+    return new NextResponse(response.status === 204 ? null : await response.arrayBuffer(), {
       status: response.status,
       headers: { ...noStore, "Content-Type": response.headers.get("content-type") || "application/json" },
     });

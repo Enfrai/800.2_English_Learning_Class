@@ -1,4 +1,4 @@
-"""Correct the attendance of a past class, with a change log (US-015).
+"""Correct past attendance under a classroom lock and retain its change log (US-015).
 
 Only a coordinator corrects, and only classes before the club's today; during
 the class itself anyone on staff ticks and unticks (US-004). Team decisions
@@ -8,6 +8,7 @@ with no record gets a new present record, logged as absent -> present.
 
 Author: Pei Wu
 Date: 25 Oct 2026
+Updated: Shuohui Liu, 26 Oct 2026
 """
 
 from datetime import date
@@ -48,7 +49,9 @@ class SessionNotPastError(CorrectionError):
 
 def _session_date(db: Session, session_id: UUID) -> date:
     session_date = db.execute(
-        select(class_sessions.c.session_date).where(class_sessions.c.id == session_id)
+        select(class_sessions.c.session_date)
+        .where(class_sessions.c.id == session_id)
+        .with_for_update()
     ).scalar_one_or_none()
     if session_date is None:
         raise SessionNotFoundError("Class session not found")

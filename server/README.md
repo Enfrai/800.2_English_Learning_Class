@@ -43,3 +43,15 @@ The default `local_internal_key` is for local development only; set a long
 random value in the environment anywhere else. Nginx refuses
 `/api/user/internal/` from outside, so the lookup is reachable only between
 services.
+
+
+## Class sessions (US-014)
+
+Staff use `/sessions` to create or reopen today's class, create a past class,
+choose its lesson and enter Attendance. Class dates are unique and use the
+club's `Pacific/Auckland` date by default. Empty classes can be deleted after
+confirmation; any attendance blocks deletion. The startup upgrade is additive
+and refuses legacy duplicate dates instead of removing data.
+
+See [class-session operation and tests](../docs/system_test/class_sessions_system_tests.md)
+for local/Chrome checks and the PostgreSQL concurrency/Docker suites.

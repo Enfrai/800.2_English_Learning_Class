@@ -1,13 +1,29 @@
-"""Ako database models.
+"""Define attendance, dated class sessions and cross-service lesson links.
 
 Author: Shuohui Liu
 Date: 19 Oct 2026
 """
 from uuid import uuid4
-from sqlalchemy import Table, Column, String, Boolean, Integer, SmallInteger, BigInteger, Date, Time, DateTime, Text, ForeignKey, CheckConstraint, UniqueConstraint, Index, func, text
-from sqlalchemy import DDL, event
+
+from sqlalchemy import (
+    DDL,
+    CheckConstraint,
+    Column,
+    Date,
+    DateTime,
+    ForeignKey,
+    Index,
+    String,
+    Table,
+    Time,
+    UniqueConstraint,
+    event,
+    func,
+    text,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import DeclarativeBase
+
 
 class Base(DeclarativeBase):
     pass
@@ -69,3 +85,14 @@ APPEND_ONLY_AUDIT_SQL = (
 # One statement per DDL: psycopg runs one statement per call.
 for _statement in APPEND_ONLY_AUDIT_SQL:
     event.listen(attendance_audits, "after_create", DDL(_statement))
+
+# US-014: one dated session, with at most one lesson stored in lessondb.
+unique_session_date = Index(
+    "uq_class_sessions_date", class_sessions.c.session_date, unique=True
+)
+session_lesson_links = Table(
+    "session_lesson_links", Base.metadata,
+    Column("session_id", UUID(as_uuid=True),
+           ForeignKey("class_sessions.id"), primary_key=True),
+    ref("lesson_id", nullable=True),
+)

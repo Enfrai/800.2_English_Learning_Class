@@ -74,14 +74,14 @@ docker compose -f compose.test.yaml -p ako-tests run --build --rm -e TEST_SUITE=
 
 Backend selections: `user`, `accessment`, `lesson`.
 Web selections: `api`, `staff-ui`, `public-enquiry`,
-`coordinator-enquiries`, `csv-ui`.
+`coordinator-enquiries`, `csv-ui`, `sessions-unit`, `sessions-ui`.
 
 ## Coverage
 
 | Group | What it runs |
 | --- | --- |
 | Backend | pytest in all three service directories, including the User Service's real PostgreSQL/cross-replica tests |
-| Web | API cookie/adapter tests, staff UI and style parity, public enquiry, coordinator enquiry, CSV upload/import UI |
+| Web | API cookie/adapter tests, staff UI and style parity, public enquiry, coordinator enquiry, CSV upload/import UI, class-session unit and browser tests |
 | System | The existing `tests/system/` suite against real Nginx, Next.js, two replicas of each API, and three isolated application databases |
 
 Mocked web tests verify frontend behavior; they do not prove backend
@@ -147,3 +147,4 @@ database instead of invoking Docker inside a test container. Authentication
 uses shared HttpOnly cookies and native Ako form selectors.
 Accessibility checks use the locally installed axe-core asset inside the
 system image, so tests do not depend on a public CDN at runtime.
+

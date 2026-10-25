@@ -57,3 +57,24 @@ SQL
 ```
 
 US-006 now implements authenticated lesson CRUD, topic tags, attachment upload/download/removal and sharing metadata. Review enforcement remains in US-008. Uploaded files are stored in the shared `lesson_files` volume, outside the code submission.
+
+
+
+## US-014 dated classrooms
+
+Accessment adds `session_lesson_links` with `session_id` UUID primary key and
+foreign key to `class_sessions.id`, plus nullable `lesson_id` UUID referencing
+Lesson service data logically across databases. The date has a unique index
+`uq_class_sessions_date`. A lesson may be linked to many different dated classes.
+
+Startup uses transaction advisory lock 800014 across Accessment replicas,
+creates missing tables, rejects legacy duplicate dates without deleting records,
+and adds the unique date index idempotently. Repeated create requests use
+`ON CONFLICT (session_date) DO NOTHING` and return the existing class.
+
+Class deletion locks the classroom row and checks all attendance records,
+including absent records. Attendance writes and corrections lock that same row.
+Only an empty class is removed, together with its lesson association and QR
+windows. The Lesson database and its files are unchanged. Foreign keys block
+unexpected related-record deletion. See
+[US-014 tests and operation](../docs/system_test/class_sessions_system_tests.md).
