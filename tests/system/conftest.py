@@ -193,9 +193,9 @@ def log_in_through_page(page: Page) -> Callable[[], None]:
 
     def log_in() -> None:
         page.goto("/")
-        page.locator("md-outlined-text-field[name=username] input").fill(USERNAME)
-        page.locator("md-outlined-text-field[name=password] input").fill(PASSWORD)
-        page.locator("md-filled-button").click()
+        page.get_by_label("Username").fill(USERNAME)
+        page.get_by_label("Password").fill(PASSWORD)
+        page.get_by_role("button", name="Sign in").click()
         # US-001: a successful login opens the home page for the person's role.
         page.wait_for_url("**/coordinator")
 
