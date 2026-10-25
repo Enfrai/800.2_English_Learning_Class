@@ -179,3 +179,21 @@ def change_history(db: Session, session_id: UUID) -> list[dict[str, Any]]:
         .order_by(attendance_audits.c.created_at, attendance_audits.c.id)
     ).mappings()
     return [dict(row) for row in rows]
+
+
+def corrected_learners(db: Session, session_id: UUID) -> list[UUID]:
+    """Return the learners whose attendance at a class was corrected.
+
+    Includes learners corrected to not present, so the list can mark every
+    changed learner "Corrected" (UI design document 6.16).
+    """
+    return list(
+        db.execute(
+            select(attendance_records.c.learner_id)
+            .where(
+                attendance_records.c.session_id == session_id,
+                attendance_records.c.corrected_at.is_not(None),
+            )
+            .order_by(attendance_records.c.learner_id)
+        ).scalars()
+    )
