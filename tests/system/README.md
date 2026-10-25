@@ -8,6 +8,8 @@ that testers follow and sign off are in `docs/system_test/`.
 | --- | --- |
 | `test_learners_page.py` | ST-11, and the Learners page parts of NT-05, NT-06, NT-07, NT-08, NT-10 |
 | `test_attendance_page.py` | ST-01, US-004 AC1 to AC5, and the attendance page parts of NT-01, NT-06, NT-07, NT-10 |
+| `test_sign_in_page.py` | ST-14 sign-in part, US-012 AC1 to AC6, and the sign-in parts of NT-06 and NT-11, on a 360 px phone |
+| `test_review_flow.py` | ST-09 and the review part of NT-10 (US-008), through the API until the lesson pages (US-006) are merged; the file step is skipped until then |
 
 ## Running the tests
 
@@ -53,6 +55,9 @@ Notes:
 - The tests log in as the demo coordinator. A new login ends the previous
   demo session, so a browser where you are logged in as demo is logged out.
 - The accessibility check loads axe-core from cdnjs, so it needs internet.
+- `test_sign_in_page.py` clears `signin_failures` on the throwaway database
+  before each test: every test request comes from this computer's address,
+  which has a limit of 50 wrong names in 10 minutes.
 - Until US-014 adds "Start today's class", the attendance tests create class
   sessions with `docker compose exec` on the running system, so Docker must
   be on the same computer. Set `COMPOSE_FILE` if the system was started from

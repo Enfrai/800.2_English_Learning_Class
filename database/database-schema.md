@@ -26,4 +26,13 @@ docker compose exec postgres-lesson psql -U lesson_app -d lessondb -c \
   "ALTER TABLE lesson_materials ADD COLUMN IF NOT EXISTS share_with_learners BOOLEAN NOT NULL DEFAULT false"
 ```
 
+## US-008 change to an existing lesson database
+
+US-008 adds `lessons.reviewer_name` and `lessons.review_date`, so the label can show "Reviewed by [name], [date]". A lesson database created before US-008 needs this once (a new database gets the columns automatically):
+
+```sh
+docker compose exec postgres-lesson psql -U lesson_app -d lessondb -c \
+  "ALTER TABLE lessons ADD COLUMN IF NOT EXISTS reviewer_name VARCHAR(150), ADD COLUMN IF NOT EXISTS review_date DATE"
+```
+
 The models define persistence only. QR check-in, lesson review enforcement and the rest of the learner and attendance APIs are not yet implemented.

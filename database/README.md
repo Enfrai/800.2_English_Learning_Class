@@ -129,6 +129,16 @@ This audit trail is a recommended implementation detail rather than an explicitl
 
 A closed or expired code cannot record attendance. Rate limiting for repeated incorrect names should use short-lived server-side counters without retaining location or device fingerprints. The original specification proposes blocking more than ten incorrect names from one device within ten minutes for ten minutes; a privacy-preserving technical mechanism needs to be agreed.
 
+### 3.5 `signin_failures` — Wrong Names at QR Sign-in (US-012)
+
+| Column | PostgreSQL Type | Constraints | Description |
+|---|---|---|---|
+| `id` | UUID | PK | Row identifier |
+| `key_hash` | VARCHAR(64) | NOT NULL | HMAC-SHA256, keyed with `INTERNAL_API_KEY`, of the phone's random sign-in id or of its address; neither is stored |
+| `failed_at` | TIMESTAMPTZ | NOT NULL | When a name that matched no learner was typed |
+
+**Index:** (`key_hash`, `failed_at`). The sign-in page keeps a random id per phone, because phones on the library Wi-Fi share one address. Ten wrong names from one phone within ten minutes block that phone for ten minutes; fifty from one address block the address, so a changing id does not help. Without a valid id, ten from the address block it. Rows older than one hour are deleted on each new wrong name. A name shared by several learners is not counted. Self sign-ins are recorded in `attendance_records` with `recorded_by` set to the teacher who opened check-in (team decision, 25 Oct 2026), and store no location or device detail.
+
 ## 4. Lesson Microservice (`lesson_db`)
 
 ### 4.1 `lessons` — Lesson Library (US-006, US-007, US-008)
@@ -143,13 +153,15 @@ A closed or expired code cannot record attendance. Rate limiting for repeated in
 | `source_lesson_id` | UUID | FK → `lessons.id`, NULL | Original lesson if copied |
 | `has_maori_content` | BOOLEAN | NOT NULL, DEFAULT FALSE | Māori content flag |
 | `review_status` | VARCHAR(20) | NOT NULL, CHECK, DEFAULT 'not_required' | `not_required`, `pending`, `reviewed`, `rejected` |
-| `reviewed_by` | UUID | NULL; User-service reference | Reviewer |
-| `reviewed_at` | TIMESTAMPTZ | NULL | Review time |
+| `reviewed_by` | UUID | NULL; User-service reference | Coordinator who recorded the review |
+| `reviewed_at` | TIMESTAMPTZ | NULL | When the review was recorded |
+| `reviewer_name` | VARCHAR(150) | NULL | Reviewer's name as typed, e.g. a Kaiārahi outside the system (US-008) |
+| `review_date` | DATE | NULL | Date of the review, not in the future (US-008) |
 | `created_at` | TIMESTAMPTZ | NOT NULL | Creation time |
 | `updated_at` | TIMESTAMPTZ | NOT NULL | Update time |
 | `deleted_at` | TIMESTAMPTZ | NULL | Soft deletion time |
 
-**Rules:** Teachers edit their own lessons; coordinators may edit any lesson, pending team confirmation. Unreviewed Māori content must not be shown to learners. Resetting review status to `pending` after relevant edits is recommended and should be confirmed.
+**Rules:** Teachers edit their own lessons; coordinators may edit any lesson, pending team confirmation. Unreviewed Māori content must not be shown to learners; staff still see it (team decision, 23 Oct 2026). Only a coordinator records a review. Adding, replacing or removing a material of a reviewed lesson resets it to `pending` (US-008 AC4).
 
 ### 4.2 `tags` — Lesson Topics
 

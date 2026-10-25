@@ -18,7 +18,6 @@ from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
-
 import user_client
 
 AUTHORIZATION = "Bearer test-session"
@@ -45,6 +44,7 @@ def user_service(monkeypatch: pytest.MonkeyPatch) -> Iterator[FakeUserService]:
                     "method": self.command,
                     "path": self.path,
                     "authorization": self.headers.get("Authorization"),
+                    "internal_key": self.headers.get("X-Internal-Key"),
                     "body": json.loads(body) if body else None,
                 }
             )
@@ -211,3 +211,55 @@ def test_unreachable_user_service_is_reported(
         user_client.current_staff(AUTHORIZATION)
     with pytest.raises(user_client.UserServiceError):
         user_client.learner_exists(AUTHORIZATION, UUID(int=1))
+
+
+# QR sign-in lookup (US-012): no login, proved with the internal key
+
+
+MATCH = ("POST", "/internal/learners/match")
+
+
+@pytest.fixture
+def internal_key(monkeypatch: pytest.MonkeyPatch) -> str:
+    monkeypatch.setattr(user_client, "INTERNAL_API_KEY", "test-internal-key")
+    return "test-internal-key"
+
+
+def test_sign_in_lookup_sends_the_internal_key_and_no_login(
+    user_service: FakeUserService, internal_key: str
+) -> None:
+    found = {"id": str(uuid4()), "first_name": "Tāne", "family_name": "Māhina"}
+    user_service.answers[MATCH] = (200, found)
+
+    result = user_client.find_learner_for_sign_in("tane", "mahina")
+
+    assert result == found
+    request = user_service.requests[0]
+    assert request["internal_key"] == internal_key
+    assert request["authorization"] is None
+    assert request["body"] == {"first_name": "tane", "family_name": "mahina"}
+
+
+@pytest.mark.parametrize(
+    ("status", "error"),
+    [
+        (404, user_client.SignInNameNotFoundError),
+        (409, user_client.AmbiguousSignInNameError),
+    ],
+)
+def test_sign_in_lookup_reports_unknown_and_shared_names(
+    user_service: FakeUserService, internal_key: str, status: int, error: type
+) -> None:
+    user_service.answers[MATCH] = (status, {"detail": "x"})
+
+    with pytest.raises(error):
+        user_client.find_learner_for_sign_in("Mere", "Walker")
+
+
+def test_refused_key_is_reported_as_unavailable_not_as_unknown_name(
+    user_service: FakeUserService, internal_key: str
+) -> None:
+    user_service.answers[MATCH] = (403, {"detail": "Internal access only"})
+
+    with pytest.raises(user_client.UserServiceError):
+        user_client.find_learner_for_sign_in("Aroha", "Ngata")
