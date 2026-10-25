@@ -46,3 +46,25 @@ test('oversized adapter request is rejected before reaching Lesson',async()=>{
  const response=await fetch(base+path,{method:'POST',headers:{Cookie:`ako_session=${token}`,Origin:base,'Content-Type':'application/octet-stream'},body:Buffer.alloc(11*1024*1024+1)});
  assert.equal(response.status,413);assert.equal(seen.length,0);
 });
+
+test('search query parameters pass through the cookie adapter unchanged',async()=>{
+  seen=[];
+  const response=await fetch(base+'/api/staff/lesson/lessons?q=M%C4%81ori%25&tag=transport',{headers:{Cookie:`ako_session=${token}`}});
+  assert.equal(response.status,200);
+  assert.equal(seen[0].url,'/lessons?q=M%C4%81ori%25&tag=transport');
+});
+test('copy draft and save keep staff authentication and same-origin write protection',async()=>{
+  const copyPath=path.replace('/materials','/copy');
+  seen=[];
+  assert.equal((await fetch(base+copyPath)).status,401);
+  assert.equal(seen.length,0);
+  assert.equal((await fetch(base+copyPath,{headers:{Cookie:`ako_session=${token}`}})).status,200);
+  assert.equal(seen[0].method,'GET');
+  seen=[];
+  assert.equal((await fetch(base+copyPath,{method:'POST',headers:{Cookie:`ako_session=${token}`,Origin:'https://untrusted.example'},body:'{}'})).status,403);
+  assert.equal(seen.length,0);
+  const body='{"title":"Copy of lesson","lesson_date":"2026-10-26","tags":["health"],"material_ids":[]}';
+  const saved=await fetch(base+copyPath,{method:'POST',headers:{Cookie:`ako_session=${token}`,Origin:base,'Content-Type':'application/json'},body});
+  assert.equal(saved.status,200);assert.equal(seen[0].body,body);
+  assert.equal(seen[0].authorization,`Bearer ${token}`);
+});

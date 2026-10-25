@@ -76,3 +76,12 @@ existing tables. PostgreSQL initialization uses transaction advisory lock
 800013 so both replicas can start safely. File sharing/review metadata remains
 in the Lesson database, and Accessment calls key-protected internal Lesson
 endpoints rather than reading another service's database.
+
+## US-007 lesson copies
+
+No schema migration is needed. `lessons.source_lesson_id` records the immediate
+source; a new lesson gets the current staff author, chosen date, independent
+metadata and tag associations. Each copied material gets a new row and storage
+key, with `share_with_learners=false`. Māori copies retain the flag but start
+with `review_status=pending` and empty review fields. Existing source tombstones
+keep the lineage reference valid when the source is deleted.
