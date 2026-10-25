@@ -1,6 +1,7 @@
 /* Call the Accessment Service attendance endpoints through Nginx (US-004).
  * Author: Pei Wu
  * Date: 23 Oct 2026
+ * Updated: Pei Wu, 25 Oct 2026 (US-015 corrections and change history)
  */
 
 import { apiRequest, RequestFailedError } from "./api";
@@ -19,6 +20,8 @@ export type AttendanceList = {
   editable: boolean;
   present_count: number;
   records: AttendanceRecord[];
+  /** Learners whose attendance was corrected after the class, present or not. */
+  corrected_learner_ids: string[];
 };
 
 export type AttendanceChange = {
@@ -30,6 +33,19 @@ export type AddAndMarkResult = AttendanceChange & {
   learner: Pick<Learner, "id" | "first_name" | "family_name" | "first_language" | "contact">;
   /** False when a learner with the same name was already on the list. */
   learner_added: boolean;
+};
+
+/** One entry of a past class's change history (US-015). */
+export type Correction = {
+  learner_id: string;
+  /** Null when the learner is no longer known to the User Service. */
+  learner_name: string | null;
+  old_status: string;
+  new_status: string;
+  corrected_by: string;
+  corrected_by_name: string | null;
+  reason: string | null;
+  created_at: string;
 };
 
 /** The learner is already marked present. No second record was made. */
@@ -45,6 +61,9 @@ export class AlreadySignedInError extends Error {
 /** The session is before today. The message comes from the server. */
 export class PastSessionError extends Error {}
 
+/** The class is today, so it is changed on its list, not corrected. */
+export class SessionNotPastError extends Error {}
+
 /** The session, the learner or the present record does not exist. */
 export class NotFoundError extends Error {}
 
@@ -54,6 +73,7 @@ async function send<T>(url: string, init: RequestInit = {}): Promise<T> {
   if (status === 409 && detail?.attendance) {
     throw new AlreadySignedInError(String(detail.message), detail.attendance as AttendanceRecord);
   }
+  if (status === 409) throw new SessionNotPastError(message);
   if (status === 403) throw new PastSessionError(message);
   if (status === 404) throw new NotFoundError(message);
   throwIfFieldError(status, detail);
@@ -89,4 +109,25 @@ export function addAndMarkPresent(
     method: "POST",
     body: JSON.stringify(name),
   });
+}
+
+function correctionsUrl(sessionId: string): string {
+  return `/api/access/sessions/${encodeURIComponent(sessionId)}/corrections`;
+}
+
+/** A coordinator marks a learner present or not present at a past class (US-015). */
+export function correctAttendance(
+  sessionId: string,
+  learnerId: string,
+  present: boolean,
+): Promise<AttendanceChange> {
+  return send<AttendanceChange>(correctionsUrl(sessionId), {
+    method: "POST",
+    body: JSON.stringify({ learner_id: learnerId, present }),
+  });
+}
+
+/** Every correction of a past class, oldest first. Coordinators only. */
+export function getCorrections(sessionId: string): Promise<Correction[]> {
+  return send<Correction[]>(correctionsUrl(sessionId));
 }

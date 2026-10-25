@@ -1,20 +1,27 @@
-/* Attendance (sign-in) page for one class session (UI design document 6.6, US-004).
+/* Attendance (sign-in) page for one class session (UI design document 6.6, US-004),
+ * and correcting a past class (6.16, US-015).
  * Author: Pei Wu
  * Date: 23 Oct 2026
+ * Updated: Pei Wu, 25 Oct 2026 (US-015 correction view and change history)
  */
 
 "use client";
 
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { type FieldErrors, TextField, checkNames } from "@/components/learners/learner-form";
+import { useSession } from "@/components/session-context";
 import { LoginRequiredError } from "@/lib/api";
 import {
   AlreadySignedInError,
   type AttendanceRecord,
+  type Correction,
   NotFoundError,
   PastSessionError,
+  SessionNotPastError,
   addAndMarkPresent,
+  correctAttendance,
   getAttendance,
+  getCorrections,
   markPresent,
   unmarkPresent,
 } from "@/lib/attendance-api";
@@ -24,10 +31,15 @@ import { formatSessionDate } from "@/lib/dates";
 type LoadState = "loading" | "ready" | "login-required" | "not-found" | "failed";
 type Message = { kind: "info" | "warning" | "error" | "success"; text: string };
 type ListedLearner = Pick<Learner, "id" | "first_name" | "family_name" | "first_language">;
+/** "class": the class is today or later (6.6); "correct": a coordinator on a
+ * past class (6.16); "view": anyone else on a past class. */
+type Mode = "class" | "correct" | "view";
 
 // Message catalogue, UI design document section 7.
 const PAST_ATTENDANCE_LOCKED = "Only a coordinator can correct past attendance";
 const CHANGE_FAILED = "The change could not be saved. Please try again.";
+const CORRECTION_NOTICE = "You are correcting a past class. Every change is logged with your name and the time";
+const HISTORY_FAILED = "The change history could not be loaded. Please try again.";
 
 function fullName(learner: Pick<Learner, "first_name" | "family_name">): string {
   return `${learner.first_name} ${learner.family_name}`;
@@ -44,6 +56,20 @@ function formatTime(isoTime: string): string {
   return new Date(isoTime).toLocaleTimeString("en-NZ", { hour: "numeric", minute: "2-digit" });
 }
 
+function formatChangeTime(isoTime: string): string {
+  return new Date(isoTime).toLocaleString("en-NZ", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function statusLabel(status: string): string {
+  return status === "present" ? "Present" : "Absent";
+}
+
 function MessageBox({ message }: { message: Message | null }) {
   if (!message) return null;
   const urgent = message.kind === "error" || message.kind === "warning";
@@ -55,12 +81,17 @@ function MessageBox({ message }: { message: Message | null }) {
 }
 
 export default function AttendanceScreen({ sessionId }: { sessionId: string }) {
+  // The server decides who may correct; the role only chooses the view.
+  const isCoordinator = useSession()?.role === "coordinator";
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [learners, setLearners] = useState<ListedLearner[]>([]);
   const [records, setRecords] = useState<Map<string, AttendanceRecord>>(new Map());
   const [presentCount, setPresentCount] = useState(0);
   const [sessionDate, setSessionDate] = useState("");
   const [editable, setEditable] = useState(false);
+  const [corrected, setCorrected] = useState<Set<string>>(new Set());
+  // Bumped after each correction so the change history loads again.
+  const [historyVersion, setHistoryVersion] = useState(0);
   // Learners whose tick is being saved, with the state the teacher chose.
   const [pending, setPending] = useState<Map<string, boolean>>(new Map());
   // Messages about one learner are shown in that learner's row (UI kit rule 3).
@@ -77,6 +108,8 @@ export default function AttendanceScreen({ sessionId }: { sessionId: string }) {
       setPresentCount(attendance.present_count);
       setSessionDate(attendance.session_date);
       setEditable(attendance.editable);
+      setCorrected(new Set(attendance.corrected_learner_ids));
+      setHistoryVersion((version) => version + 1);
       setLoadState("ready");
     } catch (error) {
       if (error instanceof LoginRequiredError) setLoadState("login-required");
@@ -111,22 +144,35 @@ export default function AttendanceScreen({ sessionId }: { sessionId: string }) {
     setEditable(false);
   }
 
+  const mode: Mode = editable ? "class" : isCoordinator ? "correct" : "view";
+
   async function toggle(learner: ListedLearner, present: boolean) {
     if (pending.has(learner.id)) return;
     setPending((current) => new Map(current).set(learner.id, present));
     setRowMessage(learner.id, null);
     try {
-      const change = present
-        ? await markPresent(sessionId, learner.id)
-        : await unmarkPresent(sessionId, learner.id);
-      setRecord(learner.id, change.attendance);
-      setPresentCount(change.present_count);
+      if (mode === "correct") {
+        const change = await correctAttendance(sessionId, learner.id, present);
+        // An unticked learner keeps an absent record; the list shows present ones.
+        setRecord(learner.id, change.attendance?.status === "present" ? change.attendance : null);
+        setPresentCount(change.present_count);
+        setCorrected((current) => new Set(current).add(learner.id));
+        setHistoryVersion((version) => version + 1);
+      } else {
+        const change = present
+          ? await markPresent(sessionId, learner.id)
+          : await unmarkPresent(sessionId, learner.id);
+        setRecord(learner.id, change.attendance);
+        setPresentCount(change.present_count);
+      }
     } catch (error) {
       if (error instanceof AlreadySignedInError) {
         setRowMessage(learner.id, { kind: "info", text: error.message });
         await load();
-      } else if (error instanceof PastSessionError) lockPastSession();
-      else if (error instanceof NotFoundError) await load();
+      } else if (error instanceof PastSessionError) {
+        if (mode === "correct") setRowMessage(learner.id, { kind: "error", text: error.message });
+        else lockPastSession();
+      } else if (error instanceof NotFoundError || error instanceof SessionNotPastError) await load();
       else if (error instanceof LoginRequiredError) setLoadState("login-required");
       else setRowMessage(learner.id, { kind: "error", text: CHANGE_FAILED });
     } finally {
@@ -196,7 +242,8 @@ export default function AttendanceScreen({ sessionId }: { sessionId: string }) {
               Open check-in with QR code (later)
             </button>
           </div>
-          {!editable && (
+          {mode === "correct" && <div className="msg msg-info">{CORRECTION_NOTICE}</div>}
+          {mode === "view" && (
             <div className="msg msg-warning" role="alert">
               {PAST_ATTENDANCE_LOCKED}
             </div>
@@ -204,12 +251,14 @@ export default function AttendanceScreen({ sessionId }: { sessionId: string }) {
           <ClassList
             learners={learners}
             records={records}
+            corrected={corrected}
             pending={pending}
             rowMessages={rowMessages}
-            editable={editable}
+            tickBoxes={mode !== "view"}
             onToggle={(learner, present) => void toggle(learner, present)}
           />
-          {editable && (
+          {mode === "correct" && <ChangeHistory sessionId={sessionId} version={historyVersion} />}
+          {mode === "class" && (
             <AddAndMarkForm
               sessionId={sessionId}
               onAdded={handleAdded}
@@ -226,16 +275,19 @@ export default function AttendanceScreen({ sessionId }: { sessionId: string }) {
 function ClassList({
   learners,
   records,
+  corrected,
   pending,
   rowMessages,
-  editable,
+  tickBoxes,
   onToggle,
 }: {
   learners: ListedLearner[];
   records: Map<string, AttendanceRecord>;
+  corrected: Set<string>;
   pending: Map<string, boolean>;
   rowMessages: Map<string, Message>;
-  editable: boolean;
+  /** False shows the list without tick boxes (a teacher on a past class). */
+  tickBoxes: boolean;
   onToggle: (learner: ListedLearner, present: boolean) => void;
 }) {
   if (learners.length === 0) {
@@ -245,7 +297,7 @@ function ClassList({
     <table className="data" style={{ marginTop: "var(--space-4)" }}>
       <thead>
         <tr>
-          <th scope="col">Present</th>
+          {tickBoxes && <th scope="col">Present</th>}
           <th scope="col">Name</th>
           <th scope="col">First language</th>
           <th scope="col">Time</th>
@@ -257,28 +309,35 @@ function ClassList({
           const checkboxId = `present-${learner.id}`;
           return (
             <tr key={learner.id}>
-              <td>
-                <div className="check">
-                  <input
-                    id={checkboxId}
-                    type="checkbox"
-                    // Show the teacher's choice at once; it reverts if saving fails.
-                    checked={pending.get(learner.id) ?? Boolean(record)}
-                    aria-busy={pending.has(learner.id)}
-                    disabled={!editable}
-                    onChange={(event) => onToggle(learner, event.target.checked)}
-                  />
-                </div>
-              </td>
+              {tickBoxes && (
+                <td>
+                  <div className="check">
+                    <input
+                      id={checkboxId}
+                      type="checkbox"
+                      // Show the teacher's choice at once; it reverts if saving fails.
+                      checked={pending.get(learner.id) ?? Boolean(record)}
+                      aria-busy={pending.has(learner.id)}
+                      onChange={(event) => onToggle(learner, event.target.checked)}
+                    />
+                  </div>
+                </td>
+              )}
               <td style={{ overflowWrap: "anywhere" }}>
                 {/* Clicking the name ticks the box; it also names the box for screen readers. */}
-                <label htmlFor={checkboxId}>{fullName(learner)}</label>
+                {tickBoxes ? <label htmlFor={checkboxId}>{fullName(learner)}</label> : fullName(learner)}
               </td>
               <td>{learner.first_language ?? "–"}</td>
               <td>
                 {record && (
                   <>
                     <span className="badge badge-present">Present</span> {formatTime(record.recorded_at)}
+                  </>
+                )}
+                {corrected.has(learner.id) && (
+                  <>
+                    {" "}
+                    <span className="badge badge-corrected">Corrected</span>
                   </>
                 )}
                 <MessageBox message={rowMessages.get(learner.id) ?? null} />
@@ -288,6 +347,65 @@ function ClassList({
         })}
       </tbody>
     </table>
+  );
+}
+
+function ChangeHistory({ sessionId, version }: { sessionId: string; version: number }) {
+  const [history, setHistory] = useState<Correction[] | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let current = true;
+    getCorrections(sessionId).then(
+      (entries) => {
+        if (!current) return;
+        setHistory(entries);
+        setFailed(false);
+      },
+      () => {
+        if (current) setFailed(true);
+      },
+    );
+    return () => {
+      current = false;
+    };
+  }, [sessionId, version]);
+
+  return (
+    <section aria-labelledby="change-history-title">
+      <h2 id="change-history-title">Change history</h2>
+      {failed && (
+        <div className="msg msg-error" role="alert">
+          {HISTORY_FAILED}
+        </div>
+      )}
+      {!failed && history === null && <p role="status">Loading the change history…</p>}
+      {history?.length === 0 && <p>No changes yet.</p>}
+      {history && history.length > 0 && (
+        <table className="data">
+          <thead>
+            <tr>
+              <th scope="col">When</th>
+              <th scope="col">Who</th>
+              <th scope="col">Change</th>
+            </tr>
+          </thead>
+          <tbody>
+            {history.map((entry, index) => (
+              <tr key={`${entry.created_at}-${index}`}>
+                <td>{formatChangeTime(entry.created_at)}</td>
+                <td>{entry.corrected_by_name ?? "Unknown staff member"}</td>
+                <td style={{ overflowWrap: "anywhere" }}>
+                  {entry.learner_name ?? "Unknown learner"}: {statusLabel(entry.old_status)} →{" "}
+                  {statusLabel(entry.new_status)}
+                  {entry.reason && ` (${entry.reason})`}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </section>
   );
 }
 
