@@ -31,6 +31,7 @@ from auth import (
     require_coordinator,
     unauthenticated,
 )
+from learner_import import router as learner_import_router
 from learners import (
     DuplicateLearnerError,
     LearnerError,
@@ -111,6 +112,7 @@ app = FastAPI(title="User Service", lifespan=lifespan)
 app.state.session_factory = SessionLocal
 app.state.session_security = SessionSecurity.from_environment()
 app.include_router(create_staff_router(password_hash))
+app.include_router(learner_import_router)
 
 
 @app.middleware("http")
@@ -120,6 +122,7 @@ async def authentication_cache_control(
     response = await call_next(request)
     if (
         request.url.path in AUTH_PATHS
+        or request.url.path == "/learners/import"
         or request.url.path == "/staff"
         or request.url.path.startswith("/staff/")
     ):
