@@ -1,9 +1,12 @@
-"""Learner records: add, view and update (US-003).
+"""Learner records: add, view and update (US-003), and find a learner by
+the name they type when signing in with the QR code (US-012).
 
 Author: Pei Wu
 Date: 22 Oct 2026
+Updated: 25 Oct 2026 (US-012 sign-in lookup)
 """
 
+import unicodedata
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
@@ -34,6 +37,10 @@ class LearnerValidationError(LearnerError):
 
 class LearnerNotFoundError(LearnerError):
     """No learner has the given id."""
+
+
+class AmbiguousLearnerNameError(LearnerError):
+    """More than one active learner has the typed name (US-012)."""
 
 
 class DuplicateLearnerError(LearnerError):
@@ -218,3 +225,48 @@ def update_learner(
         .one()
     )
     return dict(row)
+
+
+def _sign_in_key(value: str) -> str:
+    """Lower case, single spaces, and no macrons or other accents."""
+    decomposed = unicodedata.normalize("NFKD", value)
+    letters = "".join(char for char in decomposed if not unicodedata.combining(char))
+    return " ".join(letters.casefold().split())
+
+
+def find_learner_for_sign_in(
+    db: Session, first_name: str | None, family_name: str | None
+) -> dict[str, Any]:
+    """Return the one active learner whose name matches what was typed (US-012).
+
+    Matching ignores letter case, extra spaces and macrons, because a phone
+    keyboard may not offer macrons; stored names are never changed. Only the
+    matched learner's id and name are returned, never the class list.
+
+    Raises:
+        LearnerNotFoundError: no active learner has this name, or a name part
+            is empty or too long.
+        AmbiguousLearnerNameError: several active learners have this name, so
+            the teacher must tick the right one.
+    """
+    first, family = _sign_in_key(first_name or ""), _sign_in_key(family_name or "")
+    if not first or not family or max(len(first), len(family)) > MAX_NAME_LENGTH:
+        raise LearnerNotFoundError("Learner not found")
+    # Accents cannot be ignored in SQL without an extension, so compare in
+    # Python. The club's active list is small (about 50 learners).
+    rows = db.execute(
+        select(learners.c.id, learners.c.first_name, learners.c.family_name).where(
+            learners.c.is_active.is_(True)
+        )
+    ).mappings()
+    matches = [
+        dict(row)
+        for row in rows
+        if _sign_in_key(row["first_name"]) == first
+        and _sign_in_key(row["family_name"]) == family
+    ]
+    if not matches:
+        raise LearnerNotFoundError("Learner not found")
+    if len(matches) > 1:
+        raise AmbiguousLearnerNameError("Several learners have this name")
+    return matches[0]

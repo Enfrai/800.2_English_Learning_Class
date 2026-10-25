@@ -33,3 +33,13 @@ databases started by `compose.yaml`.
    end. The database in the URL is only used to create and drop it.
 
 4. Stop the test server when finished: `docker stop ako-test-postgres`.
+
+## Internal service key
+
+The Accessment Service looks up a learner by name for QR sign-in (US-012)
+without a login. It proves itself to the User Service with `INTERNAL_API_KEY`,
+which `compose.yaml` passes to `user1`, `user2`, `access1` and `access2`.
+The default `local_internal_key` is for local development only; set a long
+random value in the environment anywhere else. Nginx refuses
+`/api/user/internal/` from outside, so the lookup is reachable only between
+services.

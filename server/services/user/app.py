@@ -15,7 +15,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, HTTPException, Request, Response
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import create_engine, delete, select
@@ -33,11 +33,13 @@ from auth import (
 )
 from learner_import import router as learner_import_router
 from learners import (
+    AmbiguousLearnerNameError,
     DuplicateLearnerError,
     LearnerError,
     LearnerNotFoundError,
     LearnerValidationError,
     add_learner,
+    find_learner_for_sign_in,
     get_learner,
     list_learners,
     update_learner,
@@ -484,3 +486,50 @@ def change_learner(
             )
     except LearnerError as exc:
         raise learner_http_error(exc) from exc
+
+
+# US-012 sign-in lookup, for the Accessment Service only. Author: Pei Wu, 25 Oct 2026.
+# Learners sign in without a login, so services prove themselves with a shared
+# key. Nginx also refuses /api/user/internal/ from outside.
+INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY", "")
+
+
+def require_internal_key(
+    x_internal_key: Annotated[str | None, Header()] = None,
+) -> None:
+    # Without a configured key the endpoint stays closed.
+    if not (
+        INTERNAL_API_KEY
+        and x_internal_key
+        and hmac.compare_digest(x_internal_key, INTERNAL_API_KEY)
+    ):
+        raise HTTPException(status_code=403, detail="Internal access only")
+
+
+class SignInNameIn(BaseModel):
+    first_name: str | None = None
+    family_name: str | None = None
+
+
+class SignInLearnerOut(BaseModel):
+    id: UUID
+    first_name: str
+    family_name: str
+
+
+@app.post(
+    "/internal/learners/match",
+    response_model=SignInLearnerOut,
+    dependencies=[Depends(require_internal_key)],
+)
+def match_learner_for_sign_in(payload: SignInNameIn, request: Request):
+    """Return the one learner with the typed name; never the class list."""
+    try:
+        with request.app.state.session_factory() as db:
+            return find_learner_for_sign_in(db, payload.first_name, payload.family_name)
+    except LearnerNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Learner not found") from exc
+    except AmbiguousLearnerNameError as exc:
+        raise HTTPException(
+            status_code=409, detail="Several learners have this name"
+        ) from exc
