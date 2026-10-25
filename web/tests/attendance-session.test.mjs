@@ -57,3 +57,13 @@ test('deleting a class preserves an empty 204 response',async()=>{
     assert.equal(reply.status,204);assert.equal(await reply.text(),'');
   }finally{upstreamStatus=200;}
 });
+
+test('class lesson selection uses the staff cookie bridge and same-origin protection',async()=>{
+  const lessonPath=path.replace('/attendance','/lesson');
+  seen=[];
+  const denied=await fetch(base+lessonPath,{method:'PUT',headers:{Cookie:`ako_session=${token}`},body:'{}'});
+  assert.equal(denied.status,403);assert.equal(seen.length,0);
+  const response=await fetch(base+lessonPath,{method:'PUT',headers:{Cookie:`ako_session=${token}`,Origin:base,'Content-Type':'application/json'},body:'{"lesson_id":null}'});
+  assert.equal(response.status,200);assert.equal(seen[0].authorization,`Bearer ${token}`);
+  assert.equal(seen[0].body,'{"lesson_id":null}');
+});

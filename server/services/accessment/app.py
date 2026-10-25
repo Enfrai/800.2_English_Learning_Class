@@ -1,7 +1,8 @@
-"""Serve daily class management, staff attendance and public QR sign-in APIs.
+"""Serve class management, attendance, QR sign-in and learner material access.
 
 Author: Shuohui Liu
 Date: 19 Oct 2026
+Updated: Sandhya Tiwari, 26 Oct 2026
 """
 
 import os
@@ -48,6 +49,7 @@ from corrections import (
     corrected_learners,
 )
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
+from learner_materials import create_materials_router, issue_grant
 from models import class_sessions
 from pydantic import BaseModel
 from schema import prepare_schema
@@ -76,7 +78,7 @@ async def private_session_responses(
     request: Request, call_next: RequestResponseEndpoint
 ) -> Response:
     response = await call_next(request)
-    if request.url.path.startswith("/sessions"):
+    if request.url.path.startswith(("/sessions", "/learner/", "/checkin/")):
         response.headers["Cache-Control"] = "no-store"
         response.headers["X-Content-Type-Options"] = "nosniff"
     return response
@@ -135,6 +137,7 @@ LoggedInStaff = Annotated[StaffRequest, Depends(staff_request)]
 app.include_router(
     create_session_router(lambda: SessionLocal(), staff_request, lambda: club_today())
 )
+app.include_router(create_materials_router(lambda: SessionLocal()))
 
 
 class AttendanceOut(BaseModel):
@@ -356,6 +359,7 @@ def read_checkin(token: str):
 def learner_sign_in(
     token: str,
     payload: SignInIn,
+    response: Response,
     x_real_ip: Annotated[str | None, Header()] = None,
     x_device_id: Annotated[str | None, Header()] = None,
 ):
@@ -385,6 +389,7 @@ def learner_sign_in(
     try:
         with SessionLocal.begin() as db:
             sign_in(db, checkin, UUID(learner["id"]), club_today())
+            issue_grant(db, checkin.session_id, response, secure=os.getenv("COOKIE_SECURE", "false").lower() == "true")
     except AlreadySignedInError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except AttendanceError as exc:
@@ -485,3 +490,4 @@ def read_corrections(session_id: UUID, request: LoggedInStaff):
         }
         for entry in history
     ]
+

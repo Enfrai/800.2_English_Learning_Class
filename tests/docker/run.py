@@ -1,7 +1,8 @@
-"""Run isolated test suites including class-session unit and browser tests.
+"""Run isolated backend and web suites for lessons, materials and class sessions.
 
 Author: Shuohui Liu
 Date: 19 Oct 2026
+Updated: Sandhya Tiwari, 26 Oct 2026
 """
 
 import json
@@ -123,8 +124,12 @@ def web() -> list[dict]:
             "tests/lesson-session.test.mjs",
         ],
         "staff-ui": ["node", "tests/run-staff-ui.mjs"],
+        "materials-unit": ["npm", "run", "test:materials-unit"],
+        "materials-ui": ["node", "tests/run-materials-ui.mjs"],
         "sessions-unit": ["npm", "run", "test:sessions-unit"],
         "sessions-ui": ["node", "tests/run-sessions-ui.mjs"],
+        "lessons-unit": ["npm", "run", "test:lessons-unit"],
+        "lessons-ui": ["node", "tests/run-lessons-ui.mjs"],
         "public-enquiry": ["node", "tests/public-enquiry-form.mjs"],
         "coordinator-enquiries": ["node", "tests/coordinator-enquiries.mjs"],
         "csv-ui": ["node", "tests/run-csv-ui.mjs"],

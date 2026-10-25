@@ -1,4 +1,4 @@
-"""Verify daily classroom creation, lesson links, deletion and additive upgrades.
+"""Verify classroom management, learner material integration and additive upgrades.
 
 Author: Shuohui Liu
 Date: 24 Oct 2026
@@ -25,6 +25,7 @@ from models import (
     attendance_records,
     checkin_windows,
     class_sessions,
+    learner_material_grants,
     session_lesson_links,
 )
 from schema import prepare_schema
@@ -515,3 +516,99 @@ def test_actual_app_links_creation_attendance_and_deletion(
         ).status_code
         == 403
     )
+
+
+def test_actual_app_has_one_lesson_handler_and_materials_use_its_link(
+    api: ClassApi, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import learner_materials
+    import user_client
+    from fastapi import Response
+
+    monkeypatch.setenv("DATABASE_URL", "sqlite://")
+    module = importlib.import_module("app")
+    monkeypatch.setattr(module, "SessionLocal", api.factory)
+    monkeypatch.setattr(module, "club_today", lambda: TODAY)
+    monkeypatch.setattr(
+        user_client,
+        "current_staff",
+        lambda _: user_client.Staff(STAFF_ID, "Test teacher", "teacher"),
+    )
+
+    def routes(router):
+        for route in router.routes:
+            nested = getattr(route, "original_router", None)
+            if nested is not None:
+                yield from routes(nested)
+            else:
+                yield route
+
+    for method in ("GET", "PUT"):
+        handlers = [
+            route
+            for route in routes(module.app)
+            if getattr(route, "path", None) == "/sessions/{session_id}/lesson"
+            and method in route.methods
+        ]
+        assert len(handlers) == 1
+    def validated_title(identifier, authorization):
+        assert authorization == "Bearer teacher"
+        return api.titles[identifier]
+
+    monkeypatch.setattr(lesson_client, "lesson_title", validated_title)
+    client = TestClient(module.app)
+    headers = {"Authorization": "Bearer teacher"}
+    sid = client.post("/sessions/today", headers=headers).json()["id"]
+    response = client.put(
+        f"/sessions/{sid}/lesson",
+        headers=headers,
+        json={"lesson_id": str(LESSON_ID)},
+    )
+    assert response.status_code == 200
+    assert response.json()["lesson_title"] == api.titles[LESSON_ID]
+    api.attendance(sid)
+    cookie = Response()
+    with api.factory.begin() as db:
+        learner_materials.issue_grant(db, UUID(sid), cookie)
+    client.cookies.set(
+        learner_materials.COOKIE,
+        cookie.headers["set-cookie"].split(";", 1)[0].split("=", 1)[1],
+    )
+    paths = []
+
+    def shared_files(path):
+        paths.append(path)
+        return b'{"materials":[],"message":"No materials for today"}', {}
+
+    monkeypatch.setattr(learner_materials, "lesson_request", shared_files)
+    material_reply = client.get("/learner/materials")
+    assert material_reply.status_code == 200
+    assert material_reply.headers["cache-control"] == "no-store"
+    assert paths == [f"/internal/lessons/{LESSON_ID}/shared-materials"]
+    assert client.delete(f"/sessions/{sid}", headers=headers).status_code == 409
+    with api.factory() as db:
+        assert db.scalar(select(learner_material_grants.c.token_hash)) is not None
+    assert (
+        client.put(
+            f"/sessions/{sid}/lesson", headers=headers, json={"lesson_id": None}
+        ).status_code
+        == 200
+    )
+    paths.clear()
+    assert (
+        client.get("/learner/materials").json()["message"] == "No materials for today"
+    )
+    assert paths == []
+    client.close()
+
+
+def test_empty_class_deletion_cleans_remaining_material_grants(api: ClassApi) -> None:
+    import learner_materials
+    from fastapi import Response
+
+    sid = api.start().json()["id"]
+    with api.factory.begin() as db:
+        learner_materials.issue_grant(db, UUID(sid), Response())
+    assert api.delete(sid).status_code == 204
+    with api.factory() as db:
+        assert db.execute(select(learner_material_grants)).all() == []

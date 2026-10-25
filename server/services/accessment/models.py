@@ -1,7 +1,8 @@
-"""Define attendance, dated class sessions and cross-service lesson links.
+"""Define dated classes, attendance, lesson links and learner material grants.
 
 Author: Shuohui Liu
 Date: 19 Oct 2026
+Updated: Sandhya Tiwari, 26 Oct 2026
 """
 from uuid import uuid4
 
@@ -95,4 +96,12 @@ session_lesson_links = Table(
     Column("session_id", UUID(as_uuid=True),
            ForeignKey("class_sessions.id"), primary_key=True),
     ref("lesson_id", nullable=True),
+)
+
+learner_material_grants = Table("learner_material_grants", Base.metadata,
+    Column("token_hash", String(64), primary_key=True),
+    ref("session_id", "class_sessions.id"),
+    value("issued_at", DateTime(timezone=True)),
+    value("expires_at", DateTime(timezone=True)),
+    Index("ix_material_grants_expiry", "expires_at"),
 )

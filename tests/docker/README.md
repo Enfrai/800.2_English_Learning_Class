@@ -74,14 +74,15 @@ docker compose -f compose.test.yaml -p ako-tests run --build --rm -e TEST_SUITE=
 
 Backend selections: `user`, `accessment`, `lesson`.
 Web selections: `api`, `staff-ui`, `public-enquiry`,
-`coordinator-enquiries`, `csv-ui`, `sessions-unit`, `sessions-ui`.
+`coordinator-enquiries`, `csv-ui`, `lessons-unit`, `lessons-ui`,
+`materials-unit`, `materials-ui`, `sessions-unit`, `sessions-ui`.
 
 ## Coverage
 
 | Group | What it runs |
 | --- | --- |
 | Backend | pytest in all three service directories, including the User Service's real PostgreSQL/cross-replica tests |
-| Web | API cookie/adapter tests, staff UI and style parity, public enquiry, coordinator enquiry, CSV upload/import UI, class-session unit and browser tests |
+| Web | API cookie/adapter tests, staff UI and style parity, public enquiry, coordinator enquiry, CSV upload/import UI, lesson search/copy, learner materials and class-session unit and browser tests |
 | System | The existing `tests/system/` suite against real Nginx, Next.js, two replicas of each API, and three isolated application databases |
 
 Mocked web tests verify frontend behavior; they do not prove backend

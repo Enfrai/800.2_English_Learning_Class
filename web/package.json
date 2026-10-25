@@ -10,10 +10,12 @@
     "start": "next start --hostname 0.0.0.0",
     "test:e2e": "node --test --test-concurrency=1 tests/us001.test.mjs",
     "test:staff-ui": "node tests/run-staff-ui.mjs",
-    "test:lessons-unit": "node --test tests/lessons-api.test.mjs",
+    "test:lessons-unit": "node --test tests/lessons-api.test.mjs tests/lesson-search-copy-api.test.mjs",
     "test:lessons-ui": "node tests/run-lessons-ui.mjs",
     "test:sessions-unit": "node --test tests/class-sessions-api.test.mjs",
-    "test:sessions-ui": "node tests/run-sessions-ui.mjs"
+    "test:sessions-ui": "node tests/run-sessions-ui.mjs",
+    "test:materials-unit": "node --test tests/materials-api.test.mjs",
+    "test:materials-ui": "node tests/run-materials-ui.mjs"
   },
   "dependencies": {
     "@lit/react": "1.0.8",

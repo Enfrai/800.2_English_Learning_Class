@@ -38,7 +38,7 @@ groups, enrolment or timetable are introduced.
 From the repository root:
 
 ```sh
-git switch temp/1.0_US_014
+git switch feature/v1.0/US_014
 git pull --ff-only
 docker compose -f server/compose.yaml up -d --build --force-recreate --wait web access1 access2
 docker compose -f server/compose.yaml restart nginx
@@ -135,3 +135,21 @@ Inspect process exit codes and `test-results/backend/accessment.html`,
 The local unit/API/browser suites and production build were verified during
 implementation. PostgreSQL concurrency and the full Docker stack require their
 own run; mocked/SQLite checks do not imply that those suites were executed.
+
+
+## Integration with learner materials and lesson search/copy
+
+Staff lesson linking is owned by the class-session router. The learner-material
+router reads the same `session_lesson_links` table and does not register a second
+GET/PUT handler for the staff lesson path. Both the class detail and attendance
+lesson selectors use this shared API. A successful QR sign-in still issues the
+24-hour material grant atomically with attendance; classroom deletion is blocked
+while any attendance exists. Deleting an empty classroom removes its remaining
+grants, QR windows and lesson association without deleting the saved lesson.
+
+`test_actual_app_has_one_lesson_handler_and_materials_use_its_link` exercises both
+routers together. `test_empty_class_deletion_cleans_remaining_material_grants`
+checks the additive grant-table foreign key during empty-class deletion. The
+isolated Docker web runner includes lessons, materials and class-session unit
+and browser suites. PostgreSQL concurrency tests require the isolated test
+Compose environment; SQLite and mocked browser checks do not replace them.

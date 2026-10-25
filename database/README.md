@@ -297,3 +297,11 @@ lesson with a classroom without modifying the Lesson database. Classroom and
 attendance changes share a row lock, and any attendance record blocks deletion.
 See [schema upgrades](database-schema.md) and
 [US-014 tests](../docs/system_test/class_sessions_system_tests.md).
+## US-013 learner access
+
+The Accessment database adds `session_lesson_links` (one lesson UUID per session)
+and `learner_material_grants` (hashed token, session UUID, issued/expiry times).
+Grants last 24 hours, contain no learner identity, and are created atomically with
+successful QR attendance. Expired rows are cleaned when issuing a new grant.
+See [schema notes](database-schema.md) and
+[US-013 tests and operation](../docs/system_test/materials_system_tests.md).

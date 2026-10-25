@@ -1,4 +1,4 @@
-"""Create daily class sessions, link lessons and protect recorded attendance.
+"""Manage dated classes, shared lesson links and related access grants safely.
 
 Author: Shuohui Liu
 Date: 24 Oct 2026
@@ -15,6 +15,7 @@ from models import (
     attendance_records,
     checkin_windows,
     class_sessions,
+    learner_material_grants,
     session_lesson_links,
 )
 from pydantic import BaseModel, ConfigDict
@@ -259,6 +260,11 @@ def create_session_router(
                     .where(attendance_records.c.session_id == session_id)
                 ):
                     raise HTTPException(409, HAS_ATTENDANCE)
+                db.execute(
+                    learner_material_grants.delete().where(
+                        learner_material_grants.c.session_id == session_id
+                    )
+                )
                 db.execute(
                     checkin_windows.delete().where(
                         checkin_windows.c.session_id == session_id

@@ -38,7 +38,7 @@ try {
     await new Promise(resolve => setTimeout(resolve, 100));
   }
   if (!ready) throw new Error(output);
-  const tests = spawn(process.execPath, ["--test", "--test-concurrency=1", join(web, "tests/lessons-ui.test.mjs")], {
+  const tests = spawn(process.execPath, ["--test", "--test-concurrency=1", join(web, "tests/lessons-ui.test.mjs"), join(web, "tests/lesson-search-copy-ui.test.mjs")], {
     cwd: web, env: { ...process.env, US006_UI_BASE_URL: base }, stdio: "inherit",
   });
   process.exitCode = (await once(tests, "exit"))[0] ?? 1;
