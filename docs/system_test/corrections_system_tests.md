@@ -3,6 +3,7 @@
 | Version | Date        | Type     | Who | Comment                                   |
 | ------- | ----------- | -------- | --- | ----------------------------------------- |
 | 1.0     | 25 Oct 2026 | Creation | Pei | Manual scripts for ST-04, ST-05 and NT-06 |
+| 1.1     | 26 Oct 2026 | Update   | Pei | Last week's class opened on Class sessions |
 
 ## 1. Purpose
 
@@ -28,20 +29,20 @@ automated run supports the manual result; it does not replace it.
 - Under **Account management**, add a teacher account: display name
   `Test Teacher`, username `test_teacher`, and a temporary password you note
   down.
-- Create a class session for last week, and record that Mere Walker was
-  ticked in that class. Until US-014 adds "Start today's class", run this
-  from the `server` folder and note the session id it prints:
+- On **Class sessions**, choose **New class session**, enter the date one
+  week ago and choose **Create or open class** (US-014). The class page
+  opens at `http://localhost:8080/sessions/<session id>`; note the id. Pick
+  a date that has no class yet, so the class has no earlier attendance.
+- Record that Mere Walker was ticked during that class. A past class cannot
+  be ticked on the page, so run this from the `server` folder:
 
   ```bash
+  SESSION=<session id>
   MERE=$(docker compose exec -T postgres-user psql -U user_app -d userdb -tAqc \
     "SELECT id FROM learners WHERE first_name = 'Mere' AND family_name = 'Walker'")
-  docker compose exec -T postgres-access psql -U access_app -d accessdb -tAqc \
-    "WITH s AS (INSERT INTO class_sessions (id, session_date, created_by) VALUES
-       (gen_random_uuid(), (now() AT TIME ZONE 'Pacific/Auckland')::date - 7, gen_random_uuid())
-       RETURNING id)
-     INSERT INTO attendance_records (id, session_id, learner_id, status, recorded_by)
-       SELECT gen_random_uuid(), s.id, '$MERE', 'present', gen_random_uuid() FROM s
-       RETURNING session_id"
+  docker compose exec -T postgres-access psql -U access_app -d accessdb -c \
+    "INSERT INTO attendance_records (id, session_id, learner_id, status, recorded_by)
+     VALUES (gen_random_uuid(), '$SESSION', '$MERE', 'present', gen_random_uuid())"
   ```
 
 - The page for that class is
