@@ -13,13 +13,16 @@ The tests drive a real browser against a running Ako system started with
 Author: Pei Wu
 Date: 23 Oct 2026
 Updated: Pei Wu, 25 Oct 2026 (teacher login and in-class ticks for US-015)
-Updated: Pei Wu, 26 Oct 2026 (one class session per date, US-014)
+Updated: Pei Wu, 26 Oct 2026 (one class session per date, US-014;
+  sessions started through the US-014 endpoints)
 """
 
 import os
 import re
 import time
 from collections.abc import Callable, Iterator
+from datetime import date, timedelta
+from itertools import count
 from pathlib import Path
 from typing import Any
 from uuid import UUID, uuid4
@@ -29,7 +32,7 @@ from api import BASE_URL, api_headers
 from attendance_page import PRESENT_AT_START
 from learners_page import LearnersPage
 from playwright.sync_api import Browser, Page, expect, sync_playwright
-from setup_data import CLUB_TIMEZONE, CheckIn, access_sql
+from setup_data import ORIGIN, CheckIn, access_sql
 
 USERNAME = os.environ.get("DEMO_USERNAME", "demo")
 PASSWORD = os.environ.get("DEMO_PASSWORD", "DemoPass123!")
@@ -160,8 +163,12 @@ def add_learner(page: Page, session_id: str) -> Callable[..., dict[str, Any]]:
 
 
 @pytest.fixture
-def class_session() -> Callable[..., str]:
-    """Return a class session for today, or a new one in the past.
+def class_session(page: Page, session_id: str) -> Callable[..., str]:
+    """Return a class session for today, or a new one in the past (US-014).
+
+    Sessions are started through the US-014 endpoints, as the demo
+    coordinator, the same way "Start today's class" and "New class session"
+    do on the Class sessions page.
 
     US-014 allows one session per date. Today's session is shared by every
     test that asks for it, so earlier tests may already have learners
@@ -172,42 +179,35 @@ def class_session() -> Callable[..., str]:
     A past session is always new: it gets the first date on or before
     ``days_ago`` days back that has no session, because corrections leave
     change-log entries that cannot be removed (US-015).
-
-    Sessions are inserted into the Accessment database of the running
-    ``docker compose`` system rather than started on the page (US-014).
     """
-    club_today = f"(now() AT TIME ZONE '{CLUB_TIMEZONE}')::date"
+    staff = page.request
+    assert session_id
 
     def create(days_ago: int = 0) -> str:
-        # days_ago is an int, so formatting it into the SQL text is safe.
-        days_ago = int(days_ago)
         if days_ago == 0:
-            access_sql(
-                "INSERT INTO class_sessions (id, session_date, created_by) "
-                f"VALUES (gen_random_uuid(), {club_today}, gen_random_uuid()) "
-                "ON CONFLICT (session_date) DO NOTHING"
-            )
-            session_id = access_sql(
-                f"SELECT id FROM class_sessions WHERE session_date = {club_today}"
-            )
+            response = staff.post("/api/staff/access/sessions/today", headers=ORIGIN)
         else:
-            session_id = access_sql(
-                "INSERT INTO class_sessions (id, session_date, created_by) "
-                "SELECT gen_random_uuid(), day, gen_random_uuid() "
-                f"FROM generate_series({days_ago}, {days_ago} + 3650) AS back, "
-                f"LATERAL (SELECT {club_today} - back AS day) AS d "
-                "WHERE NOT EXISTS "
-                "(SELECT 1 FROM class_sessions WHERE session_date = day) "
-                "ORDER BY back LIMIT 1 RETURNING id"
+            listing = staff.get("/api/staff/access/sessions")
+            assert listing.ok, listing.text()
+            club_today = date.fromisoformat(listing.json()["today"])
+            taken = {row["session_date"] for row in listing.json()["sessions"]}
+            day = next(
+                club_today - timedelta(days=back)
+                for back in count(int(days_ago))
+                if (club_today - timedelta(days=back)).isoformat() not in taken
             )
-        session_id = session_id.splitlines()[0]
-        PRESENT_AT_START[session_id] = int(
-            access_sql(
-                "SELECT count(*) FROM attendance_records "
-                f"WHERE session_id = '{UUID(session_id)}' AND status = 'present'"
+            response = staff.post(
+                "/api/staff/access/sessions",
+                headers=ORIGIN,
+                data={"session_date": day.isoformat()},
             )
-        )
-        return session_id
+            assert response.ok and response.json()["created"], response.text()
+        assert response.ok, response.text()
+        class_id = response.json()["id"]
+        attendance = staff.get(f"/api/staff/access/sessions/{class_id}/attendance")
+        assert attendance.ok, attendance.text()
+        PRESENT_AT_START[class_id] = attendance.json()["present_count"]
+        return class_id
 
     return create
 

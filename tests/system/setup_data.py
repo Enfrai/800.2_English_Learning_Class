@@ -1,13 +1,16 @@
 """Set up data for the system tests in the running system.
 
-Class sessions and past attendance are inserted into the Accessment database
-through a guarded test connection (in Compose test mode) or ``docker compose
-exec`` (manual host mode). QR check-in is opened and closed through the
-US-011 staff endpoints, the same ones the class page uses.
+Class sessions are started through the US-014 endpoints and QR check-in is
+opened and closed through the US-011 endpoints, the same ones the pages use.
+Only what the pages cannot do is written to the Accessment database, through
+a guarded test connection (in Compose test mode) or ``docker compose exec``
+(manual host mode): attendance ticked during a past class, and clearing
+wrong sign-in names.
 
 Author: Pei Wu
 Date: 25 Oct 2026
-Updated: Pei Wu, 26 Oct 2026 (check-in through the US-011 endpoints)
+Updated: Pei Wu, 26 Oct 2026 (check-in through the US-011 endpoints;
+  sessions through US-014)
 """
 
 import os
@@ -32,9 +35,8 @@ CLUB_TIMEZONE = "Pacific/Auckland"
 def access_sql(sql: str) -> str:
     """Run SQL in the Accessment database of the running docker compose system.
 
-    Only for set-up the pages cannot do quickly: class sessions for many
-    tests (US-014), past attendance (US-015) and clearing wrong sign-in names
-    (US-012). Callers build the SQL from values they generated or checked,
+    Only for set-up the pages cannot do: attendance ticked during a past
+    class (US-015) and clearing wrong sign-in names (US-012). Callers build the SQL from values they generated or checked,
     never from user input.
     """
     url = os.getenv("TEST_ACCESS_DATABASE_URL")

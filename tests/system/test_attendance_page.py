@@ -4,10 +4,11 @@ Test Plan section 5: ST-01 and the attendance-page parts of NT-01, NT-06,
 NT-07 and NT-10. Each test uses its own class session and made-up learners,
 so tests run in any order and do not need an empty database.
 
-ST-01 starts with "Start today's class" (US-014, not built yet), so the
-session is created by the ``class_session`` fixture instead. Teacher
-accounts come with US-002, so the demo coordinator stands in for the
-teacher; both roles may take attendance.
+ST-01 is done as in the Test Plan: a teacher account (US-002) logs in,
+chooses "Start today's class" (US-014) and opens the class's attendance
+list. The other tests get their class from the ``class_session`` fixture,
+which uses the same US-014 endpoints, and the demo coordinator takes
+attendance; both roles may.
 
 Past classes (US-015) are tested in test_corrections_page.py.
 
@@ -16,17 +17,19 @@ The manual version is docs/system_test/attendance_system_tests.md.
 Author: Pei Wu
 Date: 23 Oct 2026
 Updated: Pei Wu, 25 Oct 2026 (past-class test moved to test_corrections_page.py)
+Updated: Pei Wu, 26 Oct 2026 (ST-01 as a teacher with "Start today's class")
 """
 
 import os
+import re
 import time
 from collections.abc import Callable
 from typing import Any
 
-from api import api_headers
+from api import BASE_URL, api_headers
 from attendance_page import AttendancePage
 from learners_page import LearnersPage, unique
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Browser, Page, expect
 
 AddLearner = Callable[..., dict[str, Any]]
 ClassSession = Callable[..., str]
@@ -42,14 +45,22 @@ def full_name(learner: dict[str, Any]) -> str:
 # ST-01 Teacher runs a class
 
 
-def test_st01_teacher_runs_a_class(
-    logged_in_page: Page, add_learner: AddLearner, class_session: ClassSession
-) -> None:
+def test_st01_teacher_runs_a_class(teacher_page: Page, add_learner: AddLearner) -> None:
     family = unique("Class")
     learners = [add_learner(name, family) for name in ["Ana", "Ben", "Cy", "Di", "Ed"]]
-    session_id = class_session()
-    attendance = AttendancePage(logged_in_page)
-    attendance.open(session_id)
+    teacher = teacher_page
+
+    # US-014: the teacher starts today's class and opens its attendance list.
+    teacher.goto("/sessions")
+    teacher.get_by_role("button", name="Start today's class", exact=True).click()
+    teacher.wait_for_url(re.compile(r"/sessions/[0-9a-f-]{36}$"))
+    session_id = teacher.url.rsplit("/", 1)[1]
+    teacher.get_by_role("link", name="Attendance", exact=True).click()
+    teacher.wait_for_url(f"**/sessions/{session_id}/attendance")
+    attendance = AttendancePage(teacher)
+    attendance.arrive(session_id)
+    # Earlier tests may have used today's class (one per date).
+    attendance.count_from_now()
     attendance.expect_present_count(0)
 
     for learner in learners:
@@ -69,12 +80,15 @@ def test_st01_teacher_runs_a_class(
     attendance.open(session_id)
     attendance.expect_present_count(5)
     expect(attendance.checkbox(mistake)).not_to_be_checked()
-    learners_page = LearnersPage(logged_in_page)
+    learners_page = LearnersPage(teacher)
     learners_page.open()
     expect(learners_page.row(f"Hana {newcomer}")).to_have_count(1)
+    # The session for today exists in the class list.
+    teacher.goto("/sessions")
+    expect(teacher.locator(f'a[href="/sessions/{session_id}"]').first).to_be_visible()
 
-    logged_in_page.get_by_role("button", name="Log out", exact=True).click()
-    logged_in_page.wait_for_url("/")
+    teacher.get_by_role("button", name="Log out", exact=True).click()
+    teacher.wait_for_url(re.compile(r"/$"))
 
 
 # US-004 acceptance criteria on screen
@@ -222,14 +236,24 @@ def test_unknown_session_says_not_found(logged_in_page: Page) -> None:
 
 
 def test_logged_out_person_is_sent_to_the_login_page(
-    page: Page, class_session: ClassSession
+    browser: Browser, class_session: ClassSession
 ) -> None:
-    page.goto(f"/sessions/{class_session()}/attendance")
+    session_id = class_session()
+    # class_session logs the demo coordinator in on the test's own page, so
+    # the visitor gets a separate window with no login.
+    context = browser.new_context(base_url=BASE_URL)
+    try:
+        visitor = context.new_page()
+        visitor.goto(f"/sessions/{session_id}/attendance")
 
-    # US-001: the server redirects before any attendance data is sent.
-    page.wait_for_url("/")
-    expect(page.get_by_role("button", name="Sign in", exact=True)).to_be_visible()
-    expect(page.locator("table.data")).to_have_count(0)
+        # US-001: the server redirects before any attendance data is sent.
+        visitor.wait_for_url(re.compile(r"/$"))
+        expect(
+            visitor.get_by_role("button", name="Sign in", exact=True)
+        ).to_be_visible()
+        expect(visitor.locator("table.data")).to_have_count(0)
+    finally:
+        context.close()
 
 
 # NT-06 Plain and accessible

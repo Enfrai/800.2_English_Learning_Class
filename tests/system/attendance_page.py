@@ -3,7 +3,8 @@
 Author: Pei Wu
 Date: 23 Oct 2026
 Updated: Pei Wu, 25 Oct 2026 (correction view and change history, US-015)
-Updated: Pei Wu, 26 Oct 2026 (counts relative to a shared session, US-014)
+Updated: Pei Wu, 26 Oct 2026 (counts relative to a shared session, US-014;
+  arriving from the class page)
 """
 
 import re
@@ -11,7 +12,8 @@ import re
 from playwright.sync_api import Locator, Page, expect
 
 # Learners already present when the class_session fixture handed out each
-# session. Today's session is shared by tests (one session per date, US-014).
+# session, or when a test called count_from_now. Today's session is shared by
+# tests (one session per date, US-014).
 PRESENT_AT_START: dict[str, int] = {}
 
 
@@ -38,10 +40,21 @@ class AttendancePage:
         )
 
     def open(self, session_id: str) -> None:
-        self.session_id = session_id
         self.page.goto(f"/sessions/{session_id}/attendance")
+        self.arrive(session_id)
+
+    def arrive(self, session_id: str) -> None:
+        """Wait for the attendance page, opened or reached by a link."""
+        self.session_id = session_id
         # The page has loaded when the count or an error message shows.
         expect(self.page.locator(".stat, .msg-error").first).to_be_visible()
+
+    def count_from_now(self) -> None:
+        """Check later counts as a rise from the number present now."""
+        expect(self.count).to_have_text(re.compile(r"^Present \d+ of \d+$"))
+        shown = re.match(r"Present (\d+)", self.count.inner_text())
+        assert shown
+        PRESENT_AT_START[self.session_id] = int(shown.group(1))
 
     def checkbox(self, full_name: str) -> Locator:
         return self.page.get_by_role("checkbox", name=full_name, exact=True)

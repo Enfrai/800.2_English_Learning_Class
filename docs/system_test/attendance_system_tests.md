@@ -5,6 +5,7 @@
 | 1.0     | 23 Oct 2026 | Creation | Pei | Manual scripts for ST-01 and related NTs    |
 | 1.1     | 25 Oct 2026 | Update   | Pei | AT-4: past classes open the correction view |
 | 1.2     | 26 Oct 2026 | Update   | Pei | Sessions opened on the Class sessions page  |
+| 1.3     | 26 Oct 2026 | Update   | Pei | ST-01 as a teacher from "Start today's class" |
 
 ## 1. Purpose
 
@@ -23,19 +24,16 @@ automated run supports the manual result; it does not replace it.
   step 1. Never use real learner data; all names below are made up.
 - Use a desktop browser (Chrome, Edge or Firefox) at about 1280 px wide.
 - Log in at <http://localhost:8080> as the demo coordinator
-  (`demo` / `DemoPass123!`). Teacher accounts come with US-002; both roles
-  may take attendance.
+  (`demo` / `DemoPass123!`). Under **Account management**, add a teacher
+  account (for example `test_teacher`) and note its temporary password.
 - On the Learners page, add five learners: `Ana Class`, `Ben Class`,
   `Cy Class`, `Di Class`, `Ed Class`.
-- On **Class sessions**, choose **Start today's class**. The class page
-  opens at `http://localhost:8080/sessions/<today id>`; note the id. There
-  is one session per date (US-014), so if today's class already exists it
-  opens again instead of a new one.
-- Back on **Class sessions**, choose **New class session**, enter
-  yesterday's date and choose **Create or open class**. Note this id too.
-- Open today's session at `http://localhost:8080/sessions/<today id>/attendance`
-  (or choose **Attendance** on its row in **Class sessions**). If learners are
-  already present from an earlier run, the counts below rise from that
+- On **Class sessions**, choose **New class session**, enter yesterday's date
+  and choose **Create or open class**. Note the id in the page address
+  (`http://localhost:8080/sessions/<yesterday id>`) for AT-4.
+- ST-01 is done by the teacher: log out, then log in as `test_teacher`.
+  There is one session per date (US-014), so if today's class already has
+  learners present from an earlier run, the counts below rise from that
   number instead of from 0.
 - Message text must match the UI design document, section 7, exactly.
 
@@ -43,17 +41,18 @@ automated run supports the manual result; it does not replace it.
 
 ### 3.1 ST-01 Teacher runs a class
 
-"Start today's class" (US-014) is replaced by opening today's session as
-above. ST-02 (reopen today's class) is tested with US-014.
+As the teacher. ST-02 (choosing "Start today's class" again opens the same
+session) is tested with US-014 in `class_sessions_system_tests.md`.
 
 | ID | Steps | Expected result | Result | Screenshot |
 | --- | --- | --- | --- | --- |
-| ST-01.1 | Open today's session | The date shows under "Attendance". "Present 0 of N" shows, where N is the number of learners. "Class sessions" is underlined in the menu | | |
+| ST-01.0 | On **Class sessions**, choose **Start today's class**. On the class page, choose **Attendance** | The class page for today opens, then its attendance list. Note the id in the address (`<today id>`) | | |
+| ST-01.1 | Look at the attendance list | The date shows under "Attendance". "Present 0 of N" shows, where N is the number of learners. "Class sessions" is underlined in the menu | | |
 | ST-01.2 | Tick the 5 Class learners | Each box is ticked at once. Each row shows "Present" and the time. The count rises by 1 each time, to "Present 5 of N" | | |
 | ST-01.3 | Under "Learner not on the list", enter `Hana` and `Newcomer`. Choose **Add and mark present** | "Hana Newcomer is added to the class list and marked present". Hana is in the list and ticked. Count 6. The cursor is back in First name | | |
 | ST-01.4 | Untick Ana Class | The box clears, "Present" and the time disappear, count 5 | | |
 | ST-01.5 | Reload the page. Then open the Learners page | Count still 5 and Ana is not ticked. Hana Newcomer is on the Learners page | | |
-| ST-01.6 | Choose **Log out** | The login page opens | | |
+| ST-01.6 | Open **Class sessions**, then choose **Log out** | Today's class is in the list once. The login page opens | | |
 
 ### 3.2 Other US-004 checks
 
@@ -83,7 +82,7 @@ attendance by hand").
 
 | Run date | Tester | Browser | Cases passed | Defects raised | Notes |
 | --- | --- | --- | --- | --- | --- |
-| | | | / 17 | | |
+| | | | / 18 | | |
 
 Record a failed case as a defect with the case ID, the steps, what happened
 and a screenshot (Test Plan section 7.2).

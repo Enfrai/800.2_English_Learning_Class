@@ -75,11 +75,11 @@ Notes:
 - `test_sign_in_page.py` clears `signin_failures` on the throwaway database
   before each test: every test request comes from this computer's address,
   which has a limit of 50 wrong names in 10 minutes.
-- The attendance, sign-in and correction tests set up class sessions with
-  `docker compose exec` on the running system (and the correction tests
-  record last week's ticks the same way), so Docker must be on the same
-  computer. Set `COMPOSE_FILE` if the system was started from another
-  compose file.
+- Class sessions are started through the US-014 endpoints and check-in is
+  opened through the US-011 endpoints. Only last week's ticks (correction
+  tests) and clearing wrong sign-in names use `docker compose exec` on the
+  running system, so Docker must be on the same computer. Set `COMPOSE_FILE`
+  if the system was started from another compose file.
 - There is one class session per date (US-014). Tests share today's
   session, so present counts are checked as a rise from the number present
   when the test started. Each test that needs a past class gets a new one,
