@@ -19,7 +19,10 @@
     "test:reports-unit": "node --test tests/attendance-reports-api.test.mjs",
     "test:reports-ui": "node tests/run-reports-ui.mjs",
     "test:checkin-unit": "node --test tests/checkin-management-api.test.mjs",
-    "test:checkin-ui": "node tests/run-checkin-ui.mjs"
+    "test:checkin-ui": "node tests/run-checkin-ui.mjs",
+    "test:public-unit": "node --test tests/club-information.test.mjs",
+    "test:public-ui": "node tests/run-public-ui.mjs",
+    "test:public-a11y": "node tests/run-public-ui.mjs --a11y"
   },
   "dependencies": {
     "@lit/react": "1.0.8",
@@ -32,7 +35,9 @@
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "typescript": "^5.0.0",
-    "playwright": "1.62.1"
+    "axe-core": "4.14.0",
+    "lighthouse": "13.5.0",
+    "playwright": "1.62.1",
+    "typescript": "^5.0.0"
   }
 }

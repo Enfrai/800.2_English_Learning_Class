@@ -75,7 +75,7 @@ docker compose -f compose.test.yaml -p ako-tests run --build --rm -e TEST_SUITE=
 Backend selections: `user`, `accessment`, `lesson`.
 Web selections: `api`, `staff-ui`, `public-enquiry`,
 `coordinator-enquiries`, `csv-ui`, `lessons-unit`, `lessons-ui`,
-`materials-unit`, `materials-ui`, `sessions-unit`, `sessions-ui`, `reports-unit`, `reports-ui`, `checkin-unit`, `checkin-ui`.
+`materials-unit`, `materials-ui`, `sessions-unit`, `sessions-ui`, `reports-unit`, `reports-ui`, `checkin-unit`, `checkin-ui`, `public-unit`, `public-ui`, `public-a11y`.
 
 ## Coverage
 
@@ -157,3 +157,10 @@ system group includes real multi-service report downloads.
 US-011 adds `TEST_SUITE=checkin-unit` and `TEST_SUITE=checkin-ui` for `test-web`,
 QR endpoint cookie-bridge checks in `api`, PostgreSQL window-lock tests in
 `accessment`, and real QR/sign-in/live-attendance cases in the system group.
+
+US-009 adds public content unit tests, public homepage browser tests and a
+Lighthouse accessibility audit. Select `TEST_SUITE=public-unit`, `public-ui` or
+`public-a11y` with `test-web`. The default web suite includes all three.
+Audit reports are `test-results/web/us009-home-lighthouse.json` and
+`test-results/web/us009-accessibility-summary.json`. All audit dependencies are
+installed in the image; no public script CDN is required.
