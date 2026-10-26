@@ -55,9 +55,13 @@ The Compose service is named `web`; its build context is `./web`.
 Login uses the User service's HttpOnly cookie. `/teacher`, `/coordinator` and
 `/account-management` are protected by server-side middleware and a browser session
 shell. Account management now provides the US-002 Teacher-management interface.
-The server-only `USER_API_URL` defaults to `http://nginx/api/user` for existing
-Compose networking. For separate local servers, set it to the User-service base
-URL. The browser still uses same-origin `/api/user/*` through the gateway.
+The server-only `USER_API_URL`, `ACCESS_API_URL` and `LESSON_API_URL` default to
+the services' internal Compose names (`http://user-service:8000`,
+`http://access-service:8000`, `http://lesson-service:8000`). Server-side calls do
+not go through Nginx: they would all come from the web container's one address
+and share one rate limit for every user. For separate local servers, set them to
+each service's base URL. The browser still uses same-origin `/api/...` through
+the gateway, where Nginx rate-limits each browser, including `/api/staff/*`.
 
 After `npm ci`, run `npm run build`. For full isolated backend/browser verification:
 

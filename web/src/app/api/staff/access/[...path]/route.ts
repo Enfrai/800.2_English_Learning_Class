@@ -1,11 +1,14 @@
 /* Forward protected classroom requests and coordinator report downloads.
  * Updated: Shuohui Liu, 26 Oct 2026
+ * Updated: Pei Wu, 26 Oct 2026 (call the Accessment service on the internal network)
  */
 
 import { NextRequest, NextResponse } from "next/server";
 
 // Fixed deployment target, never a client-supplied destination or redirect.
-const accessApi = process.env.ACCESS_API_URL || "http://nginx/api/access";
+// Straight to the service on the internal network, not through Nginx: every
+// server-side call would otherwise share the web container's one rate limit.
+const accessApi = process.env.ACCESS_API_URL || "http://access-service:8000";
 const noStore = { "Cache-Control": "no-store" };
 const uuid = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 // US-015 adds sessions/{id}/corrections.

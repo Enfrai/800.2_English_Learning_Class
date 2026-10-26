@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
 // Fixed deployment target, never a client-supplied destination or redirect.
-const lessonApi = process.env.LESSON_API_URL || "http://nginx/api/lesson";
+// Straight to the service on the internal network, not through Nginx: every
+// server-side call would otherwise share the web container's one rate limit.
+const lessonApi = process.env.LESSON_API_URL || "http://lesson-service:8000";
 const noStore = { "Cache-Control": "no-store" };
 const uuid = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 // US-008 adds /lessons/{id}/review and /lessons/{id}/maori-content.

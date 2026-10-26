@@ -1,12 +1,15 @@
 /* Guard staff pages and restrict attendance reports to coordinators.
  * Updated: Shuohui Liu, 26 Oct 2026
- * Updated: Pei Wu, 26 Oct 2026 (skip link prefetches; see config below)
+ * Updated: Pei Wu, 26 Oct 2026 (skip link prefetches; see config below;
+ *   call the User service on the internal network)
  */
 
 import { NextResponse, type NextRequest } from "next/server";
 
-// Fixed internal gateway URL; never derive the backend destination from Host headers.
-const userApi = process.env.USER_API_URL || "http://nginx/api/user";
+// Fixed internal URL; never derive the backend destination from Host headers.
+// Straight to the service on the internal network, not through Nginx: every
+// server-side call would otherwise share the web container's one rate limit.
+const userApi = process.env.USER_API_URL || "http://user-service:8000";
 
 export async function middleware(request: NextRequest) {
   const noStore = { "Cache-Control": "no-store" };

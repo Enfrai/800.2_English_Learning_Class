@@ -5,7 +5,9 @@ export const dynamic = "force-dynamic";
 export default async function MaterialsPage() {
   const token = (await cookies()).get("ako_materials")?.value;
   if (!token) redirect("/sign-in");
-  const base = process.env.ACCESS_API_URL || "http://nginx/api/access";
+  // Straight to the Accessment service, not through Nginx: a whole class opening
+  // this page would otherwise share the web container's one rate limit.
+  const base = process.env.ACCESS_API_URL || "http://access-service:8000";
   try {
     const response = await fetch(`${base}/learner/materials`, {
       headers: { Cookie: `ako_materials=${encodeURIComponent(token)}` }, cache: "no-store",
