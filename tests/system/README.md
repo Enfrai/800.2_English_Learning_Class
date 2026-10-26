@@ -11,7 +11,8 @@ that testers follow and sign off are in `docs/system_test/`.
 | `test_attendance_page.py` | ST-01, US-004 AC1 to AC5, and the attendance page parts of NT-01, NT-06, NT-07, NT-10 |
 | `test_corrections_page.py` | ST-04, ST-05 and the correction parts of NT-06 (US-015), with a new teacher account for each teacher test |
 | `test_sign_in_page.py` | ST-14 sign-in part, US-012 AC1 to AC6, and the sign-in parts of NT-06 and NT-11, on a 360 px phone |
-| `test_review_flow.py` | ST-09 and the review part of NT-10 (US-008), through the API until the lesson pages (US-006) are merged; the file step is skipped until then |
+| `test_review_flow.py` | ST-09 and the US-008 review rules through the API: the checks a page cannot reach (missing Origin, logged out, a teacher flagging another teacher's lesson) |
+| `test_review_pages.py` | ST-09 on the lesson pages, US-008 AC1 to AC5, and the review parts of NT-06 and NT-10 |
 
 ## Recommended: isolated Docker tests
 
