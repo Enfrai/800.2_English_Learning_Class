@@ -15,7 +15,9 @@
     "test:sessions-unit": "node --test tests/class-sessions-api.test.mjs",
     "test:sessions-ui": "node tests/run-sessions-ui.mjs",
     "test:materials-unit": "node --test tests/materials-api.test.mjs",
-    "test:materials-ui": "node tests/run-materials-ui.mjs"
+    "test:materials-ui": "node tests/run-materials-ui.mjs",
+    "test:reports-unit": "node --test tests/attendance-reports-api.test.mjs",
+    "test:reports-ui": "node tests/run-reports-ui.mjs"
   },
   "dependencies": {
     "@lit/react": "1.0.8",

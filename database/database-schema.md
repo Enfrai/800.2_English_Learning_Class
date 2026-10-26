@@ -105,3 +105,14 @@ metadata and tag associations. Each copied material gets a new row and storage
 key, with `share_with_learners=false`. Māori copies retain the flag but start
 with `review_status=pending` and empty review fields. Existing source tombstones
 keep the lineage reference valid when the source is deleted.
+
+
+## US-005 attendance report reads
+
+No table or schema migration is added. One Accessment SELECT reads dated
+sessions and their current attendance in the inclusive range. The User
+Service supplies only learner UUIDs and names in one coordinator-authenticated
+request, including inactive learners referenced in that range. Current active
+learners are also included; missing Present records display as Absent. UUIDs
+keep same-name learners separate. PDF/CSV outputs are generated in memory;
+reports do not write attendance, audit history, learner data or files to disk.

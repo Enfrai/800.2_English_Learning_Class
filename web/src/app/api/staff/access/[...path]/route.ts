@@ -1,4 +1,4 @@
-/* Forward authenticated classroom and attendance requests through the staff adapter.
+/* Forward protected classroom requests and coordinator report downloads.
  * Updated: Shuohui Liu, 26 Oct 2026
  */
 
@@ -16,7 +16,7 @@ const route = new RegExp(`^sessions(?:/today|/${uuid}(?:/(?:attendance(?:/(?:${u
  */
 async function forward(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   const path = (await context.params).path.join("/");
-  if (!route.test(path)) return NextResponse.json({ detail: "Not found" }, { status: 404, headers: noStore });
+  if (!route.test(path) && path !== "reports/attendance") return NextResponse.json({ detail: "Not found" }, { status: 404, headers: noStore });
   const cookies = request.cookies.getAll("ako_session");
   if (cookies.length !== 1 || !cookies[0].value || request.headers.has("authorization")) {
     return NextResponse.json({ detail: "Not authenticated" }, { status: 401, headers: noStore });
@@ -38,7 +38,10 @@ async function forward(request: NextRequest, context: { params: Promise<{ path: 
     });
     return new NextResponse(response.status === 204 ? null : await response.arrayBuffer(), {
       status: response.status,
-      headers: { ...noStore, "Content-Type": response.headers.get("content-type") || "application/json" },
+      headers: { ...noStore, "X-Content-Type-Options": "nosniff",
+        "Content-Type": response.headers.get("content-type") || "application/json",
+        ...(response.headers.get("content-disposition") ? { "Content-Disposition": response.headers.get("content-disposition")! } : {}),
+      },
     });
   } catch {
     return NextResponse.json({ detail: "Attendance service unavailable" }, { status: 502, headers: noStore });
