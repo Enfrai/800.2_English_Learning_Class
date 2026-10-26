@@ -1,4 +1,4 @@
-"""Run isolated backend and web suites including public-page accessibility checks.
+"""Run isolated backend and web suites including learner attendance history.
 
 Author: Shuohui Liu
 Date: 19 Oct 2026
@@ -132,6 +132,9 @@ def web() -> list[dict]:
         "public-a11y": ["npm", "run", "test:public-a11y"],
         "checkin-unit": ["npm", "run", "test:checkin-unit"],
         "checkin-ui": ["node", "tests/run-checkin-ui.mjs"],
+        "history-unit": ["npm", "run", "test:history-unit"],
+        "history-ui": ["npm", "run", "test:history-ui"],
+        "history-session": ["npm", "run", "test:history-session"],
         "reports-unit": ["npm", "run", "test:reports-unit"],
         "reports-ui": ["node", "tests/run-reports-ui.mjs"],
         "sessions-unit": ["npm", "run", "test:sessions-unit"],

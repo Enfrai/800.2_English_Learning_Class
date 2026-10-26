@@ -164,3 +164,9 @@ Lighthouse accessibility audit. Select `TEST_SUITE=public-unit`, `public-ui` or
 Audit reports are `test-results/web/us009-home-lighthouse.json` and
 `test-results/web/us009-accessibility-summary.json`. All audit dependencies are
 installed in the image; no public script CDN is required.
+
+US-016 adds `TEST_SUITE=history-unit`, `history-session` and `history-ui`
+with `test-web`. The default web group includes all three. Backend includes
+history aggregation and permission tests. The system group includes real
+learner history and correction refresh checks. See
+[history test instructions](../../docs/system_test/attendance_history_system_tests.md).

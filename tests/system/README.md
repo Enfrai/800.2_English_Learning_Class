@@ -6,6 +6,7 @@ that testers follow and sign off are in `docs/system_test/`.
 
 | File | Cases |
 | --- | --- |
+| `test_attendance_history.py` | US-016 current history, inclusive date filters, correction refresh and role boundaries |
 | `test_club_information.py` | US-009 anonymous class information, 360px readability, short sentences and HTTP 404/home navigation |
 | `test_checkin_management.py` | US-011 real QR open/sign-in/live attendance/close and anonymous management denial |
 | `test_attendance_reports.py` | US-005 PDF/CSV downloads, current corrections, date validation and role boundaries through real services |
@@ -86,3 +87,4 @@ Notes:
   The tests never delete attendance.
 - Each test adds its own learners with a random suffix, so the tests run in
   any order and do not need an empty database.
+
