@@ -2,6 +2,7 @@
 
 Author: Sandhya Tiwari
 Date: 25 Oct 2026
+Updated: Pei Wu, 26 Oct 2026 (Māori content flag and review status, US-008)
 """
 
 import io
@@ -141,6 +142,9 @@ def lesson_out(db: Session, lesson, staff):
         "tags": names,
         "materials": [material_out(row) for row in materials],
         "can_edit": staff.is_coordinator or lesson["created_by"] == staff.id,
+        # US-008: the form's tick box and the colour of the review pill.
+        "has_maori_content": lesson["has_maori_content"],
+        "review_status": lesson["review_status"],
         "review_label": review_label(lesson),
     }
 

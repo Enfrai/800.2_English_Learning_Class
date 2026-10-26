@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
-  getLesson, listTags, saveLesson, uploadMaterial, materialUrl,
+  getLesson, listTags, saveLesson, setMaoriContent, uploadMaterial, materialUrl,
   LoginRequiredError, LessonError, MAX_MATERIAL_BYTES, MATERIAL_RULE, messageFor,
   type Lesson,
 } from "@/lib/lessons-api";
@@ -18,6 +18,7 @@ export default function LessonEditor({ lessonId }: { lessonId?: string }) {
   const [date, setDate] = useState("");
   const [topics, setTopics] = useState("");
   const [description, setDescription] = useState("");
+  const [maoriContent, setMaoriContentTicked] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [files, setFiles] = useState<PendingFile[]>([]);
   const [loading, setLoading] = useState(Boolean(lessonId));
@@ -35,6 +36,7 @@ export default function LessonEditor({ lessonId }: { lessonId?: string }) {
       if (!active) return;
       setLesson(row); setTitle(row.title); setDate(row.lesson_date);
       setTopics(row.tags.join(", ")); setDescription(row.description || "");
+      setMaoriContentTicked(row.has_maori_content);
     }).catch(error => {
       if (!active) return;
       if (error instanceof LoginRequiredError) router.replace("/");
@@ -63,6 +65,17 @@ export default function LessonEditor({ lessonId }: { lessonId?: string }) {
     try {
       const saved = await saveLesson(lessonId || lesson?.id || null, { title, lesson_date: date, tags, description });
       setLesson(saved);
+      // US-008: the flag has its own endpoint; it is only called when the tick changed.
+      if (saved.has_maori_content !== maoriContent) {
+        try {
+          await setMaoriContent(saved.id, maoriContent);
+          setLesson({ ...saved, has_maori_content: maoriContent });
+        } catch (error) {
+          if (error instanceof LoginRequiredError) { router.replace("/"); return; }
+          setMessage("Lesson details saved. Contains Māori content could not be saved. " + messageFor(error));
+          return;
+        }
+      }
       for (const item of files) {
         try {
           const material = await uploadMaterial(saved.id, item.file, item.share);
@@ -105,6 +118,13 @@ export default function LessonEditor({ lessonId }: { lessonId?: string }) {
           {suggestions.length > 0 && <p className="hint">Existing topics: {suggestions.join(", ")}</p>}
           {fieldError("tags")}</div>
       </div>
+      <div className="field">
+        <label className="check"><input type="checkbox" name="has_maori_content" checked={maoriContent} disabled={busy}
+          aria-describedby="maori-content-hint" onChange={e => setMaoriContentTicked(e.target.checked)} />Contains Māori content</label>
+        <p id="maori-content-hint" className="hint">
+          Adds the label &quot;Māori content – not yet reviewed&quot; until a coordinator records a review.
+          {lesson?.review_status === "reviewed" && " Unticking removes the recorded review."}
+        </p></div>
       <div className="field"><label htmlFor="description">Teaching notes (optional)</label>
         <textarea id="description" value={description} disabled={busy} onChange={e => setDescription(e.target.value)} /></div>
       <h2>Materials</h2>

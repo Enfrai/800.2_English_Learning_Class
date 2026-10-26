@@ -10,8 +10,9 @@ const mid = "33333333-3333-4333-8333-333333333333";
 const original = {
   id, title: "Te reo Māori transport", lesson_date: "2026-10-25",
   description: "Teaching notes", tags: ["transport"], created_by: "11111111-1111-4111-8111-111111111111",
-  materials: [], can_edit: true, review_label: null,
+  materials: [], can_edit: true, has_maori_content: false, review_status: "not_required", review_label: null,
 };
+const NOT_YET_REVIEWED = "Māori content – not yet reviewed";
 const material = { id: mid, lesson_id: id, file_name: "Handout.pdf", file_size: 15, mime_type: "application/pdf", share_with_learners: false, created_at: "2026-10-25" };
 let browser;
 before(async () => { browser = await chromium.launch({ channel: process.env.BROWSER_CHANNEL || "chrome", headless: true }); });
@@ -21,7 +22,8 @@ async function screen(t, options = {}) {
   const context = await browser.newContext({ viewport: options.mobile ? { width: 390, height: 844 } : { width: 1280, height: 900 } });
   t.after(() => context.close());
   await context.addCookies([{ name: "ako_session", value: options.coordinator ? "ui-coordinator" : "ui-author", url: base, httpOnly: true, sameSite: "Lax" }]);
-  const state = { row: { ...structuredClone(original), materials: options.materials ? [structuredClone(material)] : [], can_edit: options.canEdit !== false }, created: 0, uploads: 0, deletes: 0, failUpload: false, expired: false };
+  const state = { row: { ...structuredClone(original), materials: options.materials ? [structuredClone(material)] : [], can_edit: options.canEdit !== false }, created: 0, uploads: 0, deletes: 0, flags: [], failUpload: false, expired: false };
+  if (options.review) Object.assign(state.row, options.review);
   await context.route("**/api/user/**", route => route.fulfill({ json: { user_id: original.created_by, display_name: "Test teacher", role: options.coordinator ? "coordinator" : "teacher" }, headers: { "X-Session-Expires-At": new Date(Date.now() + 1800000).toISOString() } }));
   await context.route("**/api/staff/lesson/**", async route => {
     const request = route.request();
@@ -39,6 +41,12 @@ async function screen(t, options = {}) {
       if (method === "PUT") state.row = { ...state.row, ...request.postDataJSON() };
       if (method === "DELETE") { state.row = null; state.deletes++; return route.fulfill({ status: 204 }); }
       return route.fulfill({ json: state.row });
+    }
+    if (path === `lessons/${id}/maori-content` && method === "PUT") {
+      const flagged = request.postDataJSON().has_maori_content;
+      state.flags.push(flagged);
+      Object.assign(state.row, { has_maori_content: flagged, review_status: flagged ? "pending" : "not_required", review_label: flagged ? NOT_YET_REVIEWED : null });
+      return route.fulfill({ json: { lesson_id: id, has_maori_content: flagged } });
     }
     if (path === `lessons/${id}/materials`) {
       state.uploads++;
@@ -191,3 +199,40 @@ test("long filenames wrap on mobile and queued files can be removed", async t =>
   await page.getByRole("button", { name: "Remove " + name, exact: true }).click();
   assert.equal(await page.getByRole("checkbox", { name: "Share " + name + " with learners", exact: true }).count(), 0);
 });
+
+// US-008: "Contains Māori content" tick box and the review pills (UI design 6.8, 6.10).
+const reviewed = { has_maori_content: true, review_status: "reviewed", review_label: "Reviewed by Kiri Tāmaki, 14 Oct 2026" };
+const pill = page => page.locator(".badge-review, .badge-reviewed");
+test("ticking Contains Māori content shows the not yet reviewed pill", async t => {
+  const { page, state } = await screen(t);
+  await fill(page);
+  await page.getByRole("checkbox", { name: "Contains Māori content", exact: true }).check();
+  await save(page);
+  await page.getByRole("heading", { name: "Māori health", exact: true }).waitFor();
+  assert.deepEqual(state.flags, [true]);
+  assert.equal(await pill(page).textContent(), NOT_YET_REVIEWED);
+  assert.equal(await pill(page).getAttribute("class"), "badge badge-review");
+});
+test("saving without changing the tick does not touch the review", async t => {
+  const { page, state } = await screen(t, { path: `/lessons/${id}/edit`, review: reviewed });
+  assert.equal(await page.getByRole("checkbox", { name: "Contains Māori content", exact: true }).isChecked(), true);
+  await page.getByText("Unticking removes the recorded review.", { exact: false }).waitFor();
+  await save(page);
+  await page.getByRole("heading", { name: original.title, exact: true }).waitFor();
+  assert.deepEqual(state.flags, []);
+});
+test("unticking sends the change and removes the pill", async t => {
+  const { page, state } = await screen(t, { path: `/lessons/${id}/edit`, review: { ...reviewed, review_status: "pending", review_label: NOT_YET_REVIEWED } });
+  await page.getByRole("checkbox", { name: "Contains Māori content", exact: true }).uncheck();
+  await save(page);
+  await page.getByRole("heading", { name: original.title, exact: true }).waitFor();
+  assert.deepEqual(state.flags, [false]);
+  assert.equal(await pill(page).count(), 0);
+});
+for (const path of ["/lessons", `/lessons/${id}`]) {
+  test(`reviewed lesson shows a green pill with macrons on ${path}`, async t => {
+    const { page } = await screen(t, { path, review: reviewed });
+    assert.equal(await pill(page).textContent(), "Reviewed by Kiri Tāmaki, 14 Oct 2026");
+    assert.equal(await pill(page).getAttribute("class"), "badge badge-reviewed");
+  });
+}

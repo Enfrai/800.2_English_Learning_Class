@@ -10,7 +10,10 @@ export type Material = {
 export type Lesson = {
   id: string; title: string; lesson_date: string; description: string | null;
   created_by: string; tags: string[]; materials: Material[];
-  can_edit: boolean; review_label: string | null;
+  can_edit: boolean;
+  /** US-008: "pending" until a coordinator records the review, then "reviewed". */
+  has_maori_content: boolean; review_status: "not_required" | "pending" | "reviewed";
+  review_label: string | null;
 };
 export type LessonInput = { title: string; lesson_date: string; description: string; tags: string[] };
 export class LessonError extends Error {
@@ -50,6 +53,10 @@ export function uploadMaterial(id: string, file: File, share: boolean) {
 export const deleteMaterial = (id: string) => send<void>(`materials/${encodeURIComponent(id)}`, { method: "DELETE" });
 export const shareMaterial = (id: string, value: boolean) => send<Material>(`materials/${encodeURIComponent(id)}`, {
   method: "PATCH", body: JSON.stringify({ share_with_learners: value }),
+});
+/** Tick or untick "Contains Māori content" (US-008). Lesson author or coordinator. */
+export const setMaoriContent = (id: string, value: boolean) => send<unknown>(`lessons/${encodeURIComponent(id)}/maori-content`, {
+  method: "PUT", body: JSON.stringify({ has_maori_content: value }),
 });
 export const materialUrl = (id: string) => `/api/staff/lesson/materials/${encodeURIComponent(id)}/download`;
 export const messageFor = (error: unknown) => error instanceof LessonError ? error.message : "Unable to complete the request. Please try again.";

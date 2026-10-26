@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { deleteLesson, deleteMaterial, getLesson, shareMaterial, materialUrl, LoginRequiredError, messageFor, type Lesson } from "@/lib/lessons-api";
+import ReviewPill from "./review-pill";
 import styles from "./lessons.module.css";
 
 export default function LessonDetail({ lessonId }: { lessonId: string }) {
@@ -43,7 +44,7 @@ export default function LessonDetail({ lessonId }: { lessonId: string }) {
     <h1 className={styles.heading}>{lesson.title}</h1>
     <p className="sub">Lesson date: <time dateTime={lesson.lesson_date}>{lesson.lesson_date}</time></p>
     <p>{lesson.tags.map(tag => <span className="chip" key={tag}>{tag}</span>)}</p>
-    {lesson.review_label && <p className="msg msg-warning">{lesson.review_label}</p>}
+    {lesson.review_label && <p><ReviewPill lesson={lesson} /></p>}
     <p className={styles.description}>{lesson.description}</p>
     <div className="row no-print">
       <Link href="/lessons" className="btn btn-secondary">Back to lessons</Link>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { listLessons, LoginRequiredError, messageFor, type Lesson } from "@/lib/lessons-api";
+import ReviewPill from "./review-pill";
 import styles from "./lessons.module.css";
 
 export default function LessonsScreen() {
@@ -35,7 +36,7 @@ export default function LessonsScreen() {
         <thead><tr><th scope="col">Title</th><th scope="col">Date</th><th scope="col">Topics</th><th scope="col">Materials</th><th scope="col" className="no-print">Actions</th></tr></thead>
         <tbody>{lessons.map(lesson => <tr key={lesson.id}>
           <td><Link href={`/lessons/${lesson.id}`}>{lesson.title}</Link>
-            {lesson.review_label && <p><span className="badge badge-review">{lesson.review_label}</span></p>}</td>
+            {lesson.review_label && <p><ReviewPill lesson={lesson} /></p>}</td>
           <td><time dateTime={lesson.lesson_date}>{lesson.lesson_date}</time></td>
           <td>{lesson.tags.map(tag => <span className="chip" key={tag}>{tag}</span>)}</td>
           <td>{lesson.materials.length}</td>

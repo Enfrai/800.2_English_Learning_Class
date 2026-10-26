@@ -401,6 +401,27 @@ def test_material_changes_reset_maori_review_and_keep_audit_log(api, operation):
     assert status["review_status"] == "pending" and status["reviewer_name"] is None
 
 
+def test_lesson_list_and_page_carry_the_review_status(api):
+    # US-008: the form's tick box and the pill colour come from these fields.
+    row = create(api)
+    assert (row["has_maori_content"], row["review_status"]) == (False, "not_required")
+    api[0].put(
+        f"/lessons/{row['id']}/maori-content",
+        json={"has_maori_content": True},
+        headers=headers(),
+    )
+    pending = api[0].get(f"/lessons/{row['id']}", headers=headers()).json()
+    assert (pending["has_maori_content"], pending["review_status"]) == (True, "pending")
+    api[0].post(
+        f"/lessons/{row['id']}/review",
+        json={"reviewer_name": "Kiri Tāmaki", "review_date": "2026-10-14"},
+        headers=headers("coordinator"),
+    )
+    [listed] = api[0].get("/lessons", headers=headers("other")).json()
+    assert listed["review_status"] == "reviewed"
+    assert listed["review_label"] == "Reviewed by Kiri Tāmaki, 14 Oct 2026"
+
+
 def test_metadata_edit_and_sharing_do_not_reset_review(api):
     row = create(api)
     material = upload(api, row["id"]).json()
