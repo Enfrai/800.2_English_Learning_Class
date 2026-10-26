@@ -1,4 +1,4 @@
-/* Forward protected classroom, QR window and report requests.
+/* Forward protected classroom, QR, report and learner history requests.
  * Updated: Shuohui Liu, 26 Oct 2026
  * Updated: Pei Wu, 26 Oct 2026 (call the Accessment service on the internal network)
  */
@@ -12,6 +12,7 @@ const accessApi = process.env.ACCESS_API_URL || "http://access-service:8000";
 const noStore = { "Cache-Control": "no-store" };
 const uuid = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 // US-015 adds sessions/{id}/corrections.
+const historyRoute = new RegExp(`^learners/${uuid}/attendance-history$`);
 const route = new RegExp(`^sessions(?:/today|/${uuid}(?:/(?:attendance(?:/(?:${uuid}|new-learner))?|corrections|lesson|check-in))?)?$`);
 
 /** Bridge attendance and class-session routes; backend /me validates session/role.
@@ -19,9 +20,10 @@ const route = new RegExp(`^sessions(?:/today|/${uuid}(?:/(?:attendance(?:/(?:${u
  */
 async function forward(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   const path = (await context.params).path.join("/");
-  if (!route.test(path) && path !== "reports/attendance") return NextResponse.json({ detail: "Not found" }, { status: 404, headers: noStore });
+  if (!route.test(path) && !historyRoute.test(path) && path !== "reports/attendance") return NextResponse.json({ detail: "Not found" }, { status: 404, headers: noStore });
   const cookies = request.cookies.getAll("ako_session");
-  if (cookies.length !== 1 || !cookies[0].value || request.headers.has("authorization")) {
+  const sessionCookieCount = (request.headers.get("cookie") || "").split(";").filter(part => part.trim().split("=", 1)[0] === "ako_session").length;
+  if (sessionCookieCount !== 1 || cookies.length !== 1 || !cookies[0].value || request.headers.has("authorization")) {
     return NextResponse.json({ detail: "Not authenticated" }, { status: 401, headers: noStore });
   }
   if (request.method !== "GET") {

@@ -1,0 +1,15 @@
+/* Style readable learner history with the shared Ako spacing and palette.
+ * Author: Shuohui Liu
+ * Date: 24 Oct 2026
+ */
+.panel { margin-block: var(--space-4); }
+.dates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.dates input { width: 100%; min-width: 0; box-sizing: border-box; }
+.dates input[type="date"][data-empty="true"] { color: var(--slate); }
+.dates input[type="date"][data-empty="true"]::-webkit-datetime-edit { color: var(--slate); }
+.dates input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; }
+.name { overflow-wrap: anywhere; }
+.table { width: 100%; }
+.table th, .table td { font-size: 18px; }
+@media (max-width: 600px) { .dates { grid-template-columns: 1fr; } }
+@media print { .panel { display: none; } }

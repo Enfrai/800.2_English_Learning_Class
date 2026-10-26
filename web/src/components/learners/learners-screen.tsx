@@ -1,11 +1,13 @@
-/* Learners page: the class list and the add or edit form (UI design document 6.4).
+/* Show the class list, learner forms and individual attendance history.
  * Author: Pei Wu
  * Date: 23 Oct 2026
+ * Updated: Shuohui Liu, 26 Oct 2026
  */
 
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import CsvUpload from "./csv-upload";
 import { useSession } from "@/components/session-context";
 import LearnerForm from "./learner-form";
@@ -152,10 +154,10 @@ function LearnerTable({
                   >
                     Edit
                   </button>
-                  {/* Attendance history is US-016 (Later, UI design document 6.17). */}
-                  <button type="button" className="btn btn-later" disabled>
-                    History (later)
-                  </button>
+                  {/* Attendance history is US-016 (UI design document 6.17). */}
+                  <Link className="btn btn-secondary" href={`/learners/${encodeURIComponent(learner.id)}/history`} aria-label={`Attendance history for ${name}`}>
+                    History
+                  </Link>
                 </div>
               </td>
             </tr>
