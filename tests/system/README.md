@@ -6,6 +6,7 @@ that testers follow and sign off are in `docs/system_test/`.
 
 | File | Cases |
 | --- | --- |
+| `test_club_information.py` | US-009 anonymous class information, 360px readability, short sentences and HTTP 404/home navigation |
 | `test_checkin_management.py` | US-011 real QR open/sign-in/live attendance/close and anonymous management denial |
 | `test_attendance_reports.py` | US-005 PDF/CSV downloads, current corrections, date validation and role boundaries through real services |
 | `test_learners_page.py` | ST-11, and the Learners page parts of NT-05, NT-06, NT-07, NT-08, NT-10 |

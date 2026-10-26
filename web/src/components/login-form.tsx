@@ -1,4 +1,4 @@
-/* Render the Ako UI kit login form and call the User Service through Nginx.
+/* Render the Ako login form standalone or within the public class page.
  * Author: Shuohui Liu
  * Date: 19 Oct 2026
  */
@@ -18,7 +18,9 @@ type LoginResult = {
   role: Role;
 };
 
-export default function LoginForm() {
+export default function LoginForm({ embedded = false }: { embedded?: boolean }) {
+  const Frame = embedded ? "div" : "main";
+  const Heading = embedded ? "h3" : "h1";
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -69,12 +71,12 @@ export default function LoginForm() {
   }
 
   return (
-    <main className="page login-page">
+    <Frame className={embedded ? undefined : "page login-page"}>
       <section className="card login-panel" aria-labelledby="login-title">
         <div className="login-brand" aria-hidden="true">Ako</div>
         <p className="login-eyebrow">ENGLISH LEARNING CLASS</p>
-        <h1 id="login-title">Welcome back</h1>
-        <p className="sub">Sign in to continue your learning journey.</p>
+        <Heading id="login-title">Welcome back</Heading>
+        <p className="sub">{embedded ? "Teachers and coordinators sign in here." : "Sign in to continue your learning journey."}</p>
         <form onSubmit={handleLogin} aria-busy={loading}>
           <TextField
             label="Username"
@@ -107,6 +109,6 @@ export default function LoginForm() {
         )}
         <p className="login-note">@Yoobee Inc</p>
       </section>
-    </main>
+    </Frame>
   );
 }

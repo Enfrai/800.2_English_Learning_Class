@@ -1,4 +1,4 @@
-"""Run isolated backend and web suites including QR windows and live attendance.
+"""Run isolated backend and web suites including public-page accessibility checks.
 
 Author: Shuohui Liu
 Date: 19 Oct 2026
@@ -127,6 +127,9 @@ def web() -> list[dict]:
         "staff-ui": ["node", "tests/run-staff-ui.mjs"],
         "materials-unit": ["npm", "run", "test:materials-unit"],
         "materials-ui": ["node", "tests/run-materials-ui.mjs"],
+        "public-unit": ["npm", "run", "test:public-unit"],
+        "public-ui": ["npm", "run", "test:public-ui"],
+        "public-a11y": ["npm", "run", "test:public-a11y"],
         "checkin-unit": ["npm", "run", "test:checkin-unit"],
         "checkin-ui": ["node", "tests/run-checkin-ui.mjs"],
         "reports-unit": ["npm", "run", "test:reports-unit"],
