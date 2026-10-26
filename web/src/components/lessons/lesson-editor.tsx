@@ -37,6 +37,9 @@ export default function LessonEditor({ lessonId, copyFrom }: { lessonId?: string
       if (!active) return;
       setDraft(row); setTitle(row.title); setDate("");
       setTopics(row.tags.join(", ")); setDescription(row.description);
+      // US-008: a copy keeps the flag (its review starts again). Without this
+      // the unticked box would remove the flag from the copy when it is saved.
+      setMaoriContentTicked(row.has_maori_content);
     }).catch(error => {
       if (!active) return;
       if (error instanceof LoginRequiredError) router.replace("/");

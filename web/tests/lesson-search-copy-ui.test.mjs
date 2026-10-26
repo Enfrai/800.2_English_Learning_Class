@@ -40,13 +40,20 @@ async function screen(t, options = {}) {
       if (state.conflict) return route.fulfill({ status: 409, json: { detail: "Source materials changed. Reopen the copy draft." } });
       state.copies++;
       const body = request.postDataJSON();
-      state.copied = { ...structuredClone(source), ...body, id: copyId, can_edit: true, materials: source.materials.filter(item => body.material_ids.includes(item.id)).map(item => ({ ...item, share_with_learners: false })), review_label: "Māori content – not yet reviewed" };
+      // Like the Lesson service: the copy keeps the flag and its review starts again (US-008).
+      state.copied = { ...structuredClone(source), ...body, id: copyId, can_edit: true, materials: source.materials.filter(item => body.material_ids.includes(item.id)).map(item => ({ ...item, share_with_learners: false })), has_maori_content: true, review_status: "pending", review_label: "Māori content – not yet reviewed" };
       return route.fulfill({ status: 201, json: state.copied });
     }
     if (path === `lessons/${id}`) return route.fulfill({ json: source });
     if (path === `lessons/${copyId}`) {
       if (method === "PUT") { state.edits++; Object.assign(state.copied, request.postDataJSON()); }
       return route.fulfill({ json: state.copied });
+    }
+    if (path === `lessons/${copyId}/maori-content` && method === "PUT") {
+      const flagged = request.postDataJSON().has_maori_content;
+      (state.flags ||= []).push(flagged);
+      Object.assign(state.copied, { has_maori_content: flagged, review_status: flagged ? "pending" : "not_required", review_label: flagged ? "Māori content – not yet reviewed" : null });
+      return route.fulfill({ json: { lesson_id: copyId, has_maori_content: flagged } });
     }
     if (path === `lessons/${copyId}/materials`) {
       state.uploads++;
@@ -200,4 +207,15 @@ test("search and filter controls fit a 360px phone", async t => {
     await mkdir(process.env.UI_SCREENSHOT_DIR, { recursive: true });
     await page.screenshot({ path: process.env.UI_SCREENSHOT_DIR + "/us007-search-mobile.png", fullPage: true });
   }
+});
+
+// US-008: copying a Māori lesson keeps "Contains Māori content" ticked; saving must not unflag the copy.
+test("a copied Māori lesson stays flagged and shows the not yet reviewed pill", async t => {
+  const { page, state } = await screen(t); await openDraft(page);
+  assert.equal(await page.getByRole("checkbox", { name: "Contains Māori content", exact: true }).isChecked(), true);
+  await page.getByLabel("Lesson date", { exact: true }).fill("2026-10-26"); await save(page);
+  await page.waitForURL(`**/lessons/${copyId}`);
+  await page.locator(".badge-review").getByText("Māori content – not yet reviewed", { exact: true }).waitFor();
+  assert.deepEqual(state.flags || [], []);
+  assert.equal(state.copied.has_maori_content, true);
 });
