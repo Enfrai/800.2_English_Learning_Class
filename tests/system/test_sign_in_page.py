@@ -1,19 +1,21 @@
 """System tests for learner QR sign-in on a phone (US-012).
 
-Test Plan section 5: the sign-in part of ST-14, US-012 AC1 to AC6, and the
-sign-in parts of NT-06 and NT-11. Phones are 360 px wide with no login.
-Opening and closing check-in (US-011) and class sessions (US-014) are not
-built yet, so the ``check_in`` and ``class_session`` fixtures set them up in
-the database. Opening lesson materials after sign-in is US-013 (Later).
+Test Plan section 5: ST-14 from the teacher opening check-in to closing it
+(US-011, US-012, US-013), US-012 AC1 to AC6, and the sign-in parts of NT-06
+and NT-11. Phones are 360 px wide with no login. ST-14 opens and closes
+check-in on the class page; the other tests use the ``check_in`` fixture,
+which calls the same US-011 endpoints.
 
 The manual version is docs/system_test/sign_in_system_tests.md.
 
 Author: Pei Wu
 Date: 25 Oct 2026
-Updated: Pei Wu, 26 Oct 2026 (materials link from US-013)
+Updated: Pei Wu, 26 Oct 2026 (materials link from US-013; full ST-14 with
+US-011 and US-013)
 """
 
 import os
+import re
 import time
 from collections.abc import Callable, Iterator
 from typing import Any
@@ -23,7 +25,7 @@ from api import BASE_URL
 from attendance_page import AttendancePage
 from learners_page import unique
 from playwright.sync_api import Browser, Page, expect
-from setup_data import CheckIn, access_sql
+from setup_data import ORIGIN, CheckIn, access_sql
 from sign_in_page import PHONE_SIZE, SignInPage
 
 AddLearner = Callable[..., dict[str, Any]]
@@ -56,11 +58,48 @@ def present_on_teachers_list(teacher: Page, session_id: str, learner: str) -> No
     expect(attendance.checkbox(learner)).to_be_checked()
 
 
-# ST-14 QR check-in (sign-in part)
+# ST-14 QR check-in, from the teacher opening it to closing it
 
 
-def test_st14_learner_signs_in_on_a_phone_and_shows_present_for_the_teacher(
+def share_a_lesson_with_the_class(staff: Page, session_id: str) -> str:
+    """Link a lesson with one file shared with learners; return the file name."""
+    handout = f"{unique('Bus timetable')}.pdf"
+    lesson = staff.request.post(
+        "/api/staff/lesson/lessons",
+        headers=ORIGIN,
+        data={
+            "title": unique("Using the bus"),
+            "lesson_date": "2026-10-20",
+            "tags": ["transport"],
+        },
+    )
+    assert lesson.status == 201, lesson.text()
+    lesson_id = lesson.json()["id"]
+    upload = staff.request.post(
+        f"/api/staff/lesson/lessons/{lesson_id}/materials",
+        headers=ORIGIN,
+        multipart={
+            "file": {
+                "name": handout,
+                "mimeType": "application/pdf",
+                "buffer": b"%PDF-1.7 test",
+            },
+            "share_with_learners": "true",
+        },
+    )
+    assert upload.status == 201, upload.text()
+    link = staff.request.put(
+        f"/api/staff/access/sessions/{session_id}/lesson",
+        headers=ORIGIN,
+        data={"lesson_id": lesson_id},
+    )
+    assert link.ok, link.text()
+    return handout
+
+
+def test_st14_qr_check_in_from_opening_to_closing(
     phone: Phone,
+    teacher_page: Page,
     logged_in_page: Page,
     add_learner: AddLearner,
     class_session: ClassSession,
@@ -69,21 +108,49 @@ def test_st14_learner_signs_in_on_a_phone_and_shows_present_for_the_teacher(
     family = unique("Ngata")
     add_learner("Aroha", family)
     session_id = class_session()
-    token = check_in.open(session_id)
-    learner = phone()
+    handout = share_a_lesson_with_the_class(logged_in_page, session_id)
+    check_in.close(session_id)  # Start with check-in closed.
 
+    # US-011: the teacher opens check-in on the class page.
+    teacher_page.goto(f"/sessions/{session_id}")
+    teacher_page.get_by_role("button", name="Open check-in", exact=True).click()
+    expect(teacher_page.get_by_alt_text("QR code for class sign-in")).to_be_visible()
+    code = teacher_page.locator("a[href*='/sign-in/']").get_attribute("href")
+    assert code
+    token = code.rsplit("/", 1)[1]
+
+    # US-012: a phone scans the code and signs in; the teacher sees Present.
+    learner = phone()
     learner.open(token)
     start = time.perf_counter()
     learner.sign_in("Aroha", family)
     expect(learner.success).to_have_text("You are signed in")
-    present_on_teachers_list(logged_in_page, session_id, f"Aroha {family}")
+    present_on_teachers_list(teacher_page, session_id, f"Aroha {family}")
     seconds = time.perf_counter() - start
-
     assert seconds <= 10, f"Present after {seconds:.1f}s"
-    check_in.close(token)
+
+    # US-013: the phone opens the lesson materials and downloads the file.
+    learner.page.get_by_role("link", name="Lesson materials", exact=True).click()
+    learner.page.wait_for_url("**/materials")
+    download_link = learner.page.get_by_role(
+        "link", name=re.compile(rf"^Download {re.escape(handout)}")
+    )
+    with learner.page.expect_download() as download:
+        download_link.click()
+    assert download.value.suggested_filename == handout
+
+    # US-011: the teacher closes check-in; scanning again shows the closed message.
+    teacher_page.goto(f"/sessions/{session_id}")
+    teacher_page.get_by_role("button", name="Close check-in", exact=True).click()
+    expect(
+        teacher_page.get_by_role("status").filter(has_text="Check-in is closed")
+    ).to_be_visible()
     learner.open(token)
     expect(learner.closed).to_have_text(CLOSED)
     expect(learner.first_name).to_have_count(0)
+    # Closing check-in does not take away materials already opened (US-013).
+    learner.page.goto("/materials")
+    expect(download_link).to_be_visible()
 
 
 # US-012 acceptance criteria on the phone
@@ -175,9 +242,10 @@ def test_ac4_second_sign_in_says_already_signed_in(
 def test_ac5_closed_or_unknown_code_shows_the_closed_message(
     phone: Phone, class_session: ClassSession, check_in: CheckIn, closed: bool
 ) -> None:
-    token = check_in.open(class_session())
+    session_id = class_session()
+    token = check_in.open(session_id)
     if closed:
-        check_in.close(token)
+        check_in.close(session_id)
     learner = phone()
 
     learner.open(token if closed else "made-up-token")

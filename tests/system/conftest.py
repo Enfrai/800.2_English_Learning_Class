@@ -233,12 +233,14 @@ def ticked_in_class() -> Callable[[str, str], None]:
 
 
 @pytest.fixture
-def check_in() -> CheckIn:
+def check_in(page: Page, session_id: str) -> CheckIn:
+    """Open and close check-in as the logged-in demo coordinator (US-011)."""
     # Every test request comes from this computer's address, so wrong names
     # from earlier tests would count towards its limit of 50. Start each test
     # with no wrong names on the throwaway database.
     access_sql("DELETE FROM signin_failures")
-    return CheckIn()
+    assert session_id
+    return CheckIn(page.request)
 
 
 @pytest.fixture
