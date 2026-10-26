@@ -12,7 +12,7 @@ const summary=[];
 const summaryPath=join(folder,"us009-accessibility-summary.json");
 await writeFile(summaryPath,JSON.stringify({status:"running",results:[]}));
 try {
-for(const [name,path] of [["home","/"]]){
+for(const [name,path] of [["home","/class-information"],["enquiry","/ask-about-classes"],["login","/"]]){
   const output=join(folder,`us009-${name}-lighthouse.json`);
   await writeFile(output,JSON.stringify({status:"running"}));
   const env={...process.env,...(process.env.BROWSER_CHANNEL==="chromium"?{CHROME_PATH:chromium.executablePath()}:{})};

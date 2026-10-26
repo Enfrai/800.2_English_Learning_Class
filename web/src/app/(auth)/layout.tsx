@@ -1,14 +1,12 @@
-/* Define shared root styles and metadata for public information and staff login.
+/* Define the root layout and metadata for the login test application.
  * Author: Shuohui Liu
  * Date: 19 Oct 2026
  */
 
-import type { Metadata, Viewport } from "next";
+import type { Metadata } from "next";
 import "@/styles/ako/tokens.css";
 import "@/styles/ako/components.css";
 import "./globals.css";
-
-export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 
 export const metadata: Metadata = {
   title: { template: "%s · Ako", default: "Ako" },

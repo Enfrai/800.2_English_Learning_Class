@@ -13,10 +13,14 @@
 .facts dt { font-weight:700; margin-bottom:var(--space-2); }
 .facts dd { margin:0; overflow-wrap:anywhere; }
 .facts a { display:inline-flex; min-height:44px; align-items:center; overflow-wrap:anywhere; }
-.enquiries, .staff { max-width:680px; padding-block:var(--space-4); scroll-margin-block:var(--space-4); }
-.home :global(.login-panel) { margin:0; }
-.home :global(.login-panel) h3 { margin-top:0; font-size:var(--fs-h2); }
+.enquiries { max-width:680px; padding-block:var(--space-4); scroll-margin-block:var(--space-4); }
 .skip { position:absolute; left:16px; top:-100px; background:var(--bg); color:var(--navy); padding:12px; z-index:10; }
 .skip:focus { top:8px; }
 @media (max-width:600px) { .facts { grid-template-columns:minmax(0,1fr); gap:var(--space-3); } .header nav { justify-content:flex-start; } }
-@media print { .header, .enquiries, .staff, .skip { display:none; } .facts { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media print { .header, .enquiries, .skip { display:none; } .facts { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+.header { flex-shrink:0; }
+.header nav a[aria-current="page"] { font-weight:700; }
+
+.frame { min-height:100dvh; display:flex; flex-direction:column; }
+.frame :global(.login-page) { flex:1; min-height:0; width:100%; }

@@ -147,8 +147,9 @@ repository root for phone/LAN setup, printing and Docker tests.
 
 ## Public class information (US-009)
 
-The homepage now presents public class details before the existing enquiry and
-staff login forms. Staff can use `/#staff-login` directly. Edit
+The root `/` keeps the standalone staff login. Public navigation opens
+`/class-information` for class details and `/ask-about-classes` for enquiries.
+These are separate pages, not sections of one page. Edit
 `src/content/club.json` and rebuild to publish approved information. The default
 schedule is explicitly labelled as sample data.
 
