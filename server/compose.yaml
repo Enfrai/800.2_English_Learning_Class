@@ -1,4 +1,4 @@
-# Define the Nginx, FastAPI, and PostgreSQL Docker services.
+# Define services, shared QR settings and configurable local network access.
 #
 # Author: Shuohui Liu
 # Date: 19 Oct 2026
@@ -26,7 +26,7 @@ services:
   nginx:
     image: nginx:1.28-alpine
     ports:
-      - "127.0.0.1:8080:80"
+      - "${AKO_BIND_ADDRESS:-127.0.0.1}:8080:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
@@ -81,6 +81,8 @@ services:
       DATABASE_URL: postgresql+psycopg://access_app:${ACCESS_DB_PASSWORD:-local_access_password}@postgres-access:5432/accessdb
       INSTANCE_NAME: access1
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      CHECKIN_PUBLIC_ORIGIN: ${CHECKIN_PUBLIC_ORIGIN:-http://localhost:8080}
+      CHECKIN_TOKEN_SECRET: ${CHECKIN_TOKEN_SECRET:-${INTERNAL_API_KEY:-local_internal_key}}
       LESSON_SERVICE_URL: ${LESSON_SERVICE_URL:-http://lesson-service:8000}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-local_internal_key}
     depends_on:
@@ -97,6 +99,8 @@ services:
       DATABASE_URL: postgresql+psycopg://access_app:${ACCESS_DB_PASSWORD:-local_access_password}@postgres-access:5432/accessdb
       INSTANCE_NAME: access2
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      CHECKIN_PUBLIC_ORIGIN: ${CHECKIN_PUBLIC_ORIGIN:-http://localhost:8080}
+      CHECKIN_TOKEN_SECRET: ${CHECKIN_TOKEN_SECRET:-${INTERNAL_API_KEY:-local_internal_key}}
       LESSON_SERVICE_URL: ${LESSON_SERVICE_URL:-http://lesson-service:8000}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-local_internal_key}
 

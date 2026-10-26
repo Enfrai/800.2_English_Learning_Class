@@ -116,3 +116,14 @@ request, including inactive learners referenced in that range. Current active
 learners are also included; missing Present records display as Absent. UUIDs
 keep same-name learners separate. PDF/CSV outputs are generated in memory;
 reports do not write attendance, audit history, learner data or files to disk.
+
+
+## US-011 QR window lifecycle
+
+No new table or column is needed. The existing `checkin_windows` row stores the
+random window UUID, session UUID, token hash, opener, opened/expiry times and
+optional close time. The shared secret derives a recoverable display token from
+the random window UUID; the database still keeps only its hash. Repeated opens
+reuse an active window and never extend its deadline. QR management and sign-in
+share the classroom row lock. Sign-in checks closure and expiry again after the
+name lookup; closing does not delete attendance or learner material grants.

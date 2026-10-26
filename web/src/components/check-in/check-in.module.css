@@ -1,0 +1,8 @@
+/* Present a high contrast QR code and keep long links inside narrow screens.
+ * Author: Shuohui Liu
+ * Date: 24 Oct 2026
+ */
+.panel { max-width: 760px; margin-block: var(--space-5); }
+.code { max-width: 560px; }
+.qr { display:block; width: min(340px,100%); height:auto; aspect-ratio:1; background:#fff; }
+.link { overflow-wrap:anywhere; }

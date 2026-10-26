@@ -1,10 +1,10 @@
-/* Export dated attendance as A4 PDF or CSV with the shared Ako controls.
+/* Export attendance with full-area calendar pickers and shared Ako controls.
  * Author: Shuohui Liu
  * Date: 24 Oct 2026
  */
 
 "use client";
-import { useRef, useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent, type MouseEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/components/session-context";
 import { downloadAttendance, ReportError, LoginRequiredError, type ReportFormat } from "@/lib/attendance-reports-api";
@@ -20,6 +20,18 @@ export default function AttendanceReports() {
   const startInput = useRef<HTMLInputElement>(null), endInput = useRef<HTMLInputElement>(null);
   if (session?.role !== "coordinator") return <p className="msg msg-error" role="alert">You do not have permission</p>;
   function focus(field: string) { (field === "start_date" ? startInput : endInput).current?.focus(); }
+  function openCalendar(event: MouseEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    if (input.disabled || typeof input.showPicker !== "function") return;
+    try {
+      input.showPicker();
+      // Avoid the native icon toggling a picker that this click already opened.
+      event.preventDefault();
+    } catch {
+      // Browsers without usable showPicker keep their normal date input behavior.
+      input.focus();
+    }
+  }
   function edited() { setErrors({}); setError(""); setMessage(""); }
   async function download(format: ReportFormat) {
     if (pending.current) return;
@@ -55,13 +67,13 @@ export default function AttendanceReports() {
       <form onSubmit={submit} noValidate aria-busy={Boolean(busy)}>
         <div className={styles.dates}>
           <div className="field"><label className="req" htmlFor="report-start">Start date</label>
-            <input ref={startInput} id="report-start" name="start_date" type="date" value={start} required disabled={Boolean(busy)}
+            <input ref={startInput} id="report-start" name="start_date" type="date" data-empty={!start} onClick={openCalendar} value={start} required disabled={Boolean(busy)}
               aria-invalid={Boolean(errors.start_date)} aria-describedby={errors.start_date ? "report-start-error" : undefined}
               onChange={event => { setStart(event.target.value); edited(); }} />
             {errors.start_date && <p id="report-start-error" className="msg msg-error" role="alert">{errors.start_date}</p>}
           </div>
           <div className="field"><label className="req" htmlFor="report-end">End date</label>
-            <input ref={endInput} id="report-end" name="end_date" type="date" value={end} required disabled={Boolean(busy)}
+            <input ref={endInput} id="report-end" name="end_date" type="date" data-empty={!end} onClick={openCalendar} value={end} required disabled={Boolean(busy)}
               aria-invalid={Boolean(errors.end_date)} aria-describedby={errors.end_date ? "report-end-error" : undefined}
               onChange={event => { setEnd(event.target.value); edited(); }} />
             {errors.end_date && <p id="report-end-error" className="msg msg-error" role="alert">{errors.end_date}</p>}

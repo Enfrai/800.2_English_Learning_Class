@@ -1,4 +1,4 @@
-/* Keep report controls readable with shared Ako spacing and responsive forms.
+/* Style responsive report controls and darker empty date placeholders.
  * Author: Shuohui Liu
  * Date: 24 Oct 2026
  */
@@ -6,6 +6,9 @@
 .panel { max-width: 800px; margin-bottom: var(--space-5); }
 .dates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
 .dates input { width: 100%; min-width: 0; box-sizing: border-box; }
+.dates input[type="date"][data-empty="true"] { color: var(--slate); }
+.dates input[type="date"][data-empty="true"]::-webkit-datetime-edit { color: var(--slate); }
+.dates input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; }
 .actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
 .help { max-width: 800px; }
 @media (max-width: 600px) { .dates { grid-template-columns: minmax(0, 1fr); } }

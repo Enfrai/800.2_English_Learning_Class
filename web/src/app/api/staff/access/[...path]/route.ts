@@ -1,4 +1,4 @@
-/* Forward protected classroom requests and coordinator report downloads.
+/* Forward protected classroom, QR window and report requests.
  * Updated: Shuohui Liu, 26 Oct 2026
  * Updated: Pei Wu, 26 Oct 2026 (call the Accessment service on the internal network)
  */
@@ -12,7 +12,7 @@ const accessApi = process.env.ACCESS_API_URL || "http://access-service:8000";
 const noStore = { "Cache-Control": "no-store" };
 const uuid = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 // US-015 adds sessions/{id}/corrections.
-const route = new RegExp(`^sessions(?:/today|/${uuid}(?:/(?:attendance(?:/(?:${uuid}|new-learner))?|corrections|lesson))?)?$`);
+const route = new RegExp(`^sessions(?:/today|/${uuid}(?:/(?:attendance(?:/(?:${uuid}|new-learner))?|corrections|lesson|check-in))?)?$`);
 
 /** Bridge attendance and class-session routes; backend /me validates session/role.
  * Updated: Shuohui Liu, 26 Oct 2026

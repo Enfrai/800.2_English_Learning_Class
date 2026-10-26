@@ -1,4 +1,4 @@
-# Python dependencies for attendance APIs and printable PDF reports.
+# Python dependencies for attendance, QR codes and printable reports.
 # Author: Shuohui Liu
 # Date: 19 Oct 2026
 fastapi>=0.115,<1
@@ -6,3 +6,4 @@ uvicorn>=0.30,<1
 sqlalchemy>=2.0,<3
 psycopg[binary]>=3.2,<4
 reportlab>=4.4,<5
+qrcode>=8,<9

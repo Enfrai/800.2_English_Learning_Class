@@ -97,6 +97,8 @@ services:
         aliases: [access-service]
     environment:
       DATABASE_URL: postgresql+psycopg://access_app:test_only_password@postgres-access:5432/accessdb
+      CHECKIN_PUBLIC_ORIGIN: http://nginx
+      CHECKIN_TOKEN_SECRET: test_only_qr_secret
       INTERNAL_API_KEY: ako_test_internal_key
     depends_on:
       postgres-access: {condition: service_healthy}

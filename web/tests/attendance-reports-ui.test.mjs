@@ -1,4 +1,4 @@
-/* Verify coordinator report forms, downloads, permissions and responsive Ako UI.
+/* Verify report downloads, native calendar pickers and responsive Ako UI.
  * Author: Shuohui Liu
  * Date: 24 Oct 2026
  */
@@ -111,4 +111,42 @@ test("360px page keeps shared Ako style and usable controls",async t=>{
 });
 test("keyboard submission downloads PDF",async t=>{
   const {page,state}=await screen(t);await open(page);await fill(page);const waiting=page.waitForEvent("download");await page.getByLabel("End date",{exact:true}).press("Enter");await waiting;assert.equal(state.requests[0].format,"pdf");
+});
+
+for (const id of ["report-start", "report-end"]) test(`${id} opens its native calendar from the input and icon`, async t => {
+  const { page } = await screen(t); await open(page);
+  await page.evaluate(() => {
+    const native = HTMLInputElement.prototype.showPicker;
+    window.__calendarOpened = [];
+    HTMLInputElement.prototype.showPicker = function () {
+      native.call(this);
+      window.__calendarOpened.push(this.id);
+    };
+  });
+  const input = page.locator(`#${id}`);
+  const box = await input.boundingBox();
+  await input.click({ position: { x: 25, y: box.height / 2 } });
+  assert.deepEqual(await page.evaluate(() => window.__calendarOpened), [id]);
+  await page.keyboard.press("Escape");
+  await input.click({ position: { x: box.width - 18, y: box.height / 2 } });
+  assert.deepEqual(await page.evaluate(() => window.__calendarOpened), [id, id]);
+  await page.keyboard.press("Escape");
+});
+test("empty dates are dark slate and selected dates use normal text colour", async t => {
+  const { page } = await screen(t); await open(page);
+  for (const id of ["report-start", "report-end"]) {
+    const input = page.locator(`#${id}`);
+    assert.equal(await input.evaluate(e => getComputedStyle(e).color), "rgb(74, 90, 107)");
+    await input.fill("2026-10-24");
+    assert.equal(await input.evaluate(e => getComputedStyle(e).color), "rgb(28, 39, 51)");
+    await input.fill("");
+    assert.equal(await input.evaluate(e => getComputedStyle(e).color), "rgb(74, 90, 107)");
+  }
+});
+test("unsupported calendar API retains manual entry without errors", async t => {
+  const { page } = await screen(t); await open(page);
+  await page.evaluate(() => { HTMLInputElement.prototype.showPicker = undefined; });
+  await page.locator("#report-start").click({ position: { x: 20, y: 20 } });
+  await fill(page);
+  assert.equal(await page.getByLabel("Start date", { exact: true }).inputValue(), "2026-10-24");
 });

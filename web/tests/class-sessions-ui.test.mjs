@@ -1,4 +1,4 @@
-/* Verify the classroom lifecycle and attendance navigation in a real browser.
+/* Verify classroom lifecycle, QR panel compatibility and attendance navigation.
  * Author: Shuohui Liu
  * Date: 24 Oct 2026
  */
@@ -42,6 +42,7 @@ async function screen(t, options = {}) {
       if (state.blockDelete || state.rows[0].attendance_count) return reply({ detail: "This session has attendance and cannot be deleted" }, 409);
       state.deletes++; state.rows = []; return route.fulfill({ status: 204 });
     }
+    if (path === `/${sid}/check-in`) return reply({ state: "not-open", session_date: today, can_open: true, opened_at: null, expires_at: null, sign_in_url: null, qr_svg: null });
     if (path === `/${sid}/attendance`) return reply({ session_date: state.rows[0].session_date, editable: true, present_count: 0, records: [], corrected_learner_ids: [] });
     return reply({ detail: "Class session not found" }, 404);
   });

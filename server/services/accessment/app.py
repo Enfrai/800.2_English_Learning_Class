@@ -1,4 +1,4 @@
-"""Serve classroom management, attendance exports, QR sign-in and material access.
+"""Serve classroom management, QR window management, attendance and materials.
 
 Author: Shuohui Liu
 Date: 19 Oct 2026
@@ -40,6 +40,7 @@ from checkin import (
     sign_in,
     wrong_name_limits,
 )
+from checkin_management import create_checkin_router
 from class_sessions import create_session_router
 from corrections import (
     CorrectionError,
@@ -79,7 +80,9 @@ async def private_session_responses(
     request: Request, call_next: RequestResponseEndpoint
 ) -> Response:
     response = await call_next(request)
-    if request.url.path.startswith(("/sessions", "/learner/", "/checkin/", "/reports/")):
+    if request.url.path.startswith(
+        ("/sessions", "/learner/", "/checkin/", "/reports/")
+    ):
         response.headers["Cache-Control"] = "no-store"
         response.headers["X-Content-Type-Options"] = "nosniff"
     return response
@@ -140,6 +143,14 @@ app.include_router(
 )
 app.include_router(create_materials_router(lambda: SessionLocal()))
 app.include_router(create_report_router(lambda: SessionLocal(), staff_request))
+app.include_router(
+    create_checkin_router(
+        lambda: SessionLocal(),
+        staff_request,
+        lambda: club_today(),
+        lambda: datetime.now(UTC),
+    )
+)
 
 
 class AttendanceOut(BaseModel):
@@ -390,10 +401,20 @@ def learner_sign_in(
         raise HTTPException(status_code=503, detail="User service unavailable") from exc
     try:
         with SessionLocal.begin() as db:
-            sign_in(db, checkin, UUID(learner["id"]), club_today())
-            issue_grant(db, checkin.session_id, response, secure=os.getenv("COOKIE_SECURE", "false").lower() == "true")
+            check_session_is_running(db, checkin.session_id, club_today())
+            sign_in(
+                db, checkin, UUID(learner["id"]), club_today(), now=datetime.now(UTC)
+            )
+            issue_grant(
+                db,
+                checkin.session_id,
+                response,
+                secure=os.getenv("COOKIE_SECURE", "false").lower() == "true",
+            )
     except AlreadySignedInError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except CheckinUnavailableError as exc:
+        raise HTTPException(status_code=404, detail=CHECKIN_CLOSED) from exc
     except AttendanceError as exc:
         # The class ended between the check above and now.
         raise HTTPException(status_code=404, detail=CHECKIN_CLOSED) from exc
@@ -492,4 +513,3 @@ def read_corrections(session_id: UUID, request: LoggedInStaff):
         }
         for entry in history
     ]
-

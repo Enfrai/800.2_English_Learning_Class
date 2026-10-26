@@ -1,4 +1,4 @@
-"""Unit tests for QR check-in tokens and learner sign-in (US-012).
+"""Test token scope, expiry, closed windows and locked learner sign-in.
 
 Cases UT-64 (the check-in code works for at most four hours and stops when
 closed), the sign-in part of UT-65, UT-66 (privacy) and UT-67 (wrong-name
@@ -156,7 +156,7 @@ def test_only_the_token_hash_is_stored_and_each_token_finds_its_class(
     assert first not in stored and second not in stored
     assert hash_token(first) in stored and len(hash_token(first)) == 64
     assert find(db, first, timedelta(minutes=1), today).session_id == first_session
-    assert find(db, second, timedelta(minutes=1), today).session_id == second_session
+    assert find(db, second, timedelta(minutes=1), today + timedelta(days=1)).session_id == second_session
 
 
 # Signing in (US-012 AC2, AC4; Test Plan UT-65, UT-66)
@@ -168,7 +168,7 @@ def test_sign_in_marks_present_under_the_teacher_who_opened_check_in(
     token, session_id = open_window()
     checkin = find(db, token, timedelta(minutes=1), today)
 
-    record = sign_in(db, checkin, uuid4(), today)
+    record = sign_in(db, checkin, uuid4(), today, now=OPENED + timedelta(minutes=1))
 
     assert record["status"] == "present"
     assert record["recorded_at"] is not None
@@ -182,10 +182,10 @@ def test_second_sign_in_says_already_signed_in_and_adds_nothing(
     token, session_id = open_window()
     checkin = find(db, token, timedelta(minutes=1), today)
     learner_id = uuid4()
-    sign_in(db, checkin, learner_id, today)
+    sign_in(db, checkin, learner_id, today, now=OPENED + timedelta(minutes=1))
 
     with pytest.raises(AlreadySignedInError) as error:
-        sign_in(db, checkin, learner_id, today)
+        sign_in(db, checkin, learner_id, today, now=OPENED + timedelta(minutes=1))
 
     assert str(error.value) == "Already signed in"
     assert present_count(db, session_id) == 1

@@ -1,4 +1,4 @@
-/** Test the attendance and classroom cookie/Bearer adapter against a loopback stub.
+/** Test attendance, classroom and QR-window cookie/Bearer forwarding.
  * Updated: Shuohui Liu, 26 Oct 2026
  */
 import assert from 'node:assert/strict';
@@ -66,4 +66,15 @@ test('class lesson selection uses the staff cookie bridge and same-origin protec
   const response=await fetch(base+lessonPath,{method:'PUT',headers:{Cookie:`ako_session=${token}`,Origin:base,'Content-Type':'application/json'},body:'{"lesson_id":null}'});
   assert.equal(response.status,200);assert.equal(seen[0].authorization,`Bearer ${token}`);
   assert.equal(seen[0].body,'{"lesson_id":null}');
+});
+
+
+test('QR window lifecycle uses the same authenticated same-origin bridge',async()=>{
+  const qr=path.replace('/attendance','/check-in');
+  for(const method of ['GET','POST','DELETE']){
+    seen=[];
+    const response=await fetch(base+qr,{method,headers:{Cookie:`ako_session=${token}`,Origin:base}});
+    assert.equal(response.status,200);assert.equal(seen[0].authorization,`Bearer ${token}`);
+    assert.equal(seen[0].method,method);assert.ok(seen[0].url.endsWith('/check-in'));
+  }
 });
