@@ -1,0 +1,49 @@
+"""Verify public class details, responsive layout, plain English and friendly 404s.
+
+Author: Sandhya Tiwari
+Date: 26 Oct 2026
+"""
+
+import re
+
+from playwright.sync_api import expect
+
+
+def test_class_information_is_public_without_a_session(page):
+    response = page.goto("/")
+    assert response.status == 200
+    expect(page.get_by_role("heading", name="English classes", exact=True)).to_be_visible()
+    facts = page.locator("#class-information")
+    for label in ("Class day", "Class time", "Venue address", "Contact"):
+        expect(facts.get_by_text(label, exact=True)).to_be_visible()
+    expect(facts.get_by_role("link")).to_have_count(1)
+    expect(page.get_by_role("link", name="Learners", exact=True)).to_have_count(0)
+    expect(page.get_by_role("link", name="Staff login", exact=True)).to_be_visible()
+
+
+def test_public_page_fits_a_phone_and_keeps_body_text_readable(page):
+    page.set_viewport_size({"width": 360, "height": 800})
+    page.goto("/")
+    expect(page.get_by_label("Username", exact=True)).to_be_visible()
+    assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
+    assert page.locator("#class-information dd").evaluate_all(
+        "items => items.every(item => parseFloat(getComputedStyle(item).fontSize) >= 18)"
+    )
+
+
+def test_public_copy_uses_short_sentences_without_learner_photos(page):
+    page.goto("/")
+    expect(page.get_by_label("Name (required)", exact=True)).to_be_visible()
+    expect(page.get_by_label("Username", exact=True)).to_be_visible()
+    for text in page.locator("h1,h2,h3,p,dt,dd,label,legend,button").all_text_contents():
+        for sentence in re.split(r"[.!?]+(?:\s|$)", text):
+            assert len(sentence.split()) <= 15, sentence
+    expect(page.locator("img,video")).to_have_count(0)
+
+
+def test_unknown_public_address_has_http_404_and_home_link(page):
+    response = page.goto("/missing-public-information")
+    assert response.status == 404
+    expect(page.get_by_role("heading", name="Page not found", exact=True)).to_be_visible()
+    page.get_by_role("link", name="Go to home page", exact=True).click()
+    expect(page.get_by_role("heading", name="English classes", exact=True)).to_be_visible()

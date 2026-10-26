@@ -1,17 +1,9 @@
-/* Load the Ako login screen with a client-side loading state.
+/* Show public class information and preserve the staff sign-in entry.
  * Author: Shuohui Liu
  * Date: 19 Oct 2026
  */
 
-"use client";
+import ClubHome from "@/components/club/club-home";
 
-import dynamic from "next/dynamic";
-
-const LoginForm = dynamic(() => import("@/components/login-form"), {
-  ssr: false,
-  loading: () => <main className="page" role="status">Loading sign in…</main>,
-});
-
-export default function Home() {
-  return <LoginForm />;
-}
+export const metadata = { title: "English classes", description: "Class times, venue and contact details for Ako." };
+export default function Home() { return <ClubHome />; }

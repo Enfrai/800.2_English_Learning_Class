@@ -1,0 +1,19 @@
+{
+  "schedule": {
+    "confirmed": false,
+    "day": "Monday",
+    "time": "10:00 am to 12:00 pm",
+    "venue": "Sample community room",
+    "address": "123 Example Street, Example Town"
+  },
+  "contact": {
+    "approved": false,
+    "type": "email",
+    "value": ""
+  },
+  "greeting": {
+    "text": "",
+    "reviewer": "",
+    "review_date": ""
+  }
+}

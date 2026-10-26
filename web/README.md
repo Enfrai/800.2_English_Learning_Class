@@ -144,3 +144,13 @@ existing server-only cookie adapter. `npm run test:checkin-unit` checks requests
 and print output; after `npm run build`, `npm run test:checkin-ui` starts an
 isolated browser suite. See `docs/system_test/qr_checkin_system_tests.md` at the
 repository root for phone/LAN setup, printing and Docker tests.
+
+## Public class information (US-009)
+
+The homepage now presents public class details before the existing enquiry and
+staff login forms. Staff can use `/#staff-login` directly. Edit
+`src/content/club.json` and rebuild to publish approved information. The default
+schedule is explicitly labelled as sample data.
+
+Run `npm run test:public-unit`, `npm run build`, `npm run test:public-ui` and
+`npm run test:public-a11y`. See [content approval and testing](../docs/system_test/club_information_system_tests.md).
