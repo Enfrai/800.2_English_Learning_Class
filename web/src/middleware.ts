@@ -1,5 +1,6 @@
 /* Guard staff pages and restrict attendance reports to coordinators.
  * Updated: Shuohui Liu, 26 Oct 2026
+ * Updated: Pei Wu, 26 Oct 2026 (skip link prefetches; see config below)
  */
 
 import { NextResponse, type NextRequest } from "next/server";
@@ -54,4 +55,23 @@ export async function middleware(request: NextRequest) {
   }
 }
 
-export const config = { matcher: ["/reports/:path*", "/enquiries/:path*", "/teacher/:path*", "/coordinator/:path*", "/account-management/:path*", "/forbidden", "/learners/:path*", "/sessions/:path*", "/lessons/:path*"] };
+// Next.js prefetches every visible link (menu items, each lesson's title and
+// Edit). Checking the session for each prefetch sent dozens of requests per
+// page through Nginx's one shared limit for the web server, so real page
+// loads were refused with 503. Prefetches only fetch the page code; opening
+// or reloading a page still passes this check, the staff layout checks the
+// role in the browser, and every API checks the session itself. Next.js
+// reads this config at build time, so each entry is written out in full.
+export const config = {
+  matcher: [
+    { source: "/reports/:path*", missing: [{ type: "header", key: "next-router-prefetch" }, { type: "header", key: "purpose", value: "prefetch" }] },
+    { source: "/enquiries/:path*", missing: [{ type: "header", key: "next-router-prefetch" }, { type: "header", key: "purpose", value: "prefetch" }] },
+    { source: "/teacher/:path*", missing: [{ type: "header", key: "next-router-prefetch" }, { type: "header", key: "purpose", value: "prefetch" }] },
+    { source: "/coordinator/:path*", missing: [{ type: "header", key: "next-router-prefetch" }, { type: "header", key: "purpose", value: "prefetch" }] },
+    { source: "/account-management/:path*", missing: [{ type: "header", key: "next-router-prefetch" }, { type: "header", key: "purpose", value: "prefetch" }] },
+    { source: "/forbidden", missing: [{ type: "header", key: "next-router-prefetch" }, { type: "header", key: "purpose", value: "prefetch" }] },
+    { source: "/learners/:path*", missing: [{ type: "header", key: "next-router-prefetch" }, { type: "header", key: "purpose", value: "prefetch" }] },
+    { source: "/sessions/:path*", missing: [{ type: "header", key: "next-router-prefetch" }, { type: "header", key: "purpose", value: "prefetch" }] },
+    { source: "/lessons/:path*", missing: [{ type: "header", key: "next-router-prefetch" }, { type: "header", key: "purpose", value: "prefetch" }] },
+  ],
+};
