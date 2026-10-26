@@ -43,7 +43,7 @@ export function clubInformation(config: unknown, today = new Intl.DateTimeFormat
   const values = [schedule.day, schedule.time, schedule.venue, schedule.address].map(text);
   const confirmed = schedule.confirmed === true && values.every(Boolean);
   const [day, time, venue, address] = confirmed ? values as string[] : Object.values(SAMPLE_SCHEDULE);
-  let details = { label: "Enquiry form", value: "Send an enquiry", href: "#enquiries" };
+  let details = { label: "Enquiry form", value: "Send an enquiry", href: "/ask-about-classes" };
   if (contact.approved === true && typeof contact.value === "string") {
     const value = contact.value.trim();
     const parts = value.split("@"), local = parts[0] || "", domain = parts[1] || "";

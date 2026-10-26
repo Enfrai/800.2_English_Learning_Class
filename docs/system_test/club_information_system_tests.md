@@ -1,8 +1,10 @@
 # US-009: public club information
 
-Open `/` without signing in. Class day, time, venue address and contact appear
-before the enquiry and staff forms. Existing staff login remains at
-`/#staff-login`; enquiries remain at `/#enquiries`.
+Open `/class-information` without signing in for class day, time, venue and
+contact. The root `/` keeps the original standalone staff login. The enquiry
+form has its own `/ask-about-classes` page. The public menu navigates between
+these URLs and marks the current page. No page combines the three contents.
+Teacher and coordinator home pages and login destinations remain unchanged.
 
 The page uses the shared Ako tokens and controls. It renders class information
 on the server without calling an authenticated API. No database migration is
@@ -56,11 +58,12 @@ The isolated UI runners start their own production server and mock staff
 sessions; enquiry and login submissions are intercepted by browser tests.
 They do not alter application databases.
 
-Accessibility output is in `test-results/web/us009-home-lighthouse.json` and
-`us009-accessibility-summary.json`. Read the summary status before reusing reports.
-Lighthouse measures the homepage; axe additionally checks the 404 page.
-The implementation review measured homepage accessibility at 100/100, with
-zero axe violations on both pages.
+Accessibility output is in `test-results/web/us009-home-lighthouse.json`,
+`us009-enquiry-lighthouse.json`, `us009-login-lighthouse.json` and
+`us009-accessibility-summary.json`. Read the summary before reusing reports.
+Lighthouse measures the class information, enquiry and login pages; axe also checks the 404 page.
+Check the current audit summary for each page score. The browser suite checks
+separate routes, active navigation, back navigation and isolated form contents.
 
 ## Docker and full system checks
 
@@ -84,3 +87,17 @@ Use the existing system-test dependency setup. Review console exit codes,
 `test-results/web/summary.json`, web logs and system HTML/JUnit reports.
 Docker was unavailable during implementation verification; run the Docker
 commands in your Docker environment before deployment.
+
+## Navigation regression check (26 Oct 2026)
+
+The standalone login form and shared authentication layout match
+`feature/v1.0/US_011`. Public navigation belongs only to the three public pages;
+it is not added to the auth layout shared with account management. Teacher/coordinator home pages,
+session handling and role destinations are unchanged. Tests verify route URLs,
+current navigation, browser Back, direct links and absence of unrelated forms.
+The class information, enquiry and login audits each scored 100/100.
+
+Final checks: production build, 38 content unit tests, 24 public-page browser
+tests, 5 Python browser checks and 27 existing Staff UI regression tests passed.
+The five Python checks ran against the real Next frontend with the backend
+unavailable; this does not replace full Docker integration tests.
