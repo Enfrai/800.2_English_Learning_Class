@@ -1,18 +1,11 @@
-import Link from "next/link";
 import config from "@/content/club.json";
 import { clubInformation, PUBLIC_COPY as copy } from "@/lib/club-information";
-import EnquiryEntry from "./enquiry-entry";
-import StaffLogin from "./staff-login";
 import styles from "./club-home.module.css";
 
 export default function ClubHome() {
   const info = clubInformation(config);
   return <div className={styles.home}>
     <a className={styles.skip} href="#class-information">{copy.skip}</a>
-    <header className={`bar ${styles.header}`}>
-      <Link className="logo" href="/" aria-label="Ako home">Ako</Link>
-      <nav aria-label="Public menu"><a href="#class-information">{copy.details}</a><a href="#enquiries">{copy.enquiry}</a><a href="#staff-login">{copy.staff}</a></nav>
-    </header>
     <main className={`page ${styles.main}`}>
       <h1>{copy.title}</h1>
       <p>{copy.intro}</p>
@@ -29,12 +22,6 @@ export default function ClubHome() {
       <section aria-labelledby="join-heading"><h2 id="join-heading">{copy.join}</h2>
         {info.greeting && <p lang="mi">{info.greeting}</p>}
         <p>{copy.walkIn}</p><p>{copy.noAccount}</p>
-      </section>
-      <section id="enquiries" className={styles.enquiries} aria-labelledby="enquiry-heading" tabIndex={-1}>
-        <h2 id="enquiry-heading">{copy.enquiry}</h2><p>{copy.enquiryNote}</p><EnquiryEntry /><noscript><p>Turn on JavaScript to send an enquiry.</p></noscript>
-      </section>
-      <section id="staff-login" className={styles.staff} aria-labelledby="staff-heading" tabIndex={-1}>
-        <h2 id="staff-heading">{copy.staff}</h2><p>{copy.staffNote}</p><StaffLogin />
       </section>
     </main>
   </div>;

@@ -1,9 +1,18 @@
-/* Show public class information and preserve the staff sign-in entry.
+/* Load standalone staff login with navigation to separate public pages.
  * Author: Shuohui Liu
  * Date: 19 Oct 2026
  */
 
-import ClubHome from "@/components/club/club-home";
+"use client";
 
-export const metadata = { title: "English classes", description: "Class times, venue and contact details for Ako." };
-export default function Home() { return <ClubHome />; }
+import dynamic from "next/dynamic";
+import PublicFrame from "@/components/club/public-frame";
+
+const LoginForm = dynamic(() => import("@/components/login-form"), {
+  ssr: false,
+  loading: () => <main className="page" role="status">Loading sign in…</main>,
+});
+
+export default function Home() {
+  return <PublicFrame><LoginForm /></PublicFrame>;
+}
