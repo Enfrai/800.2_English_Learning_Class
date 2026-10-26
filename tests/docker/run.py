@@ -1,4 +1,4 @@
-"""Run isolated backend and web suites including attendance report exports.
+"""Run isolated backend and web suites including QR windows and live attendance.
 
 Author: Shuohui Liu
 Date: 19 Oct 2026
@@ -127,6 +127,8 @@ def web() -> list[dict]:
         "staff-ui": ["node", "tests/run-staff-ui.mjs"],
         "materials-unit": ["npm", "run", "test:materials-unit"],
         "materials-ui": ["node", "tests/run-materials-ui.mjs"],
+        "checkin-unit": ["npm", "run", "test:checkin-unit"],
+        "checkin-ui": ["node", "tests/run-checkin-ui.mjs"],
         "reports-unit": ["npm", "run", "test:reports-unit"],
         "reports-ui": ["node", "tests/run-reports-ui.mjs"],
         "sessions-unit": ["npm", "run", "test:sessions-unit"],

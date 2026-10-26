@@ -1,4 +1,4 @@
-"""Verify material grants and shared classroom lesson routes without duplicate handlers.
+"""Verify material grants and classroom routes with locked QR sign-in.
 
 Author: Sandhya Tiwari
 Date: 26 Oct 2026
@@ -316,7 +316,7 @@ def test_signin_mints_grant_in_same_transaction(material_api, monkeypatch):
         lambda first, last: {"id": str(uuid4())},
     )
 
-    def signin(db, window, learner_id, today):
+    def signin(db, window, learner_id, today, *, now=None):
         db.execute(
             attendance_records.insert().values(
                 session_id=window.session_id,
@@ -374,7 +374,7 @@ def test_signin_rolls_back_attendance_when_grant_cannot_be_saved(
         lambda first, last: {"id": str(uuid4())},
     )
 
-    def signin(db, window, learner_id, today):
+    def signin(db, window, learner_id, today, *, now=None):
         db.execute(
             attendance_records.insert().values(
                 session_id=window.session_id,
