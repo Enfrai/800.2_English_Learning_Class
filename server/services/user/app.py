@@ -1,4 +1,4 @@
-"""Implement Ako login with UUID-backed SQLAlchemy tables.
+"""Serve staff sessions, learner records and coordinator-only report rosters.
 
 Author: Shuohui Liu
 Date: 19 Oct 2026
@@ -15,14 +15,6 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
-from sqlalchemy import create_engine, delete, select
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session, sessionmaker
-from starlette.middleware.base import RequestResponseEndpoint
-
 from auth import (
     AuthenticatedUser,
     get_current_user,
@@ -32,6 +24,8 @@ from auth import (
     unauthenticated,
 )
 from enquiries import create_enquiries_router, create_enquiry_listing_router
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
+from fastapi.responses import JSONResponse
 from learner_import import router as learner_import_router
 from learners import (
     AmbiguousLearnerNameError,
@@ -46,13 +40,19 @@ from learners import (
     update_learner,
 )
 from models import Base, user_sessions, users
+from pydantic import BaseModel, Field
+from report_roster import create_report_roster_router
 from security import (
     SessionSecurity,
     clear_session_cookie,
     protect_login,
     set_session_cookie,
 )
+from sqlalchemy import create_engine, delete, select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session, sessionmaker
 from staff import create_staff_router
+from starlette.middleware.base import RequestResponseEndpoint
 
 engine = create_engine(os.environ["DATABASE_URL"], pool_pre_ping=True)
 SessionLocal = sessionmaker(engine)
@@ -128,6 +128,7 @@ async def authentication_cache_control(
     if (
         request.url.path in AUTH_PATHS
         or request.url.path == "/learners/import"
+        or request.url.path.startswith("/reports/")
         or request.url.path == "/enquiries"
         or request.url.path == "/staff"
         or request.url.path.startswith("/staff/")
@@ -537,3 +538,9 @@ def match_learner_for_sign_in(payload: SignInNameIn, request: Request):
         raise HTTPException(
             status_code=409, detail="Several learners have this name"
         ) from exc
+
+
+# Share names only; report requests still require a coordinator session.
+app.include_router(
+    create_report_roster_router(lambda: app.state.session_factory(), require_coordinator)
+)

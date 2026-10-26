@@ -1,4 +1,4 @@
-"""Serve class management, attendance, QR sign-in and learner material access.
+"""Serve classroom management, attendance exports, QR sign-in and material access.
 
 Author: Shuohui Liu
 Date: 19 Oct 2026
@@ -26,6 +26,7 @@ from attendance import (
     present_records,
     unmark,
 )
+from attendance_reports import create_report_router
 from checkin import (
     CHECKIN_CLOSED,
     NAME_NOT_FOUND,
@@ -78,7 +79,7 @@ async def private_session_responses(
     request: Request, call_next: RequestResponseEndpoint
 ) -> Response:
     response = await call_next(request)
-    if request.url.path.startswith(("/sessions", "/learner/", "/checkin/")):
+    if request.url.path.startswith(("/sessions", "/learner/", "/checkin/", "/reports/")):
         response.headers["Cache-Control"] = "no-store"
         response.headers["X-Content-Type-Options"] = "nosniff"
     return response
@@ -138,6 +139,7 @@ app.include_router(
     create_session_router(lambda: SessionLocal(), staff_request, lambda: club_today())
 )
 app.include_router(create_materials_router(lambda: SessionLocal()))
+app.include_router(create_report_router(lambda: SessionLocal(), staff_request))
 
 
 class AttendanceOut(BaseModel):

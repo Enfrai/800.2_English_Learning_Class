@@ -55,3 +55,18 @@ and refuses legacy duplicate dates instead of removing data.
 
 See [class-session operation and tests](../docs/system_test/class_sessions_system_tests.md)
 for local/Chrome checks and the PostgreSQL concurrency/Docker suites.
+
+
+## US-005 attendance reports
+
+Coordinators open **Attendance reports** in the staff menu, or
+`http://localhost:8080/reports/attendance`. Select inclusive start/end dates
+and download an A4 landscape PDF or UTF-8 CSV. Teachers cannot view or export
+reports. Outputs use actual class dates and current attendance, including
+corrections. No database migration is needed.
+
+The Accessment service now needs ReportLab; reinstall its requirements for
+local Python use. Its bundled licensed DejaVu Sans font preserves Māori
+macrons without an OS font installation. Rebuild `web`, `user1`, `user2`,
+`access1` and `access2` for Docker use, then restart Nginx.
+See [report behavior, tests and commands](../docs/system_test/attendance_reports_system_tests.md).
