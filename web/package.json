@@ -17,7 +17,9 @@
     "test:materials-unit": "node --test tests/materials-api.test.mjs",
     "test:materials-ui": "node tests/run-materials-ui.mjs",
     "test:reports-unit": "node --test tests/attendance-reports-api.test.mjs",
-    "test:reports-ui": "node tests/run-reports-ui.mjs"
+    "test:reports-ui": "node tests/run-reports-ui.mjs",
+    "test:checkin-unit": "node --test tests/checkin-management-api.test.mjs",
+    "test:checkin-ui": "node tests/run-checkin-ui.mjs"
   },
   "dependencies": {
     "@lit/react": "1.0.8",

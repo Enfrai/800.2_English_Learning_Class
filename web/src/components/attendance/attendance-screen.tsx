@@ -1,5 +1,5 @@
 /* Attendance (sign-in) page for one class session (UI design document 6.6, US-004),
- * and correcting a past class, with a class-management return link (US-014/015).
+ * and correcting past classes, with live QR attendance refresh (US-011/015).
  * Author: Pei Wu
  * Date: 23 Oct 2026
  * Updated: Pei Wu, 25 Oct 2026 (US-015 correction view and change history)
@@ -100,32 +100,48 @@ export default function AttendanceScreen({ sessionId }: { sessionId: string }) {
   // Messages about one learner are shown in that learner's row (UI kit rule 3).
   const [rowMessages, setRowMessages] = useState<Map<string, Message>>(new Map());
 
-  const load = useCallback(async () => {
+  const loadVersion = useRef(0), writes = useRef(0), polling = useRef(false);
+  const [refreshFailed, setRefreshFailed] = useState(false);
+  const load = useCallback(async (silent = false) => {
+    if (silent && (writes.current || polling.current)) return;
+    if (silent) polling.current = true;
+    const version = ++loadVersion.current;
     try {
       const [classList, attendance] = await Promise.all([
         listLearners(),
         getAttendance(sessionId),
       ]);
+      if (version !== loadVersion.current || (silent && writes.current)) return;
+      setRefreshFailed(false);
       setLearners(classList);
       setRecords(new Map(attendance.records.map((record) => [record.learner_id, record])));
       setPresentCount(attendance.present_count);
       setSessionDate(attendance.session_date);
       setEditable(attendance.editable);
       setCorrected(new Set(attendance.corrected_learner_ids));
-      setHistoryVersion((version) => version + 1);
+      if (!silent) setHistoryVersion((version) => version + 1);
       setLoadState("ready");
     } catch (error) {
+      if (version !== loadVersion.current) return;
+      if (silent && !(error instanceof LoginRequiredError) && !(error instanceof NotFoundError)) { setRefreshFailed(true); return; }
       if (error instanceof LoginRequiredError) setLoadState("login-required");
       else if (error instanceof NotFoundError) setLoadState("not-found");
       else setLoadState("failed");
-    }
+    } finally { if (silent) polling.current = false; }
   }, [sessionId]);
 
   useEffect(() => {
     void load();
+    return () => { loadVersion.current++; };
   }, [load]);
+  useEffect(() => {
+    if (!editable || loadState !== "ready") return;
+    const timer = window.setInterval(() => { if (!document.hidden) void load(true); }, 3000);
+    return () => clearInterval(timer);
+  }, [load, editable, loadState]);
 
   function setRecord(learnerId: string, record: AttendanceRecord | null) {
+    loadVersion.current++;
     setRecords((current) => {
       const next = new Map(current);
       if (record) next.set(learnerId, record);
@@ -151,6 +167,7 @@ export default function AttendanceScreen({ sessionId }: { sessionId: string }) {
 
   async function toggle(learner: ListedLearner, present: boolean) {
     if (pending.has(learner.id)) return;
+    writes.current++; loadVersion.current++;
     setPending((current) => new Map(current).set(learner.id, present));
     setRowMessage(learner.id, null);
     try {
@@ -179,6 +196,7 @@ export default function AttendanceScreen({ sessionId }: { sessionId: string }) {
       else if (error instanceof LoginRequiredError) setLoadState("login-required");
       else setRowMessage(learner.id, { kind: "error", text: CHANGE_FAILED });
     } finally {
+      writes.current--;
       setPending((current) => {
         const next = new Map(current);
         next.delete(learner.id);
@@ -225,6 +243,7 @@ export default function AttendanceScreen({ sessionId }: { sessionId: string }) {
       <h1>Attendance</h1>
       <p className="no-print"><Link href={`/sessions/${sessionId}`}>Back to class session</Link></p>
       <SessionLesson sessionId={sessionId} />
+      {refreshFailed && <p className="msg msg-warning" role="status">Live attendance could not refresh. Retrying…</p>}
       {loadState === "loading" && <p role="status">Loading the class list…</p>}
       {loadState === "failed" && (
         <div className="msg msg-error" role="alert">
@@ -244,10 +263,9 @@ export default function AttendanceScreen({ sessionId }: { sessionId: string }) {
             <button type="button" className="btn btn-secondary no-print" onClick={() => window.print()}>
               Print this list
             </button>
-            {/* QR check-in is US-011 (Later). */}
-            <button type="button" className="btn btn-later no-print" disabled>
-              Open check-in with QR code (later)
-            </button>
+            <Link className="btn btn-secondary no-print" href={`/sessions/${sessionId}#qr-heading`}>
+              Manage QR check-in
+            </Link>
           </div>
           {mode === "correct" && <div className="msg msg-info">{CORRECTION_NOTICE}</div>}
           {mode === "view" && (

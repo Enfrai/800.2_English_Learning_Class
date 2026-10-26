@@ -75,7 +75,7 @@ docker compose -f compose.test.yaml -p ako-tests run --build --rm -e TEST_SUITE=
 Backend selections: `user`, `accessment`, `lesson`.
 Web selections: `api`, `staff-ui`, `public-enquiry`,
 `coordinator-enquiries`, `csv-ui`, `lessons-unit`, `lessons-ui`,
-`materials-unit`, `materials-ui`, `sessions-unit`, `sessions-ui`, `reports-unit`, `reports-ui`.
+`materials-unit`, `materials-ui`, `sessions-unit`, `sessions-ui`, `reports-unit`, `reports-ui`, `checkin-unit`, `checkin-ui`.
 
 ## Coverage
 
@@ -153,3 +153,7 @@ system image, so tests do not depend on a public CDN at runtime.
 US-005 report commands: `TEST_SUITE=reports-unit` or `TEST_SUITE=reports-ui`
 with `test-web`. Backend runs include report roster and PDF/CSV tests. The
 system group includes real multi-service report downloads.
+
+US-011 adds `TEST_SUITE=checkin-unit` and `TEST_SUITE=checkin-ui` for `test-web`,
+QR endpoint cookie-bridge checks in `api`, PostgreSQL window-lock tests in
+`accessment`, and real QR/sign-in/live-attendance cases in the system group.

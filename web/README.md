@@ -134,3 +134,13 @@ See `../server/services/user/US002_API.md` for the complete verification record,
 isolation/cleanup evidence and remaining acceptance limits. AC4 historical-page
 visibility remains **Pending Joint Verification**; AC5 was added later (see `US002_API.md`). HTTP integration
 success does not resolve the documented trusted-host/public-origin or HTTPS risks.
+
+
+## US-011 QR check-in
+
+The class detail page provides Teacher/Coordinator QR window controls. The
+Attendance page refreshes live attendance every three seconds. Both use the
+existing server-only cookie adapter. `npm run test:checkin-unit` checks requests
+and print output; after `npm run build`, `npm run test:checkin-ui` starts an
+isolated browser suite. See `docs/system_test/qr_checkin_system_tests.md` at the
+repository root for phone/LAN setup, printing and Docker tests.

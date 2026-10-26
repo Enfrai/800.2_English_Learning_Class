@@ -1,10 +1,11 @@
-/* Link a reusable lesson, open attendance and safely delete empty classes (US-014).
+/* Manage classroom lessons, attendance and printable QR check-in.
  * Author: Shuohui Liu
  * Date: 24 Oct 2026
  */
 
 "use client";
 import Link from "next/link";
+import CheckInPanel from "@/components/check-in/check-in-panel";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { deleteClassSession, getClassSession, linkClassLesson, sessionError, LoginRequiredError, type SessionDetails } from "@/lib/class-sessions-api";
@@ -59,6 +60,7 @@ export default function SessionDetailScreen({ sessionId }: { sessionId: string }
     <p>{session.present_count} present · {session.attendance_count} attendance records</p>
     {!session.can_delete && <p className="msg msg-info">This session has attendance and cannot be deleted</p>}
     {session.session_date < session.today && <p className="msg msg-info">Only a coordinator can correct past attendance</p>}
+    <CheckInPanel sessionId={session.id} />
     <section className={styles.lesson} aria-labelledby="class-lesson-heading"><h2 id="class-lesson-heading">Class lesson</h2>
       <p>{session.lesson_unavailable ? "Lesson unavailable" : session.lesson_title || "No lesson linked"}</p>
       {lessonError && <p className="msg msg-warning" role="alert">{lessonError} <button className="btn btn-secondary" onClick={() => void loadLessons()}>Retry lessons</button></p>}

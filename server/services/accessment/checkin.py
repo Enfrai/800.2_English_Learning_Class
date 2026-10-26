@@ -1,4 +1,4 @@
-"""Check a QR check-in token and sign a learner in (US-012).
+"""Validate QR check-in windows again under the classroom lock before sign-in.
 
 US-011 opens a check-in window for a class session and puts a long random
 token in the QR code link. Only the token's SHA-256 hash is stored, the same
@@ -7,21 +7,22 @@ token itself.
 
 Author: Pei Wu
 Date: 25 Oct 2026
+Updated: Shuohui Liu, 26 Oct 2026
 """
 
 import hashlib
 import hmac
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid4
 
-from attendance import mark_present
+from attendance import check_session_is_running, mark_present
 from models import checkin_windows, class_sessions, signin_failures
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-# Tokens from secrets.token_urlsafe(32) are 43 characters. Anything far
+# Random or HMAC-derived 256-bit URL-safe tokens are 43 characters. Anything far
 # longer is not a token, so it is refused before hashing or querying.
 MAX_TOKEN_LENGTH = 256
 
@@ -44,6 +45,10 @@ MAX_WRONG_NAMES_PER_ADDRESS = 50
 WRONG_NAME_PERIOD = timedelta(minutes=10)
 BLOCK_TIME = timedelta(minutes=10)
 KEEP_FAILURES = timedelta(hours=1)
+
+
+def aware(value: datetime) -> datetime:
+    return value.replace(tzinfo=UTC) if value.tzinfo is None else value
 
 
 def hash_token(token: str) -> str:
@@ -90,7 +95,7 @@ class CheckinExpiredError(CheckinUnavailableError):
 
 
 class CheckinSessionPastError(CheckinUnavailableError):
-    """The class session is dated before today."""
+    """The class session is not dated today."""
 
     reason = "session before today"
 
@@ -120,6 +125,7 @@ def find_open_checkin(
                 checkin_windows.c.closed_at,
                 checkin_windows.c.opened_by,
                 class_sessions.c.session_date,
+                class_sessions.c.status.label("class_status"),
             )
             .join(class_sessions, class_sessions.c.id == checkin_windows.c.session_id)
             .where(checkin_windows.c.token_hash == hash_token(token))
@@ -129,23 +135,30 @@ def find_open_checkin(
     )
     if row is None:
         raise UnknownCheckinTokenError()
-    if row["closed_at"] is not None and row["closed_at"] <= now:
+    if row["class_status"] == "closed" or (
+        row["closed_at"] is not None and aware(row["closed_at"]) <= now
+    ):
         raise CheckinClosedError()
-    if row["expires_at"] <= now:
+    if aware(row["expires_at"]) <= now:
         raise CheckinExpiredError()
-    if row["session_date"] < today:
+    if row["session_date"] != today:
         raise CheckinSessionPastError()
     return OpenCheckin(
         window_id=row["id"],
         session_id=row["session_id"],
         session_date=row["session_date"],
-        expires_at=row["expires_at"],
+        expires_at=aware(row["expires_at"]),
         opened_by=row["opened_by"],
     )
 
 
 def sign_in(
-    db: Session, checkin: OpenCheckin, learner_id: UUID, today: date
+    db: Session,
+    checkin: OpenCheckin,
+    learner_id: UUID,
+    today: date,
+    *,
+    now: datetime | None = None,
 ) -> dict[str, Any]:
     """Mark the learner present at the check-in's class (US-012 AC2).
 
@@ -154,6 +167,32 @@ def sign_in(
     learner, the class and the time are stored: no location or device detail
     (Test Plan UT-66). The caller owns the transaction.
     """
+    # Opening, closing, deletion and sign-in all acquire this class row first.
+    check_session_is_running(db, checkin.session_id, today)
+    current = (
+        db.execute(
+            select(checkin_windows).where(
+                checkin_windows.c.id == checkin.window_id,
+                checkin_windows.c.session_id == checkin.session_id,
+            )
+        )
+        .mappings()
+        .first()
+    )
+    instant = now or datetime.now(UTC)
+    if current is None:
+        raise UnknownCheckinTokenError()
+    if current["closed_at"] is not None:
+        raise CheckinClosedError()
+    if aware(current["expires_at"]) <= instant:
+        raise CheckinExpiredError()
+    class_row = db.execute(
+        select(class_sessions.c.session_date, class_sessions.c.status).where(
+            class_sessions.c.id == checkin.session_id
+        )
+    ).one()
+    if class_row.session_date != today or class_row.status == "closed":
+        raise CheckinClosedError()
     return mark_present(
         db,
         session_id=checkin.session_id,
@@ -196,7 +235,8 @@ def blocked_until(
     WRONG_NAME_PERIOD.
     """
     times = sorted(
-        db.execute(
+        aware(value)
+        for value in db.execute(
             select(signin_failures.c.failed_at).where(
                 signin_failures.c.key_hash == key,
                 signin_failures.c.failed_at > now - WRONG_NAME_PERIOD - BLOCK_TIME,
