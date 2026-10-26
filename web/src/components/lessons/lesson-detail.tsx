@@ -4,11 +4,15 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { deleteLesson, deleteMaterial, getLesson, shareMaterial, materialUrl, LoginRequiredError, messageFor, type Lesson } from "@/lib/lessons-api";
+import { useSession } from "@/components/session-context";
+import ReviewForm from "./review-form";
 import ReviewPill from "./review-pill";
 import styles from "./lessons.module.css";
 
 export default function LessonDetail({ lessonId }: { lessonId: string }) {
   const router = useRouter();
+  // The Lesson service decides who may review; the role only chooses what to show.
+  const isCoordinator = useSession()?.role === "coordinator";
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -45,6 +49,9 @@ export default function LessonDetail({ lessonId }: { lessonId: string }) {
     <p className="sub">Lesson date: <time dateTime={lesson.lesson_date}>{lesson.lesson_date}</time></p>
     <p>{lesson.tags.map(tag => <span className="chip" key={tag}>{tag}</span>)}</p>
     {lesson.review_label && <p><ReviewPill lesson={lesson} /></p>}
+    {isCoordinator && lesson.has_maori_content && <ReviewForm lessonId={lesson.id}
+      onSaved={async () => { setError(""); await load(); setNotice("Review saved"); }}
+      onLoginRequired={() => router.replace("/")} />}
     <p className={styles.description}>{lesson.description}</p>
     <div className="row no-print">
       <Link href="/lessons" className="btn btn-secondary">Back to lessons</Link>

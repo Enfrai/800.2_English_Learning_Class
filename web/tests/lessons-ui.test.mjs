@@ -22,7 +22,7 @@ async function screen(t, options = {}) {
   const context = await browser.newContext({ viewport: options.mobile ? { width: 390, height: 844 } : { width: 1280, height: 900 } });
   t.after(() => context.close());
   await context.addCookies([{ name: "ako_session", value: options.coordinator ? "ui-coordinator" : "ui-author", url: base, httpOnly: true, sameSite: "Lax" }]);
-  const state = { row: { ...structuredClone(original), materials: options.materials ? [structuredClone(material)] : [], can_edit: options.canEdit !== false }, created: 0, uploads: 0, deletes: 0, flags: [], failUpload: false, expired: false };
+  const state = { row: { ...structuredClone(original), materials: options.materials ? [structuredClone(material)] : [], can_edit: options.canEdit !== false }, created: 0, uploads: 0, deletes: 0, flags: [], reviews: [], reviewErrors: null, failUpload: false, expired: false };
   if (options.review) Object.assign(state.row, options.review);
   await context.route("**/api/user/**", route => route.fulfill({ json: { user_id: original.created_by, display_name: "Test teacher", role: options.coordinator ? "coordinator" : "teacher" }, headers: { "X-Session-Expires-At": new Date(Date.now() + 1800000).toISOString() } }));
   await context.route("**/api/staff/lesson/**", async route => {
@@ -47,6 +47,15 @@ async function screen(t, options = {}) {
       state.flags.push(flagged);
       Object.assign(state.row, { has_maori_content: flagged, review_status: flagged ? "pending" : "not_required", review_label: flagged ? NOT_YET_REVIEWED : null });
       return route.fulfill({ json: { lesson_id: id, has_maori_content: flagged } });
+    }
+    if (path === `lessons/${id}/review` && method === "POST") {
+      const review = request.postDataJSON();
+      state.reviews.push(review);
+      if (state.reviewErrors) return route.fulfill({ status: 422, json: { detail: { errors: state.reviewErrors } } });
+      const [year, month, day] = review.review_date.split("-").map(Number);
+      const shown = new Date(year, month - 1, day).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+      Object.assign(state.row, { review_status: "reviewed", review_label: `Reviewed by ${review.reviewer_name}, ${shown}` });
+      return route.fulfill({ json: { lesson_id: id } });
     }
     if (path === `lessons/${id}/materials`) {
       state.uploads++;
@@ -236,3 +245,52 @@ for (const path of ["/lessons", `/lessons/${id}`]) {
     assert.equal(await pill(page).getAttribute("class"), "badge badge-reviewed");
   });
 }
+
+// US-008: the coordinator's "Record a review" form (UI design 6.10, AC2, AC3).
+const pending = { has_maori_content: true, review_status: "pending", review_label: NOT_YET_REVIEWED };
+const reviewForm = page => page.getByRole("region", { name: "Record a review" });
+test("coordinator records a review and the pill turns green", async t => {
+  const { page, state } = await screen(t, { path: `/lessons/${id}`, coordinator: true, review: pending });
+  await page.getByLabel("Reviewer name").fill("Te Aroha (Kaiārahi)");
+  await page.getByLabel("Review date").fill("2026-10-14");
+  await page.getByRole("button", { name: "Save review", exact: true }).click();
+  await page.getByText("Review saved", { exact: true }).waitFor();
+  assert.deepEqual(state.reviews, [{ reviewer_name: "Te Aroha (Kaiārahi)", review_date: "2026-10-14" }]);
+  assert.equal(await pill(page).textContent(), "Reviewed by Te Aroha (Kaiārahi), 14 Oct 2026");
+  assert.equal(await pill(page).getAttribute("class"), "badge badge-reviewed");
+  assert.equal(await page.getByLabel("Reviewer name").inputValue(), "");
+});
+test("empty name and future date are refused without saving", async t => {
+  const { page, state } = await screen(t, { path: `/lessons/${id}`, coordinator: true, review: pending });
+  await page.getByLabel("Review date").fill("2099-01-01");
+  await page.getByRole("button", { name: "Save review", exact: true }).click();
+  await page.getByText("Reviewer name is required", { exact: true }).waitFor();
+  await page.getByText("Review date cannot be in the future", { exact: true }).waitFor();
+  assert.deepEqual(state.reviews, []);
+  assert.equal(await pill(page).textContent(), NOT_YET_REVIEWED);
+  assert.equal(await page.getByLabel("Reviewer name").evaluate(el => el === document.activeElement), true);
+  await page.getByLabel("Review date").fill("");
+  await page.getByRole("button", { name: "Save review", exact: true }).click();
+  await page.getByText("Review date is required", { exact: true }).waitFor();
+});
+test("the service's field messages are shown under the fields", async t => {
+  const { page, state } = await screen(t, { path: `/lessons/${id}`, coordinator: true, review: pending });
+  state.reviewErrors = { review_date: "Review date cannot be in the future" };
+  await page.getByLabel("Reviewer name").fill("Aroha");
+  await page.getByLabel("Review date").fill("2026-10-14");
+  await page.getByRole("button", { name: "Save review", exact: true }).click();
+  await page.locator("#review_date-error").getByText("Review date cannot be in the future").waitFor();
+  assert.equal(await pill(page).textContent(), NOT_YET_REVIEWED);
+});
+for (const [who, options] of [["a teacher", { review: pending }], ["a coordinator on a lesson without Māori content", { coordinator: true }]]) {
+  test(`no review form for ${who}`, async t => {
+    const { page } = await screen(t, { path: `/lessons/${id}`, ...options });
+    await page.getByRole("heading", { name: "Materials", exact: true }).waitFor();
+    assert.equal(await reviewForm(page).count(), 0);
+  });
+}
+test("review form fits a phone", async t => {
+  const { page } = await screen(t, { path: `/lessons/${id}`, coordinator: true, review: pending, mobile: true });
+  await reviewForm(page).waitFor();
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+});

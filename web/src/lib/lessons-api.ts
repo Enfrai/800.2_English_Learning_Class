@@ -25,6 +25,8 @@ async function send<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (status === 403) throw new LessonError("You do not have permission");
   if (status === 404) throw new LessonError("This lesson or material is no longer available");
   if (status === 413) throw new LessonError(MATERIAL_RULE);
+  // US-008: a review for a lesson that is no longer marked as Māori content.
+  if (status === 409 && message) throw new LessonError(message);
   if (status === 422) {
     const fields: Record<string, string> = {};
     if (detail?.errors && typeof detail.errors === "object") {
@@ -58,5 +60,10 @@ export const shareMaterial = (id: string, value: boolean) => send<Material>(`mat
 export const setMaoriContent = (id: string, value: boolean) => send<unknown>(`lessons/${encodeURIComponent(id)}/maori-content`, {
   method: "PUT", body: JSON.stringify({ has_maori_content: value }),
 });
+/** Record a Māori content review (US-008). Coordinators only; 422 gives each field's message. */
+export const recordReview = (id: string, review: { reviewer_name: string; review_date: string }) =>
+  send<unknown>(`lessons/${encodeURIComponent(id)}/review`, {
+    method: "POST", body: JSON.stringify({ ...review, review_date: review.review_date || null }),
+  });
 export const materialUrl = (id: string) => `/api/staff/lesson/materials/${encodeURIComponent(id)}/download`;
 export const messageFor = (error: unknown) => error instanceof LessonError ? error.message : "Unable to complete the request. Please try again.";
