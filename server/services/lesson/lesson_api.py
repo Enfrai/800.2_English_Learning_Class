@@ -1,4 +1,4 @@
-"""Manage staff lessons, topic tags and protected teaching materials (US-006).
+"""Manage staff lessons, title/topic searches and protected teaching materials.
 
 Author: Sandhya Tiwari
 Date: 25 Oct 2026
@@ -15,13 +15,13 @@ from pathlib import Path
 from urllib.parse import quote
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, File, Form, HTTPException, Response, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Query, Response, UploadFile
 from fastapi.responses import StreamingResponse
 from maori_review import reset_review_after_material_change, review_label
 from maori_review_api import LoggedInStaff
 from models import lesson_materials, lesson_tags, lessons, tags
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
@@ -217,12 +217,37 @@ def create_lesson_router(
             ]
 
     @router.get("/lessons")
-    def list_lessons(staff: LoggedInStaff):
+    def list_lessons(
+        staff: LoggedInStaff,
+        q: str = Query(default="", max_length=255),
+        tag: str = Query(default="", max_length=100),
+    ) -> list[dict]:
+        conditions = [lessons.c.deleted_at.is_(None)]
+        keyword, topic = q.strip(), tag.strip()
+        if keyword:
+            tagged = (
+                select(lesson_tags.c.lesson_id)
+                .join(tags, lesson_tags.c.tag_id == tags.c.id)
+                .where(tags.c.name.icontains(keyword, autoescape=True))
+            )
+            conditions.append(
+                or_(
+                    lessons.c.title.icontains(keyword, autoescape=True),
+                    lessons.c.id.in_(tagged),
+                )
+            )
+        if topic:
+            tagged = (
+                select(lesson_tags.c.lesson_id)
+                .join(tags, lesson_tags.c.tag_id == tags.c.id)
+                .where(tags.c.name == topic)
+            )
+            conditions.append(lessons.c.id.in_(tagged))
         with session_factory() as db:
             rows = (
                 db.execute(
                     select(lessons)
-                    .where(lessons.c.deleted_at.is_(None))
+                    .where(*conditions)
                     .order_by(
                         lessons.c.lesson_date.desc(),
                         lessons.c.created_at.desc(),

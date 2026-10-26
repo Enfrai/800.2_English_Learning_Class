@@ -13,6 +13,7 @@ The tests drive a real browser against a running Ako system started with
 Author: Pei Wu
 Date: 23 Oct 2026
 Updated: Pei Wu, 25 Oct 2026 (teacher login and in-class ticks for US-015)
+Updated: Pei Wu, 26 Oct 2026 (one class session per date, US-014)
 """
 
 import os
@@ -25,6 +26,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from api import BASE_URL, api_headers
+from attendance_page import PRESENT_AT_START
 from learners_page import LearnersPage
 from playwright.sync_api import Browser, Page, expect, sync_playwright
 from setup_data import CLUB_TIMEZONE, CheckIn, access_sql
@@ -159,20 +161,53 @@ def add_learner(page: Page, session_id: str) -> Callable[..., dict[str, Any]]:
 
 @pytest.fixture
 def class_session() -> Callable[..., str]:
-    """Create a class session and return its id.
+    """Return a class session for today, or a new one in the past.
 
-    Until US-014 adds "Start today's class", sessions are inserted straight
-    into the Accessment database of the running ``docker compose`` system.
+    US-014 allows one session per date. Today's session is shared by every
+    test that asks for it, so earlier tests may already have learners
+    present; the number present now is kept in ``PRESENT_AT_START`` and the
+    attendance page object counts from it. Nothing is deleted, so a run
+    against real data never removes attendance.
+
+    A past session is always new: it gets the first date on or before
+    ``days_ago`` days back that has no session, because corrections leave
+    change-log entries that cannot be removed (US-015).
+
+    Sessions are inserted into the Accessment database of the running
+    ``docker compose`` system rather than started on the page (US-014).
     """
+    club_today = f"(now() AT TIME ZONE '{CLUB_TIMEZONE}')::date"
 
     def create(days_ago: int = 0) -> str:
         # days_ago is an int, so formatting it into the SQL text is safe.
-        return access_sql(
-            "INSERT INTO class_sessions (id, session_date, created_by) "
-            "VALUES (gen_random_uuid(), "
-            f"(now() AT TIME ZONE '{CLUB_TIMEZONE}')::date - {int(days_ago)}, "
-            "gen_random_uuid()) RETURNING id"
-        ).splitlines()[0]
+        days_ago = int(days_ago)
+        if days_ago == 0:
+            access_sql(
+                "INSERT INTO class_sessions (id, session_date, created_by) "
+                f"VALUES (gen_random_uuid(), {club_today}, gen_random_uuid()) "
+                "ON CONFLICT (session_date) DO NOTHING"
+            )
+            session_id = access_sql(
+                f"SELECT id FROM class_sessions WHERE session_date = {club_today}"
+            )
+        else:
+            session_id = access_sql(
+                "INSERT INTO class_sessions (id, session_date, created_by) "
+                "SELECT gen_random_uuid(), day, gen_random_uuid() "
+                f"FROM generate_series({days_ago}, {days_ago} + 3650) AS back, "
+                f"LATERAL (SELECT {club_today} - back AS day) AS d "
+                "WHERE NOT EXISTS "
+                "(SELECT 1 FROM class_sessions WHERE session_date = day) "
+                "ORDER BY back LIMIT 1 RETURNING id"
+            )
+        session_id = session_id.splitlines()[0]
+        PRESENT_AT_START[session_id] = int(
+            access_sql(
+                "SELECT count(*) FROM attendance_records "
+                f"WHERE session_id = '{UUID(session_id)}' AND status = 'present'"
+            )
+        )
+        return session_id
 
     return create
 

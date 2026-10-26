@@ -1,4 +1,4 @@
-/* Share the Ako staff navigation and preserve session lifecycle and permissions.
+/* Share staff navigation, coordinator reports and session lifecycle permissions.
  * Author: Shuohui Liu
  * Date: 19 Oct 2026
  */
@@ -143,7 +143,7 @@ export default function SessionShell({
 
   if (!session) return <main className="page"><p role={error ? "alert" : "status"}>{error || "Checking your session…"}</p></main>;
   const home = homeFor(session.role);
-  const denied = (path.startsWith("/account-management") || path.startsWith("/coordinator") || path.startsWith("/enquiries")) && session.role !== "coordinator"
+  const denied = (path.startsWith("/account-management") || path.startsWith("/coordinator") || path.startsWith("/enquiries") || path.startsWith("/reports")) && session.role !== "coordinator"
     || path.startsWith("/teacher") && session.role !== "teacher";
   // A section stays current on its sub-pages, e.g. a session's attendance.
   const current = (href: string) =>
@@ -155,6 +155,7 @@ export default function SessionShell({
         <Link href={home} aria-current={current(home)}>Home</Link>
         <Link href="/sessions" aria-current={current("/sessions")}>Class sessions</Link>
         <Link href="/learners" aria-current={current("/learners")}>Learners</Link>
+        {session.role === "coordinator" && <Link href="/reports/attendance" aria-current={current("/reports")}>Attendance reports</Link>}
         <Link href="/lessons" aria-current={current("/lessons")}>Lessons</Link>
         {session.role === "coordinator" && <Link href="/enquiries" aria-current={path === "/enquiries" ? "page" : undefined}>Enquiries</Link>}
         {session.role === "coordinator" && <Link href="/account-management" aria-current={current("/account-management")}>Account management</Link>}

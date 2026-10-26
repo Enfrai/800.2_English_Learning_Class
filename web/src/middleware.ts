@@ -1,7 +1,15 @@
+/* Guard staff pages and restrict attendance reports to coordinators.
+ * Updated: Shuohui Liu, 26 Oct 2026
+ * Updated: Pei Wu, 26 Oct 2026 (skip link prefetches; see config below;
+ *   call the User service on the internal network)
+ */
+
 import { NextResponse, type NextRequest } from "next/server";
 
-// Fixed internal gateway URL; never derive the backend destination from Host headers.
-const userApi = process.env.USER_API_URL || "http://nginx/api/user";
+// Fixed internal URL; never derive the backend destination from Host headers.
+// Straight to the service on the internal network, not through Nginx: every
+// server-side call would otherwise share the web container's one rate limit.
+const userApi = process.env.USER_API_URL || "http://user-service:8000";
 
 export async function middleware(request: NextRequest) {
   const noStore = { "Cache-Control": "no-store" };
@@ -26,7 +34,7 @@ export async function middleware(request: NextRequest) {
     const path = request.nextUrl.pathname;
     let allowed = ["teacher", "coordinator"].includes(user.role);
     if (path.startsWith("/teacher")) allowed = user.role === "teacher";
-    if (path.startsWith("/coordinator") || path.startsWith("/account-management") || path.startsWith("/enquiries")) allowed = user.role === "coordinator";
+    if (path.startsWith("/coordinator") || path.startsWith("/account-management") || path.startsWith("/enquiries") || path.startsWith("/reports")) allowed = user.role === "coordinator";
     if (allowed && path.startsWith("/account-management")) {
       const access = await fetch(`${userApi}/account-management/access`, { headers, cache: "no-store", signal: AbortSignal.timeout(5000) });
       if (access.status === 401) return login();
@@ -50,4 +58,23 @@ export async function middleware(request: NextRequest) {
   }
 }
 
-export const config = { matcher: ["/enquiries/:path*", "/teacher/:path*", "/coordinator/:path*", "/account-management/:path*", "/forbidden", "/learners/:path*", "/sessions/:path*", "/lessons/:path*"] };
+// Next.js prefetches every visible link (menu items, each lesson's title and
+// Edit). Checking the session for each prefetch sent dozens of requests per
+// page through Nginx's one shared limit for the web server, so real page
+// loads were refused with 503. Prefetches only fetch the page code; opening
+// or reloading a page still passes this check, the staff layout checks the
+// role in the browser, and every API checks the session itself. Next.js
+// reads this config at build time, so each entry is written out in full.
+export const config = {
+  matcher: [
+    { source: "/reports/:path*", missing: [{ type: "header", key: "next-router-prefetch" }, { type: "header", key: "purpose", value: "prefetch" }] },
+    { source: "/enquiries/:path*", missing: [{ type: "header", key: "next-router-prefetch" }, { type: "header", key: "purpose", value: "prefetch" }] },
+    { source: "/teacher/:path*", missing: [{ type: "header", key: "next-router-prefetch" }, { type: "header", key: "purpose", value: "prefetch" }] },
+    { source: "/coordinator/:path*", missing: [{ type: "header", key: "next-router-prefetch" }, { type: "header", key: "purpose", value: "prefetch" }] },
+    { source: "/account-management/:path*", missing: [{ type: "header", key: "next-router-prefetch" }, { type: "header", key: "purpose", value: "prefetch" }] },
+    { source: "/forbidden", missing: [{ type: "header", key: "next-router-prefetch" }, { type: "header", key: "purpose", value: "prefetch" }] },
+    { source: "/learners/:path*", missing: [{ type: "header", key: "next-router-prefetch" }, { type: "header", key: "purpose", value: "prefetch" }] },
+    { source: "/sessions/:path*", missing: [{ type: "header", key: "next-router-prefetch" }, { type: "header", key: "purpose", value: "prefetch" }] },
+    { source: "/lessons/:path*", missing: [{ type: "header", key: "next-router-prefetch" }, { type: "header", key: "purpose", value: "prefetch" }] },
+  ],
+};

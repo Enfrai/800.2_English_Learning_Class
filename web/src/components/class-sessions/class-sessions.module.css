@@ -1,0 +1,14 @@
+/* Lay out class-session controls using shared Ako tokens.
+ * Author: Shuohui Liu
+ * Date: 24 Oct 2026
+ */
+
+.toolbar { margin-bottom: var(--space-4); }
+.form { max-width: 480px; margin-bottom: var(--space-5); }
+.table { overflow-x: auto; margin-bottom: var(--space-4); }
+.table table { min-width: 680px; }
+.actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.heading { overflow-wrap: anywhere; }
+.lesson { max-width: 640px; overflow-wrap: anywhere; }
+.confirm { margin-top: var(--space-4); }
+@media print { .table table { min-width: 0; } }

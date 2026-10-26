@@ -4,6 +4,7 @@
 | ------- | ----------- | -------- | --- | ------------------------------------------- |
 | 1.0     | 23 Oct 2026 | Creation | Pei | Manual scripts for ST-01 and related NTs    |
 | 1.1     | 25 Oct 2026 | Update   | Pei | AT-4: past classes open the correction view |
+| 1.2     | 26 Oct 2026 | Update   | Pei | Sessions opened on the Class sessions page  |
 
 ## 1. Purpose
 
@@ -26,19 +27,16 @@ automated run supports the manual result; it does not replace it.
   may take attendance.
 - On the Learners page, add five learners: `Ana Class`, `Ben Class`,
   `Cy Class`, `Di Class`, `Ed Class`.
-- Create a class session for today and one for yesterday. Until US-014 adds
-  "Start today's class", run this from the `server` folder and note the two
-  ids it prints:
-
-  ```bash
-  docker compose exec -T postgres-access psql -U access_app -d accessdb -tAqc \
-    "INSERT INTO class_sessions (id, session_date, created_by) VALUES
-     (gen_random_uuid(), (now() AT TIME ZONE 'Pacific/Auckland')::date, gen_random_uuid()),
-     (gen_random_uuid(), (now() AT TIME ZONE 'Pacific/Auckland')::date - 1, gen_random_uuid())
-     RETURNING id"
-  ```
-
-- Open today's session at `http://localhost:8080/sessions/<today id>/attendance`.
+- On **Class sessions**, choose **Start today's class**. The class page
+  opens at `http://localhost:8080/sessions/<today id>`; note the id. There
+  is one session per date (US-014), so if today's class already exists it
+  opens again instead of a new one.
+- Back on **Class sessions**, choose **New class session**, enter
+  yesterday's date and choose **Create or open class**. Note this id too.
+- Open today's session at `http://localhost:8080/sessions/<today id>/attendance`
+  (or choose **Attendance** on its row in **Class sessions**). If learners are
+  already present from an earlier run, the counts below rise from that
+  number instead of from 0.
 - Message text must match the UI design document, section 7, exactly.
 
 ## 3. Test cases

@@ -1,6 +1,7 @@
 # Independent test infrastructure: no host ports, persistent DB volumes or Docker socket.
 # Author: Shuohui Liu
 # Date: 19 Oct 2026
+# Updated: Pei Wu, 26 Oct 2026 (internal names for access and lesson; web skips Nginx)
 
 name: ako-tests
 
@@ -91,6 +92,9 @@ services:
   access1: &access
     <<: *api
     build: ./server/services/accessment
+    networks:
+      test:
+        aliases: [access-service]
     environment:
       DATABASE_URL: postgresql+psycopg://access_app:test_only_password@postgres-access:5432/accessdb
       INTERNAL_API_KEY: ako_test_internal_key
@@ -106,6 +110,9 @@ services:
   lesson1: &lesson
     <<: *api
     build: ./server/services/lesson
+    networks:
+      test:
+        aliases: [lesson-service]
     environment:
       DATABASE_URL: postgresql+psycopg://lesson_app:test_only_password@postgres-lesson:5432/lessondb
     depends_on:
@@ -121,9 +128,10 @@ services:
     build: ./web
     networks: [test]
     environment:
-      USER_API_URL: http://nginx/api/user
-      ACCESS_API_URL: http://nginx/api/access
-      LESSON_API_URL: http://nginx/api/lesson
+      # Same as server/compose.yaml: server-side calls skip Nginx.
+      USER_API_URL: http://user-service:8000
+      ACCESS_API_URL: http://access-service:8000
+      LESSON_API_URL: http://lesson-service:8000
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 3s

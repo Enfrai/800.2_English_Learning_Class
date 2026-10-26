@@ -4,16 +4,17 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
-  getLesson, listTags, saveLesson, setMaoriContent, uploadMaterial, materialUrl,
+  getLesson, getCopyDraft, copyLesson, listTags, saveLesson, setMaoriContent, uploadMaterial, materialUrl,
   LoginRequiredError, LessonError, MAX_MATERIAL_BYTES, MATERIAL_RULE, messageFor,
-  type Lesson,
+  type Lesson, type CopyDraft,
 } from "@/lib/lessons-api";
 import styles from "./lessons.module.css";
 
 type PendingFile = { id: number; file: File; share: boolean };
-export default function LessonEditor({ lessonId }: { lessonId?: string }) {
+export default function LessonEditor({ lessonId, copyFrom }: { lessonId?: string; copyFrom?: string }) {
   const router = useRouter();
   const [lesson, setLesson] = useState<Lesson | null>(null);
+  const [draft, setDraft] = useState<CopyDraft | null>(null);
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
   const [topics, setTopics] = useState("");
@@ -21,7 +22,7 @@ export default function LessonEditor({ lessonId }: { lessonId?: string }) {
   const [maoriContent, setMaoriContentTicked] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [files, setFiles] = useState<PendingFile[]>([]);
-  const [loading, setLoading] = useState(Boolean(lessonId));
+  const [loading, setLoading] = useState(Boolean(lessonId || copyFrom));
   const [loadError, setLoadError] = useState("");
   const [message, setMessage] = useState("");
   const [fields, setFields] = useState<Record<string, string>>({});
@@ -32,6 +33,15 @@ export default function LessonEditor({ lessonId }: { lessonId?: string }) {
   useEffect(() => {
     let active = true;
     void listTags().then(rows => { if (active) setSuggestions(rows.map(row => row.name)); }).catch(() => {});
+    if (copyFrom && !lessonId) void getCopyDraft(copyFrom).then(row => {
+      if (!active) return;
+      setDraft(row); setTitle(row.title); setDate("");
+      setTopics(row.tags.join(", ")); setDescription(row.description);
+    }).catch(error => {
+      if (!active) return;
+      if (error instanceof LoginRequiredError) router.replace("/");
+      else setLoadError(messageFor(error));
+    }).finally(() => { if (active) setLoading(false); });
     if (lessonId) void getLesson(lessonId).then(row => {
       if (!active) return;
       setLesson(row); setTitle(row.title); setDate(row.lesson_date);
@@ -43,7 +53,7 @@ export default function LessonEditor({ lessonId }: { lessonId?: string }) {
       else setLoadError(messageFor(error));
     }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [lessonId, router]);
+  }, [lessonId, copyFrom, router]);
   function focusError(errors: Record<string, string>) {
     setFields(errors);
     form.current?.querySelector<HTMLElement>(`[name="${Object.keys(errors)[0]}"]`)?.focus();
@@ -63,7 +73,10 @@ export default function LessonEditor({ lessonId }: { lessonId?: string }) {
     if (Object.keys(errors).length) return;
     pending.current = true; setBusy(true);
     try {
-      const saved = await saveLesson(lessonId || lesson?.id || null, { title, lesson_date: date, tags, description });
+      const input = { title, lesson_date: date, tags, description };
+      const saved = copyFrom && !lesson
+        ? await copyLesson(copyFrom, input, (draft?.materials || []).map(item => item.id))
+        : await saveLesson(lessonId || lesson?.id || null, input);
       setLesson(saved);
       // US-008: the flag has its own endpoint; it is only called when the tick changed.
       if (saved.has_maori_content !== maoriContent) {
@@ -102,8 +115,10 @@ export default function LessonEditor({ lessonId }: { lessonId?: string }) {
   if (loadError) return <><h1>Lesson</h1><p className="msg msg-error" role="alert">{loadError}</p><Link href="/lessons">Back to lessons</Link></>;
   if (lessonId && lesson && !lesson.can_edit) return <><h1>Edit lesson</h1><p className="msg msg-error" role="alert">You do not have permission</p><Link href={`/lessons/${lessonId}`}>View lesson</Link></>;
   return <>
-    <h1>{lessonId ? "Edit lesson" : "New lesson"}</h1>
+    <h1>{lessonId ? "Edit lesson" : copyFrom ? "Copy lesson" : "New lesson"}</h1>
     <p className="sub">Save the lesson date, topics and materials for other volunteers.</p>
+    {copyFrom && !lesson && <p className="msg msg-info">This is an unsaved copy. Choose a date before saving. The original stays unchanged.</p>}
+    {draft?.has_maori_content && !lesson && <p className="msg msg-warning">This copy contains Māori content and will need a new review.</p>}
     <form className={styles.form} ref={form} onSubmit={save} noValidate aria-busy={busy}>
       <div className="field"><label htmlFor="title" className="req">Title</label>
         <input id="title" name="title" type="text" required value={title} disabled={busy} {...attrs("title")} onChange={e => setTitle(e.target.value)} />
@@ -129,6 +144,14 @@ export default function LessonEditor({ lessonId }: { lessonId?: string }) {
         <textarea id="description" value={description} disabled={busy} onChange={e => setDescription(e.target.value)} /></div>
       <h2>Materials</h2>
       <p className="sub">{MATERIAL_RULE}. Files are private to staff unless selected for later learner sharing.</p>
+      {draft && !lesson && <>
+        <p className="hint">Copied files are staff only. You can change sharing after saving.</p>
+        <ul className={styles.materials}>{draft.materials.map(material => <li className={`card ${styles.material}`} key={material.id}>
+          <p><a href={materialUrl(material.id)} download>{material.file_name}</a></p>
+          <button className="btn btn-secondary" type="button" disabled={busy} aria-label={"Remove copied " + material.file_name}
+            onClick={() => setDraft(current => current ? { ...current, materials: current.materials.filter(item => item.id !== material.id) } : current)}>Remove from copy</button>
+        </li>)}</ul>
+      </>}
       {lesson && lesson.materials.length > 0 && <ul>{lesson.materials.map(material =>
         <li key={material.id}><a href={materialUrl(material.id)} download>{material.file_name}</a></li>)}</ul>}
       <div className="field"><label htmlFor="materials">Add materials (optional)</label>
@@ -146,7 +169,7 @@ export default function LessonEditor({ lessonId }: { lessonId?: string }) {
       </li>)}</ul>
       <div className="row no-print">
         <button className="btn" type="submit" disabled={busy}>{busy ? "Saving…" : "Save lesson"}</button>
-        {!busy && <Link className="btn btn-secondary" href={lesson ? `/lessons/${lesson.id}` : "/lessons"}>Cancel</Link>}
+        {!busy && <Link className="btn btn-secondary" href={lesson ? `/lessons/${lesson.id}` : copyFrom ? `/lessons/${copyFrom}` : "/lessons"}>Cancel</Link>}
       </div>
       {busy && <p role="status">Saving lesson and materials…</p>}
       {message && <p className="msg msg-error" role="alert">{message}</p>}

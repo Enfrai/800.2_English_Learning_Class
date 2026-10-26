@@ -10,6 +10,7 @@ The manual version is docs/system_test/sign_in_system_tests.md.
 
 Author: Pei Wu
 Date: 25 Oct 2026
+Updated: Pei Wu, 26 Oct 2026 (materials link from US-013)
 """
 
 import os
@@ -115,9 +116,10 @@ def test_ac2_name_typed_without_macrons_signs_in(
     learner.sign_in("tane", family.replace("ā", "a").upper())
 
     expect(learner.success).to_have_text("You are signed in")
+    # US-013 replaced the greyed "Lesson materials (later)" button with a link.
     expect(
-        learner.page.get_by_role("button", name="Lesson materials (later)")
-    ).to_be_disabled()
+        learner.page.get_by_role("link", name="Lesson materials", exact=True)
+    ).to_have_attribute("href", "/materials")
 
 
 def test_ac3_unknown_name_asks_for_the_teacher(

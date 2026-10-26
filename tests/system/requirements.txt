@@ -1,5 +1,7 @@
-# Browser system test dependencies.
+# Browser system test dependencies including attendance PDF verification.
 # Author: Pei Wu
 # Date: 23 Oct 2026
+# Updated: Shuohui Liu, 26 Oct 2026
 pytest>=8,<9
 playwright>=1.50,<2
+pypdf>=5,<7

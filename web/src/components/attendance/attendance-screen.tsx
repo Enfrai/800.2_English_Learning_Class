@@ -1,12 +1,15 @@
 /* Attendance (sign-in) page for one class session (UI design document 6.6, US-004),
- * and correcting a past class (6.16, US-015).
+ * and correcting a past class, with a class-management return link (US-014/015).
  * Author: Pei Wu
  * Date: 23 Oct 2026
  * Updated: Pei Wu, 25 Oct 2026 (US-015 correction view and change history)
+ * Updated: Shuohui Liu, 26 Oct 2026
  */
 
 "use client";
 
+import Link from "next/link";
+import SessionLesson from "@/components/materials/session-lesson";
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { type FieldErrors, TextField, checkNames } from "@/components/learners/learner-form";
 import { useSession } from "@/components/session-context";
@@ -198,6 +201,7 @@ export default function AttendanceScreen({ sessionId }: { sessionId: string }) {
     return (
       <>
         <h1>Attendance</h1>
+      <p className="no-print"><Link href={`/sessions/${sessionId}`}>Back to class session</Link></p>
         <div className="msg msg-error" role="alert">
           Please log in to take attendance. <a href="/">Log in</a>
         </div>
@@ -208,6 +212,7 @@ export default function AttendanceScreen({ sessionId }: { sessionId: string }) {
     return (
       <>
         <h1>Attendance</h1>
+      <p className="no-print"><Link href={`/sessions/${sessionId}`}>Back to class session</Link></p>
         <div className="msg msg-error" role="alert">
           Class session not found
         </div>
@@ -218,6 +223,8 @@ export default function AttendanceScreen({ sessionId }: { sessionId: string }) {
   return (
     <>
       <h1>Attendance</h1>
+      <p className="no-print"><Link href={`/sessions/${sessionId}`}>Back to class session</Link></p>
+      <SessionLesson sessionId={sessionId} />
       {loadState === "loading" && <p role="status">Loading the class list…</p>}
       {loadState === "failed" && (
         <div className="msg msg-error" role="alert">

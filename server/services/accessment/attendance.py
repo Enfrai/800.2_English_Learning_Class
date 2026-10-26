@@ -1,7 +1,8 @@
-"""Attendance during a class: mark present and unmark (US-004).
+"""Record attendance under a session lock shared with classroom deletion (US-004).
 
 Author: Pei Wu
 Date: 23 Oct 2026
+Updated: Shuohui Liu, 26 Oct 2026
 """
 
 from datetime import date
@@ -55,7 +56,9 @@ def check_session_is_running(db: Session, session_id: UUID, today: date) -> None
         PastSessionError: the session is before ``today``.
     """
     session_date = db.execute(
-        select(class_sessions.c.session_date).where(class_sessions.c.id == session_id)
+        select(class_sessions.c.session_date)
+        .where(class_sessions.c.id == session_id)
+        .with_for_update()
     ).scalar_one_or_none()
     if session_date is None:
         raise SessionNotFoundError("Class session not found")

@@ -14,3 +14,8 @@
 @media print {
   .materials a { color: #000; }
 }
+.search { margin-bottom: var(--space-5); }
+.actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+.table table { min-width: 760px; }
+@media print { .table table { min-width: 0; } }

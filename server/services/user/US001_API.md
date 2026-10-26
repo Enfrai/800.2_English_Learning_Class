@@ -323,8 +323,9 @@ CRUD. No unrelated business-story links or features are implemented.
 
 Next.js middleware checks protected routes against the User service before serving
 them. It returns a 403 denial page for wrong roles and redirects unauthenticated
-users to `/`. `USER_API_URL` defaults to `http://nginx/api/user`, using the existing
-Compose gateway on the existing network; local tests supply a loopback test URL.
+users to `/`. `USER_API_URL` defaults to `http://user-service:8000`, the User service's
+internal Compose name (26 Oct 2026: no longer through the Nginx gateway, whose
+rate limit all server-side calls shared); local tests supply a loopback test URL.
 The backend destination is never derived from user-controlled request headers.
 Authorization failures never render account-management content.
 

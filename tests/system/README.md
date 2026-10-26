@@ -6,6 +6,7 @@ that testers follow and sign off are in `docs/system_test/`.
 
 | File | Cases |
 | --- | --- |
+| `test_attendance_reports.py` | US-005 PDF/CSV downloads, current corrections, date validation and role boundaries through real services |
 | `test_learners_page.py` | ST-11, and the Learners page parts of NT-05, NT-06, NT-07, NT-08, NT-10 |
 | `test_attendance_page.py` | ST-01, US-004 AC1 to AC5, and the attendance page parts of NT-01, NT-06, NT-07, NT-10 |
 | `test_corrections_page.py` | ST-04, ST-05 and the correction parts of NT-06 (US-015), with a new teacher account for each teacher test |
@@ -70,10 +71,15 @@ Notes:
 - `test_sign_in_page.py` clears `signin_failures` on the throwaway database
   before each test: every test request comes from this computer's address,
   which has a limit of 50 wrong names in 10 minutes.
-- Until US-014 adds "Start today's class", the attendance tests create class
-  sessions with `docker compose exec` on the running system (and the
-  correction tests record last week's ticks the same way), so Docker must
-  be on the same computer. Set `COMPOSE_FILE` if the system was started from
-  another compose file.
+- The attendance, sign-in and correction tests set up class sessions with
+  `docker compose exec` on the running system (and the correction tests
+  record last week's ticks the same way), so Docker must be on the same
+  computer. Set `COMPOSE_FILE` if the system was started from another
+  compose file.
+- There is one class session per date (US-014). Tests share today's
+  session, so present counts are checked as a rise from the number present
+  when the test started. Each test that needs a past class gets a new one,
+  on the first date at or before the one it asks for that has no class.
+  The tests never delete attendance.
 - Each test adds its own learners with a random suffix, so the tests run in
   any order and do not need an empty database.

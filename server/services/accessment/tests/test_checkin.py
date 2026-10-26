@@ -7,6 +7,7 @@ directly because opening check-in is US-011.
 
 Author: Pei Wu
 Date: 25 Oct 2026
+Updated: Shuohui Liu, 26 Oct 2026
 """
 
 import secrets
@@ -148,7 +149,7 @@ def test_only_the_token_hash_is_stored_and_each_token_finds_its_class(
     db: Session, open_window: OpenWindow, today: date
 ) -> None:
     first, first_session = open_window()
-    second, second_session = open_window()
+    second, second_session = open_window(session_date=today + timedelta(days=1))
 
     stored = set(db.execute(select(checkin_windows.c.token_hash)).scalars())
 

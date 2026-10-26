@@ -1,7 +1,8 @@
-"""Run test suites, retain logs/reports, and return a failing exit code on errors.
+"""Run isolated backend and web suites including attendance report exports.
 
 Author: Shuohui Liu
 Date: 19 Oct 2026
+Updated: Sandhya Tiwari, 26 Oct 2026
 """
 
 import json
@@ -120,9 +121,18 @@ def web() -> list[dict]:
             "--test-concurrency=1",
             "tests/api-cookie.test.mjs",
             "tests/attendance-session.test.mjs",
+            "tests/report-session.test.mjs",
             "tests/lesson-session.test.mjs",
         ],
         "staff-ui": ["node", "tests/run-staff-ui.mjs"],
+        "materials-unit": ["npm", "run", "test:materials-unit"],
+        "materials-ui": ["node", "tests/run-materials-ui.mjs"],
+        "reports-unit": ["npm", "run", "test:reports-unit"],
+        "reports-ui": ["node", "tests/run-reports-ui.mjs"],
+        "sessions-unit": ["npm", "run", "test:sessions-unit"],
+        "sessions-ui": ["node", "tests/run-sessions-ui.mjs"],
+        "lessons-unit": ["npm", "run", "test:lessons-unit"],
+        "lessons-ui": ["node", "tests/run-lessons-ui.mjs"],
         "public-enquiry": ["node", "tests/public-enquiry-form.mjs"],
         "coordinator-enquiries": ["node", "tests/coordinator-enquiries.mjs"],
         "csv-ui": ["node", "tests/run-csv-ui.mjs"],
@@ -182,3 +192,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

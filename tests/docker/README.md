@@ -74,14 +74,15 @@ docker compose -f compose.test.yaml -p ako-tests run --build --rm -e TEST_SUITE=
 
 Backend selections: `user`, `accessment`, `lesson`.
 Web selections: `api`, `staff-ui`, `public-enquiry`,
-`coordinator-enquiries`, `csv-ui`.
+`coordinator-enquiries`, `csv-ui`, `lessons-unit`, `lessons-ui`,
+`materials-unit`, `materials-ui`, `sessions-unit`, `sessions-ui`, `reports-unit`, `reports-ui`.
 
 ## Coverage
 
 | Group | What it runs |
 | --- | --- |
 | Backend | pytest in all three service directories, including the User Service's real PostgreSQL/cross-replica tests |
-| Web | API cookie/adapter tests, staff UI and style parity, public enquiry, coordinator enquiry, CSV upload/import UI |
+| Web | API cookie/adapter tests, staff UI and style parity, public enquiry, coordinator enquiry, CSV upload/import UI, lesson search/copy, learner materials and class-session and attendance-report unit/browser tests, including binary report adapters |
 | System | The existing `tests/system/` suite against real Nginx, Next.js, two replicas of each API, and three isolated application databases |
 
 Mocked web tests verify frontend behavior; they do not prove backend
@@ -147,3 +148,8 @@ database instead of invoking Docker inside a test container. Authentication
 uses shared HttpOnly cookies and native Ako form selectors.
 Accessibility checks use the locally installed axe-core asset inside the
 system image, so tests do not depend on a public CDN at runtime.
+
+
+US-005 report commands: `TEST_SUITE=reports-unit` or `TEST_SUITE=reports-ui`
+with `test-web`. Backend runs include report roster and PDF/CSV tests. The
+system group includes real multi-service report downloads.

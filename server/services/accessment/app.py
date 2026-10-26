@@ -1,7 +1,8 @@
-"""Implement the demo permission check with the Ako database schema.
+"""Serve classroom management, attendance exports, QR sign-in and material access.
 
 Author: Shuohui Liu
 Date: 19 Oct 2026
+Updated: Sandhya Tiwari, 26 Oct 2026
 """
 
 import os
@@ -25,6 +26,7 @@ from attendance import (
     present_records,
     unmark,
 )
+from attendance_reports import create_report_router
 from checkin import (
     CHECKIN_CLOSED,
     NAME_NOT_FOUND,
@@ -38,6 +40,7 @@ from checkin import (
     sign_in,
     wrong_name_limits,
 )
+from class_sessions import create_session_router
 from corrections import (
     CorrectionError,
     NotCoordinatorError,
@@ -46,11 +49,14 @@ from corrections import (
     correct_attendance,
     corrected_learners,
 )
-from fastapi import Depends, FastAPI, Header, HTTPException
-from models import Base, class_sessions
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
+from learner_materials import create_materials_router, issue_grant
+from models import class_sessions
 from pydantic import BaseModel
+from schema import prepare_schema
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
+from starlette.middleware.base import RequestResponseEndpoint
 
 engine = create_engine(os.environ["DATABASE_URL"], pool_pre_ping=True)
 SessionLocal = sessionmaker(engine)
@@ -61,11 +67,22 @@ CLUB_TIMEZONE = ZoneInfo(os.getenv("CLUB_TIMEZONE", "Pacific/Auckland"))
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
+    prepare_schema(engine)
     yield
 
 
 app = FastAPI(title="Accessment Service", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def private_session_responses(
+    request: Request, call_next: RequestResponseEndpoint
+) -> Response:
+    response = await call_next(request)
+    if request.url.path.startswith(("/sessions", "/learner/", "/checkin/", "/reports/")):
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 class CheckRequest(BaseModel):
@@ -118,6 +135,11 @@ def staff_request(
 
 
 LoggedInStaff = Annotated[StaffRequest, Depends(staff_request)]
+app.include_router(
+    create_session_router(lambda: SessionLocal(), staff_request, lambda: club_today())
+)
+app.include_router(create_materials_router(lambda: SessionLocal()))
+app.include_router(create_report_router(lambda: SessionLocal(), staff_request))
 
 
 class AttendanceOut(BaseModel):
@@ -339,6 +361,7 @@ def read_checkin(token: str):
 def learner_sign_in(
     token: str,
     payload: SignInIn,
+    response: Response,
     x_real_ip: Annotated[str | None, Header()] = None,
     x_device_id: Annotated[str | None, Header()] = None,
 ):
@@ -368,6 +391,7 @@ def learner_sign_in(
     try:
         with SessionLocal.begin() as db:
             sign_in(db, checkin, UUID(learner["id"]), club_today())
+            issue_grant(db, checkin.session_id, response, secure=os.getenv("COOKIE_SECURE", "false").lower() == "true")
     except AlreadySignedInError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except AttendanceError as exc:
@@ -468,3 +492,4 @@ def read_corrections(session_id: UUID, request: LoggedInStaff):
         }
         for entry in history
     ]
+

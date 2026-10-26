@@ -4,7 +4,7 @@ Author: Shuohui Liu
 Date: 19 Oct 2026  
 Updated: Sandhya Tiwari, 23 Oct 2026 (US-006)
 
-Each service imports its own `models.Base`. The Lesson Service calls `prepare_schema` at startup; it serializes PostgreSQL initialization and adds missing US-006 sharing and US-008 reviewer columns without dropping records. No Alembic is used. The three databases contain 3, 4, and 5 business tables respectively.
+Each service imports its own `models.Base`. The Lesson Service calls `prepare_schema` at startup; it serializes PostgreSQL initialization and adds missing US-006 sharing and US-008 reviewer columns without dropping records. No Alembic is used. Each service owns its database tables; the feature sections below describe additive schema changes.
 
 **Development reset only:** `docker compose down -v` removes all Compose-managed volume data, then `docker compose up -d --build` recreates databases and tables. Verify that the volumes contain no data you need before doing this. `create_all` never changes an existing table's schema.
 
@@ -57,3 +57,62 @@ SQL
 ```
 
 US-006 now implements authenticated lesson CRUD, topic tags, attachment upload/download/removal and sharing metadata. Review enforcement remains in US-008. Uploaded files are stored in the shared `lesson_files` volume, outside the code submission.
+
+
+
+## US-014 dated classrooms
+
+Accessment adds `session_lesson_links` with `session_id` UUID primary key and
+foreign key to `class_sessions.id`, plus nullable `lesson_id` UUID referencing
+Lesson service data logically across databases. The date has a unique index
+`uq_class_sessions_date`. A lesson may be linked to many different dated classes.
+
+Startup uses transaction advisory lock 800014 across Accessment replicas,
+creates missing tables, rejects legacy duplicate dates without deleting records,
+and adds the unique date index idempotently. Repeated create requests use
+`ON CONFLICT (session_date) DO NOTHING` and return the existing class.
+
+Class deletion locks the classroom row and checks all attendance records,
+including absent records. Attendance writes and corrections lock that same row.
+Only an empty class is removed, together with its lesson association and QR
+windows and any remaining material grants. The Lesson database and its files are unchanged. Foreign keys block
+unexpected related-record deletion. See
+[US-014 tests and operation](../docs/system_test/class_sessions_system_tests.md).
+## US-013 additive accessment tables
+
+`session_lesson_links` associates an existing classroom session with one Lesson
+Service lesson. `session_id` is the primary key and a foreign key to
+`class_sessions.id`; nullable `lesson_id` is a UUID cross-service reference.
+
+`learner_material_grants` contains `token_hash` VARCHAR(64) primary key,
+`session_id` UUID foreign key to `class_sessions.id`, and non-null timezone-aware
+`issued_at` and `expires_at` timestamps. `expires_at` is indexed. Grants last
+exactly 24 hours and contain no learner/device identity. Expired grants are
+removed when a new sign-in issues a grant. Only the browser receives the raw
+random token; the database stores its hash.
+
+Both tables are created automatically on Accessment startup without modifying
+existing tables. PostgreSQL initialization uses transaction advisory lock
+800014 (the shared US-013/014 schema initializer) so both replicas can start safely. File sharing/review metadata remains
+in the Lesson database, and Accessment calls key-protected internal Lesson
+endpoints rather than reading another service's database.
+
+## US-007 lesson copies
+
+No schema migration is needed. `lessons.source_lesson_id` records the immediate
+source; a new lesson gets the current staff author, chosen date, independent
+metadata and tag associations. Each copied material gets a new row and storage
+key, with `share_with_learners=false`. Māori copies retain the flag but start
+with `review_status=pending` and empty review fields. Existing source tombstones
+keep the lineage reference valid when the source is deleted.
+
+
+## US-005 attendance report reads
+
+No table or schema migration is added. One Accessment SELECT reads dated
+sessions and their current attendance in the inclusive range. The User
+Service supplies only learner UUIDs and names in one coordinator-authenticated
+request, including inactive learners referenced in that range. Current active
+learners are also included; missing Present records display as Absent. UUIDs
+keep same-name learners separate. PDF/CSV outputs are generated in memory;
+reports do not write attendance, audit history, learner data or files to disk.

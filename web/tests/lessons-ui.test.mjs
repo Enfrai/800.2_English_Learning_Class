@@ -170,7 +170,7 @@ test("delete requires confirmation and removes the lesson", async t => {
   await page.getByRole("button", { name: "Confirm deletion", exact: true }).click();
   await page.getByRole("heading", { name: "Lessons", exact: true }).waitFor();
   assert.equal(state.deletes, 1);
-  await page.getByText("No lessons yet. Choose New lesson to start.", { exact: true }).waitFor();
+  await page.getByText("No lessons found", { exact: true }).waitFor();
 });
 test("remove material keeps the parent lesson", async t => {
   const { page, state } = await screen(t, { path: `/lessons/${id}`, materials: true });

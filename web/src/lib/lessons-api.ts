@@ -24,6 +24,7 @@ async function send<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (status >= 200 && status < 300) return body as T;
   if (status === 403) throw new LessonError("You do not have permission");
   if (status === 404) throw new LessonError("This lesson or material is no longer available");
+  if (status === 409) throw new LessonError(message || "The source lesson changed. Reopen the copy draft.");
   if (status === 413) throw new LessonError(MATERIAL_RULE);
   // US-008: a review for a lesson that is no longer marked as Māori content.
   if (status === 409 && message) throw new LessonError(message);
@@ -38,7 +39,22 @@ async function send<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
   throw new LessonError("Unable to complete the request. Please try again.");
 }
-export const listLessons = () => send<Lesson[]>("lessons");
+export type LessonSearch = { q?: string; tag?: string };
+export type CopyDraft = {
+  source_lesson_id: string; title: string; lesson_date: null; description: string;
+  tags: string[]; materials: Material[]; has_maori_content: boolean;
+};
+export const listLessons = (filters: LessonSearch = {}) => {
+  const params = new URLSearchParams();
+  if (filters.q?.trim()) params.set("q", filters.q.trim());
+  if (filters.tag?.trim()) params.set("tag", filters.tag.trim());
+  return send<Lesson[]>("lessons" + (params.size ? "?" + params.toString() : ""));
+};
+export const getCopyDraft = (id: string) => send<CopyDraft>(`lessons/${encodeURIComponent(id)}/copy`);
+export const copyLesson = (id: string, input: LessonInput, materialIds: string[]) =>
+  send<Lesson>(`lessons/${encodeURIComponent(id)}/copy`, {
+    method: "POST", body: JSON.stringify({ ...input, material_ids: materialIds }),
+  });
 export const getLesson = (id: string) => send<Lesson>(`lessons/${encodeURIComponent(id)}`);
 export const listTags = () => send<{ id: string; name: string }[]>("tags");
 export const saveLesson = (id: string | null, input: LessonInput) =>

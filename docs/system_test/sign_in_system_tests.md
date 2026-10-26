@@ -3,6 +3,7 @@
 | Version | Date        | Type     | Who | Comment                                          |
 | ------- | ----------- | -------- | --- | ------------------------------------------------ |
 | 1.0     | 25 Oct 2026 | Creation | Pei | Manual scripts for the ST-14 sign-in part and NTs |
+| 1.1     | 26 Oct 2026 | Update   | Pei | Today's class started on the Class sessions page  |
 
 ## 1. Purpose
 
@@ -28,13 +29,12 @@ built, check-in is opened and closed with the commands below.
 - On a laptop, log in as the demo coordinator (`demo` / `DemoPass123!`) and
   add learners on the Learners page: `Aroha Ngata`, `Tāne Māhina`, and
   `Mere Walker` twice (choose **Add anyway** the second time).
-- Create today's class and open check-in. From the `server` folder:
+- On **Class sessions**, choose **Start today's class** (US-014). The class
+  page opens at `http://localhost:8080/sessions/<session id>`; note the id.
+  If today's class already exists, it opens again instead of a new one.
+- Make a check-in code. From the `server` folder:
 
   ```bash
-  docker compose exec -T postgres-access psql -U access_app -d accessdb -tAqc \
-    "INSERT INTO class_sessions (id, session_date, created_by) VALUES
-     (gen_random_uuid(), (now() AT TIME ZONE 'Pacific/Auckland')::date, gen_random_uuid())
-     RETURNING id"
   python3 -c "import secrets; print(secrets.token_urlsafe(32))"
   ```
 
@@ -68,7 +68,7 @@ Open a new check-in (section 2) for the cases below.
 
 | ID | Steps | Expected result | Result | Screenshot |
 | --- | --- | --- | --- | --- |
-| SI-1 (AC2) | Enter `tane` `mahina` (no macrons) | "You are signed in". "Lesson materials (later)" is shown greyed and cannot be used | | |
+| SI-1 (AC2) | Enter `tane` `mahina` (no macrons) | "You are signed in". A **Lesson materials** link is shown; the materials page is tested in `materials_system_tests.md` (US-013) | | |
 | SI-2 (AC3) | Enter `Nobody` `Here` | "We could not find that name. Please ask the teacher". The cursor goes back to First name | | |
 | SI-3 | Enter `Mere` `Walker` (two learners share this name) | "We could not find that name. Please ask the teacher". The teacher ticks the right Mere on the attendance page | | |
 | SI-4 (AC4) | Reload the link and enter `Tāne` `Māhina` again | "Already signed in". The teacher's list still shows Tāne once | | |

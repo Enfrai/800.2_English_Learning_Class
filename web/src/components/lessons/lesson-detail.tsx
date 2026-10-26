@@ -55,6 +55,7 @@ export default function LessonDetail({ lessonId }: { lessonId: string }) {
     <p className={styles.description}>{lesson.description}</p>
     <div className="row no-print">
       <Link href="/lessons" className="btn btn-secondary">Back to lessons</Link>
+      <Link href={`/lessons/new?copyFrom=${lesson.id}`} className="btn btn-secondary">Copy as new lesson</Link>
       {lesson.can_edit && <>
         <Link href={`/lessons/${lesson.id}/edit`} className="btn">Edit lesson</Link>
         <button className="btn btn-danger" disabled={busy} onClick={() => setConfirmation({ id: lesson.id, name: lesson.title, lesson: true })}>Delete lesson</button>
