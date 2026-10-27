@@ -116,7 +116,7 @@ docker compose -f compose.test.yaml -p ako-tests run --build --rm -e TEST_SUITE=
 Inspect process exit codes and `test-results/backend/accessment.html`,
 `test-results/backend/accessment.xml`, `test-results/backend/accessment.log`,
 `test-results/web/summary.json`, and the `sessions-*.log` files. The full helper
-`python3 tests/run_docker_tests.py` also includes these groups. See
+`python3.14 tests/run_docker_tests.py` also includes these groups. See
 `tests/docker/README.md` for cleanup and isolation.
 
 ## Acceptance checklist

@@ -102,7 +102,7 @@ docker compose -f compose.test.yaml -p ako-tests run --build --rm -e TEST_SUITE=
 ```
 
 Reports and logs appear under `test-results/backend/` and `test-results/web/`.
-The helper `python3 tests/run_docker_tests.py` also runs these suites as part of
+The helper `python3.14 tests/run_docker_tests.py` also runs these suites as part of
 the full test stack. See `tests/docker/README.md` for isolation and cleanup.
 
 ## Acceptance mapping

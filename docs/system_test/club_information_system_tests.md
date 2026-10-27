@@ -73,7 +73,7 @@ From the repository root:
 docker compose -f compose.test.yaml -p ako-tests run --build --rm -e TEST_SUITE=public-unit test-web
 docker compose -f compose.test.yaml -p ako-tests run --build --rm -e TEST_SUITE=public-ui test-web
 docker compose -f compose.test.yaml -p ako-tests run --build --rm -e TEST_SUITE=public-a11y test-web
-python3 tests/run_docker_tests.py --suite system
+python3.14 tests/run_docker_tests.py --suite system
 ```
 
 The system suite includes `tests/system/test_club_information.py`. Against an

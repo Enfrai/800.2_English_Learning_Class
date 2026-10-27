@@ -70,8 +70,8 @@ From the repository root, run the same selections in isolated Docker:
 docker compose -f compose.test.yaml -p ako-tests run --build --rm -e TEST_SUITE=history-unit test-web
 docker compose -f compose.test.yaml -p ako-tests run --build --rm -e TEST_SUITE=history-session test-web
 docker compose -f compose.test.yaml -p ako-tests run --build --rm -e TEST_SUITE=history-ui test-web
-python3 tests/run_docker_tests.py --suite backend
-python3 tests/run_docker_tests.py --suite system
+python3.14 tests/run_docker_tests.py --suite backend
+python3.14 tests/run_docker_tests.py --suite system
 ```
 
 The system suite includes `tests/system/test_attendance_history.py`, which uses
