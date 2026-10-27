@@ -48,7 +48,10 @@ async function fetchWithSession(url: string, init: RequestInit): Promise<Respons
  */
 export async function apiRequest(url: string, init: RequestInit = {}): Promise<ApiResponse> {
   const response = await fetchWithSession(url, init);
-  const body: unknown = await response.json().catch(() => null);
+  const body: unknown = await response.json().catch(/*
+     * Handle an asynchronous failure using the workflow’s error state.
+     */
+    () => null);
   const detail = (body as { detail?: unknown } | null)?.detail;
   return {
     status: response.status,

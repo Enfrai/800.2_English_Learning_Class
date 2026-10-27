@@ -13,6 +13,9 @@ export const metadata: Metadata = {
   description: "English Learning Class",
 };
 
+/*
+ * Render the root layout interface and its associated content.
+ */
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {

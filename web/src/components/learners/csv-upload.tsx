@@ -1,3 +1,9 @@
+/*
+ * Upload a learner CSV and display imported rows, duplicates and validation errors.
+ * Author: Leonwu2026
+ * Date: 25 Oct 2026
+ */
+
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -16,10 +22,16 @@ function isResult(value: unknown): value is ImportResult {
   if (!value || typeof value !== "object") return false;
   const result = value as ImportResult;
   return Number.isSafeInteger(result.imported_count) && result.imported_count >= 0
-    && Array.isArray(result.duplicates) && result.duplicates.every(row => row && Number.isSafeInteger(row.row_number) && row.row_number > 1
+    && Array.isArray(result.duplicates) && result.duplicates.every(/*
+     * Check whether every collection entry satisfies this validation rule.
+     */
+    row => row && Number.isSafeInteger(row.row_number) && row.row_number > 1
       && typeof row.first_name === "string" && typeof row.family_name === "string"
       && ["file", "database"].includes(row.source))
-    && Array.isArray(result.errors) && result.errors.every(row => row && Number.isSafeInteger(row.row_number) && row.row_number > 1
+    && Array.isArray(result.errors) && result.errors.every(/*
+     * Check whether every collection entry satisfies this validation rule.
+     */
+    row => row && Number.isSafeInteger(row.row_number) && row.row_number > 1
       && typeof row.field === "string" && typeof row.message === "string");
 }
 
@@ -37,6 +49,9 @@ export default function CsvUpload({ onImported }: { onImported?: () => void }) {
   const [error, setError] = useState("");
   const [result, setResult] = useState<ImportResult | null>(null);
 
+  /*
+   * Validate and submit the csv upload form, updating its success and error state.
+   */
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (pending.current || blocked) return;
@@ -66,7 +81,10 @@ export default function CsvUpload({ onImported }: { onImported?: () => void }) {
         return;
       }
       if (response.status === 413) { setError(SIZE_ERROR); return; }
-      const body: unknown = await response.json().catch(() => null);
+      const body: unknown = await response.json().catch(/*
+     * Handle an asynchronous failure using the workflow’s error state.
+     */
+    () => null);
       if (!response.ok) {
         const detail = body && typeof body === "object" && "detail" in body ? body.detail : null;
         // Only display the parser's known file-error messages, not arbitrary server content.
@@ -105,7 +123,10 @@ export default function CsvUpload({ onImported }: { onImported?: () => void }) {
         <label htmlFor={`${id}-file`}>CSV file</label>
         <input ref={picker} id={`${id}-file`} type="file" accept=".csv,text/csv" disabled={busy || blocked}
           aria-describedby={`${id}-help`} style={{ maxWidth: "100%", minHeight: "var(--control-h)" }}
-          onChange={event => { setFile(event.target.files?.[0] ?? null); setResult(null); setError(""); }} />
+          onChange={/*
+     * Handle the change event for this control.
+     */
+    event => { setFile(event.target.files?.[0] ?? null); setResult(null); setError(""); }} />
       </div>
       <button className="btn" disabled={busy || blocked} type="submit">{busy ? "Importing…" : "Import learners"}</button>
       {busy && <p role="status">Uploading CSV…</p>}
@@ -115,11 +136,17 @@ export default function CsvUpload({ onImported }: { onImported?: () => void }) {
       <p className="msg msg-success" role="status">{result.imported_count} learners imported</p>
       {result.duplicates.length > 0 && <div className="msg msg-warning">
         <h3>Skipped duplicate learners ({result.duplicates.length})</h3>
-        <ul>{result.duplicates.map(row => <li key={row.row_number}>Row {row.row_number}: {row.first_name} {row.family_name} — {row.source === "database" ? "Already exists" : `Duplicate in file${row.first_row_number ? ` (row ${row.first_row_number})` : ""}`}</li>)}</ul>
+        <ul>{result.duplicates.map(/*
+     * Transform the current collection item into its displayed or normalized value.
+     */
+    row => <li key={row.row_number}>Row {row.row_number}: {row.first_name} {row.family_name} — {row.source === "database" ? "Already exists" : `Duplicate in file${row.first_row_number ? ` (row ${row.first_row_number})` : ""}`}</li>)}</ul>
       </div>}
       {result.errors.length > 0 && <div className="msg msg-error" role="alert">
         <h3>Rejected rows ({result.errors.length})</h3>
-        <ul>{result.errors.map(row => <li key={`${row.row_number}-${row.field}`}>Row {row.row_number}: {row.message}</li>)}</ul>
+        <ul>{result.errors.map(/*
+     * Transform the current collection item into its displayed or normalized value.
+     */
+    row => <li key={`${row.row_number}-${row.field}`}>Row {row.row_number}: {row.message}</li>)}</ul>
       </div>}
     </div>}
   </section>;

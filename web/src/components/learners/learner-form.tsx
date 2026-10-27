@@ -36,6 +36,9 @@ const FIELD_IDS: Record<FieldName, string> = {
   contact: "learner-contact",
 };
 
+/*
+ * Validate learner name fields before submitting the form.
+ */
 export function checkNames(details: LearnerDetails): FieldErrors {
   const errors: FieldErrors = {};
   const firstName = details.first_name.trim();
@@ -55,6 +58,9 @@ type Props = {
   onLoginRequired: () => void;
 };
 
+/*
+ * Render the learner form interface and its associated content.
+ */
 export default function LearnerForm({ learner, onSaved, onCancel, onLoginRequired }: Props) {
   const [details, setDetails] = useState<LearnerDetails>({
     first_name: learner?.first_name ?? "",
@@ -71,23 +77,42 @@ export default function LearnerForm({ learner, onSaved, onCancel, onLoginRequire
   const editing = learner !== null;
   const heading = editing ? "Edit learner" : "Add learner";
 
-  useEffect(() => {
+  useEffect(/*
+     * Synchronize the component with its current dependencies and manage effect
+     * resources.
+     */
+    () => {
     firstFieldRef.current?.focus();
   }, []);
 
+  /*
+   * Update the edited form field and clear its obsolete feedback.
+   */
   function change(field: FieldName, value: string) {
-    setDetails((current) => ({ ...current, [field]: value }));
-    setErrors((current) => ({ ...current, [field]: undefined }));
+    setDetails(/*
+     * Compute the next details state from its previous value.
+     */
+    (current) => ({ ...current, [field]: value }));
+    setErrors(/*
+     * Compute the next errors state from its previous value.
+     */
+    (current) => ({ ...current, [field]: undefined }));
     // The warning was about the old name.
     if (field === "first_name" || field === "family_name") setDuplicateWarning(null);
   }
 
+  /*
+   * Validate and submit the learner form form, updating its success and error state.
+   */
   async function save(allowDuplicate: boolean) {
     if (saving) return;
     const found = checkNames(details);
     setErrors(found);
     setFailure(null);
-    const firstInvalid = (Object.keys(FIELD_IDS) as FieldName[]).find((field) => found[field]);
+    const firstInvalid = (Object.keys(FIELD_IDS) as FieldName[]).find(/*
+     * Find the collection entry matching the selected identifier or condition.
+     */
+    (field) => found[field]);
     if (firstInvalid) {
       document.getElementById(FIELD_IDS[firstInvalid])?.focus();
       return;
@@ -110,6 +135,9 @@ export default function LearnerForm({ learner, onSaved, onCancel, onLoginRequire
     }
   }
 
+  /*
+   * Validate and submit the learner form form, updating its success and error state.
+   */
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     void save(false);
@@ -166,10 +194,16 @@ export default function LearnerForm({ learner, onSaved, onCancel, onLoginRequire
         {duplicateWarning && (
           <div className="msg msg-warning" role="alert">
             {duplicateWarning}.{" "}
-            <button type="button" className="btn btn-secondary" onClick={() => setDuplicateWarning(null)}>
+            <button type="button" className="btn btn-secondary" onClick={/*
+     * Handle the click event for this control.
+     */
+    () => setDuplicateWarning(null)}>
               Cancel
             </button>{" "}
-            <button type="button" className="btn" onClick={() => void save(true)}>
+            <button type="button" className="btn" onClick={/*
+     * Handle the click event for this control.
+     */
+    () => void save(true)}>
               {editing ? "Save anyway" : "Add anyway"}
             </button>
           </div>
@@ -196,6 +230,9 @@ type TextFieldProps = {
   onChange: (field: FieldName, value: string) => void;
 };
 
+/*
+ * Render the text field interface and its associated content.
+ */
 export function TextField({ ref, name, label, value, error, hint, required, maxLength, onChange }: TextFieldProps) {
   const id = FIELD_IDS[name];
   const describedBy = [error && `${id}-error`, hint && `${id}-hint`].filter(Boolean).join(" ");
@@ -214,7 +251,10 @@ export function TextField({ ref, name, label, value, error, hint, required, maxL
         aria-required={required}
         aria-invalid={Boolean(error)}
         aria-describedby={describedBy || undefined}
-        onChange={(event) => onChange(name, event.target.value)}
+        onChange={/*
+     * Handle the change event for this control.
+     */
+    (event) => onChange(name, event.target.value)}
       />
       {hint && (
         <div id={`${id}-hint`} className="hint">

@@ -10,6 +10,9 @@ import { useSession } from "@/components/session-context";
 import { downloadAttendance, ReportError, LoginRequiredError, type ReportFormat } from "@/lib/attendance-reports-api";
 import styles from "./attendance-reports.module.css";
 
+/*
+ * Render the attendance reports interface and its associated content.
+ */
 export default function AttendanceReports() {
   const session = useSession(), router = useRouter();
   const [start, setStart] = useState(""), [end, setEnd] = useState("");
@@ -19,7 +22,13 @@ export default function AttendanceReports() {
   const pending = useRef(false);
   const startInput = useRef<HTMLInputElement>(null), endInput = useRef<HTMLInputElement>(null);
   if (session?.role !== "coordinator") return <p className="msg msg-error" role="alert">You do not have permission</p>;
+  /*
+   * Focus the requested report form control.
+   */
   function focus(field: string) { (field === "start_date" ? startInput : endInput).current?.focus(); }
+  /*
+   * Open the native date picker from the field or calendar control when supported.
+   */
   function openCalendar(event: MouseEvent<HTMLInputElement>) {
     const input = event.currentTarget;
     if (input.disabled || typeof input.showPicker !== "function") return;
@@ -32,7 +41,13 @@ export default function AttendanceReports() {
       input.focus();
     }
   }
+  /*
+   * Update the selected report date and clear obsolete validation feedback.
+   */
   function edited() { setErrors({}); setError(""); setMessage(""); }
+  /*
+   * Download the selected attendance report and release its browser object URL.
+   */
   async function download(format: ReportFormat) {
     if (pending.current) return;
     setMessage(""); setError("");
@@ -48,7 +63,10 @@ export default function AttendanceReports() {
       const url = URL.createObjectURL(file.blob);
       const link = document.createElement("a"); link.href = url; link.download = file.filename;
       document.body.appendChild(link); link.click(); link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      window.setTimeout(/*
+     * Compute the next timeout state from its previous value.
+     */
+    () => URL.revokeObjectURL(url), 1000);
       setMessage(`${format.toUpperCase()} download started.`);
     } catch (reason) {
       if (reason instanceof LoginRequiredError) router.replace("/");
@@ -57,6 +75,10 @@ export default function AttendanceReports() {
       } else setError(reason instanceof ReportError ? reason.message : "The report could not be downloaded. Please try again.");
     } finally { pending.current = false; setBusy(null); }
   }
+  /*
+   * Validate and submit the attendance reports form, updating its success and error
+   * state.
+   */
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); void download("pdf"); }
   return <>
     <h1>Attendance reports</h1>
@@ -69,20 +91,29 @@ export default function AttendanceReports() {
           <div className="field"><label className="req" htmlFor="report-start">Start date</label>
             <input ref={startInput} id="report-start" name="start_date" type="date" data-empty={!start} onClick={openCalendar} value={start} required disabled={Boolean(busy)}
               aria-invalid={Boolean(errors.start_date)} aria-describedby={errors.start_date ? "report-start-error" : undefined}
-              onChange={event => { setStart(event.target.value); edited(); }} />
+              onChange={/*
+     * Handle the change event for this control.
+     */
+    event => { setStart(event.target.value); edited(); }} />
             {errors.start_date && <p id="report-start-error" className="msg msg-error" role="alert">{errors.start_date}</p>}
           </div>
           <div className="field"><label className="req" htmlFor="report-end">End date</label>
             <input ref={endInput} id="report-end" name="end_date" type="date" data-empty={!end} onClick={openCalendar} value={end} required disabled={Boolean(busy)}
               aria-invalid={Boolean(errors.end_date)} aria-describedby={errors.end_date ? "report-end-error" : undefined}
-              onChange={event => { setEnd(event.target.value); edited(); }} />
+              onChange={/*
+     * Handle the change event for this control.
+     */
+    event => { setEnd(event.target.value); edited(); }} />
             {errors.end_date && <p id="report-end-error" className="msg msg-error" role="alert">{errors.end_date}</p>}
           </div>
         </div>
         <p className="hint">Includes current learners and anyone with attendance records in this range. Without a Present record, the learner is shown as Absent.</p>
         <div className={styles.actions}>
           <button className="btn" type="submit" disabled={Boolean(busy)}>{busy === "pdf" ? "Preparing PDF…" : "Download PDF"}</button>
-          <button className="btn btn-secondary" type="button" disabled={Boolean(busy)} onClick={() => void download("csv")}>{busy === "csv" ? "Preparing CSV…" : "Download CSV"}</button>
+          <button className="btn btn-secondary" type="button" disabled={Boolean(busy)} onClick={/*
+     * Handle the click event for this control.
+     */
+    () => void download("csv")}>{busy === "csv" ? "Preparing CSV…" : "Download CSV"}</button>
         </div>
       </form>
       {busy && <p role="status">Preparing your attendance report…</p>}

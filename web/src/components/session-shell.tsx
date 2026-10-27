@@ -12,6 +12,9 @@ import { clearSessionId, homeFor, readSession, type Session } from "@/lib/sessio
 
 import { SessionContext } from "./session-context";
 
+/*
+ * Render the session shell interface and its associated content.
+ */
 export default function SessionShell({
   children,
 }: {
@@ -23,9 +26,16 @@ export default function SessionShell({
   const [session, setSession] = useState<Session | null>(null);
   const [error, setError] = useState("");
   const [leaving, setLeaving] = useState(false);
-  const logoutAction = useRef<() => Promise<void>>(async () => {});
+  const logoutAction = useRef<() => Promise<void>>(/*
+     * Initialize the callback or state retained by this React ref.
+     */
+    async () => {});
 
-  useEffect(() => {
+  useEffect(/*
+     * Synchronize the component with its current dependencies and manage effect
+     * resources.
+     */
+    () => {
     let disposed = false;
     let ended = false;
     let loggingOut = false;
@@ -36,6 +46,9 @@ export default function SessionShell({
     let expiryTimer: ReturnType<typeof setTimeout> | undefined;
     const channel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("ako-session") : null;
 
+    /*
+     * End the local staff session, release timers and return to the login page.
+     */
     const end = (broadcast = false) => {
       if (ended || disposed) return;
       ended = true;
@@ -46,11 +59,20 @@ export default function SessionShell({
       if (broadcast) channel?.postMessage("logout");
       router.replace("/");
     };
+    /*
+     * Schedule local session termination at the server-provided expiry instant.
+     */
     const scheduleExpiry = (expiresAt: number) => {
       deadline = expiresAt;
       clearTimeout(expiryTimer);
-      expiryTimer = setTimeout(() => end(), Math.max(0, expiresAt - Date.now()));
+      expiryTimer = setTimeout(/*
+     * Compute the next timeout state from its previous value.
+     */
+    () => end(), Math.max(0, expiresAt - Date.now()));
     };
+    /*
+     * Read the current staff session and synchronize its identity and expiry.
+     */
     const check = async () => {
       if (ended || disposed || loggingOut) return;
       try {
@@ -64,6 +86,9 @@ export default function SessionShell({
         if (!disposed && !ended) setError(reason instanceof Error ? reason.message : "Unable to check your session.");
       }
     };
+    /*
+     * Renew session expiry after trusted user activity and notify other tabs.
+     */
     const refresh = async () => {
       if (!dirty || refreshing || ended || disposed || loggingOut) return;
       if (deadline && deadline <= Date.now()) return end();
@@ -87,6 +112,9 @@ export default function SessionShell({
         if (dirty && !ended && !disposed && !loggingOut) activityTimer = setTimeout(refresh, 250);
       }
     };
+    /*
+     * Record trusted pointer or keyboard activity and request session renewal.
+     */
     const interacted = (event: Event) => {
       if (!event.isTrusted || ended || loggingOut || !deadline) return;
       if (deadline <= Date.now()) return end();
@@ -94,15 +122,27 @@ export default function SessionShell({
       clearTimeout(activityTimer);
       if (!refreshing) void refresh();
     };
+    /*
+     * Recheck the session when the document becomes visible.
+     */
     const visible = () => {
       if (document.visibilityState === "visible") void check();
     };
+    /*
+     * Recheck the session after browser focus or page restoration.
+     */
     const restored = () => void check();
-    channel && (channel.onmessage = (event) => {
+    channel && (channel.onmessage = /*
+     * Update channel.onmessage for the session shell workflow.
+     */
+    (event) => {
       if (event.data === "logout") end();
       else if (event.data === "activity") void check();
     });
-    logoutAction.current = async () => {
+    logoutAction.current = /*
+     * Update logout action for the session shell workflow.
+     */
+    async () => {
       if (loggingOut || ended) return;
       loggingOut = true;
       setLeaving(true);
@@ -127,6 +167,9 @@ export default function SessionShell({
     window.addEventListener("pageshow", restored);
     window.addEventListener("focus", restored);
     document.addEventListener("visibilitychange", visible);
+    /*
+     * Release resources installed by the enclosing component effect.
+     */
     return () => {
       disposed = true;
       clearInterval(poll);
@@ -162,7 +205,10 @@ export default function SessionShell({
       </nav>
       <div className="who">
         {session.display_name} ({session.role}) ·{" "}
-        <button type="button" className="btn btn-secondary" disabled={leaving} onClick={() => void logoutAction.current()}>
+        <button type="button" className="btn btn-secondary" disabled={leaving} onClick={/*
+     * Handle the click event for this control.
+     */
+    () => void logoutAction.current()}>
           {leaving ? "Logging out…" : "Log out"}
         </button>
       </div>

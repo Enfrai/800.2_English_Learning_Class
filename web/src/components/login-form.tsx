@@ -18,6 +18,9 @@ type LoginResult = {
   role: Role;
 };
 
+/*
+ * Render the login form interface and its associated content.
+ */
 export default function LoginForm() {
   const router = useRouter();
   const [username, setUsername] = useState("");
@@ -26,6 +29,10 @@ export default function LoginForm() {
   const [message, setMessage] = useState("");
   const [failed, setFailed] = useState(false);
 
+  /*
+   * Validate login input, authenticate the staff member and navigate to their role
+   * home.
+   */
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (loading) return;
@@ -83,7 +90,10 @@ export default function LoginForm() {
             required
             disabled={loading}
             value={username}
-            onInput={(event) => setUsername((event.target as HTMLInputElement).value)}
+            onInput={/*
+     * Handle the input event for this control.
+     */
+    (event) => setUsername((event.target as HTMLInputElement).value)}
           />
           <TextField
             label="Password"
@@ -93,7 +103,10 @@ export default function LoginForm() {
             required
             disabled={loading}
             value={password}
-            onInput={(event) => setPassword((event.target as HTMLInputElement).value)}
+            onInput={/*
+     * Handle the input event for this control.
+     */
+    (event) => setPassword((event.target as HTMLInputElement).value)}
           />
           <Button type="submit" disabled={loading}>
             {loading ? "Signing in…" : "Sign in"}

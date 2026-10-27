@@ -1,7 +1,16 @@
+/*
+ * Render learner-shared materials after classroom sign-in.
+ * Author: SandhyaCodes1
+ * Date: 26 Oct 2026
+ */
+
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import MaterialsScreen from "@/components/materials/materials-screen";
 export const dynamic = "force-dynamic";
+/*
+ * Render the materials page interface and its associated content.
+ */
 export default async function MaterialsPage() {
   const token = (await cookies()).get("ako_materials")?.value;
   if (!token) redirect("/sign-in");

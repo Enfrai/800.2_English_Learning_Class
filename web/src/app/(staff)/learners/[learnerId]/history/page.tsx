@@ -4,6 +4,9 @@
  */
 import AttendanceHistoryScreen from "@/components/attendance-history/attendance-history-screen";
 export const metadata = { title: "Learner attendance history" };
+/*
+ * Render the history page interface and its associated content.
+ */
 export default async function HistoryPage({ params }: { params: Promise<{ learnerId: string }> }) {
   const { learnerId } = await params;
   return <AttendanceHistoryScreen learnerId={learnerId} />;

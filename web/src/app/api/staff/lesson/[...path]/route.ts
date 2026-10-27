@@ -1,3 +1,10 @@
+/*
+ * Validate and bridge staff lesson requests from the browser cookie to internal Bearer
+ * authentication.
+ * Author: willtbing
+ * Date: 25 Oct 2026
+ */
+
 import { NextRequest, NextResponse } from "next/server";
 
 // Fixed deployment target, never a client-supplied destination or redirect.

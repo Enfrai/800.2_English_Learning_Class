@@ -12,6 +12,9 @@ type TextFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, "autoComplete"
   autocomplete?: string;
 };
 
+/*
+ * Render the text field interface and its associated content.
+ */
 export function TextField({ label, autocomplete, id, ...props }: TextFieldProps) {
   const generatedId = useId();
   const inputId = id ?? generatedId;
@@ -21,6 +24,9 @@ export function TextField({ label, autocomplete, id, ...props }: TextFieldProps)
   </div>;
 }
 
+/*
+ * Render the button interface and its associated content.
+ */
 export function Button({ className = "", ...props }: ButtonHTMLAttributes<HTMLButtonElement>) {
   return <button {...props} className={`btn ${className}`.trim()} />;
 }
