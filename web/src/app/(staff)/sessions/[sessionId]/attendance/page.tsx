@@ -8,6 +8,9 @@ import AttendanceScreen from "@/components/attendance/attendance-screen";
 
 export const metadata: Metadata = { title: "Attendance" };
 
+/*
+ * Render the attendance page interface and its associated content.
+ */
 export default async function AttendancePage({
   params,
 }: {

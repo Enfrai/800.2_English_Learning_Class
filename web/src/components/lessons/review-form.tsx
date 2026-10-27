@@ -20,6 +20,9 @@ function clubToday(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Pacific/Auckland" }).format(new Date());
 }
 
+/*
+ * Render the review form interface and its associated content.
+ */
 export default function ReviewForm({ lessonId, onSaved, onLoginRequired }: {
   lessonId: string;
   onSaved: () => Promise<void>;
@@ -32,12 +35,18 @@ export default function ReviewForm({ lessonId, onSaved, onLoginRequired }: {
   const [busy, setBusy] = useState(false);
   const form = useRef<HTMLFormElement>(null);
 
+  /*
+   * Display validation feedback and focus the first invalid form field.
+   */
   function showErrors(found: Record<string, string>) {
     setErrors(found);
     const first = Object.keys(found)[0];
     if (first) form.current?.querySelector<HTMLElement>(`[name="${first}"]`)?.focus();
   }
 
+  /*
+   * Validate and submit the review form form, updating its success and error state.
+   */
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
@@ -60,8 +69,14 @@ export default function ReviewForm({ lessonId, onSaved, onLoginRequired }: {
     } finally { setBusy(false); }
   }
 
+  /*
+   * Read the validation message associated with the requested form field.
+   */
   const fieldError = (field: string) => errors[field] &&
     <p id={`${field}-error`} className="msg msg-error" role="alert">{errors[field]}</p>;
+  /*
+   * Build accessible validation attributes for a form control.
+   */
   const attrs = (field: string) => ({
     "aria-invalid": Boolean(errors[field]),
     "aria-describedby": [field === "review_date" ? "review-date-hint" : "", errors[field] ? `${field}-error` : ""].filter(Boolean).join(" ") || undefined,
@@ -72,11 +87,17 @@ export default function ReviewForm({ lessonId, onSaved, onLoginRequired }: {
     <form ref={form} onSubmit={save} noValidate aria-busy={busy}>
       <div className="field"><label htmlFor="reviewer-name" className="req">Reviewer name</label>
         <input id="reviewer-name" name="reviewer_name" type="text" maxLength={MAX_NAME_LENGTH} value={name} disabled={busy}
-          {...attrs("reviewer_name")} onChange={e => setName(e.target.value)} />
+          {...attrs("reviewer_name")} onChange={/*
+     * Handle the change event for this control.
+     */
+    e => setName(e.target.value)} />
         {fieldError("reviewer_name")}</div>
       <div className="field"><label htmlFor="review-date" className="req">Review date</label>
         <input id="review-date" name="review_date" type="date" max={clubToday()} value={date} disabled={busy}
-          {...attrs("review_date")} onChange={e => setDate(e.target.value)} />
+          {...attrs("review_date")} onChange={/*
+     * Handle the change event for this control.
+     */
+    e => setDate(e.target.value)} />
         <p id="review-date-hint" className="hint">Not in the future</p>
         {fieldError("review_date")}</div>
       <button className="btn" type="submit" disabled={busy}>{busy ? "Saving…" : "Save review"}</button>

@@ -27,12 +27,18 @@ export type SignInResult =
 
 const DEVICE_ID_KEY = "ako.signin-device";
 
+/*
+ * Generate a random browser device identifier using the available crypto API.
+ */
 function randomUuid(): string {
   // crypto.randomUUID needs HTTPS; getRandomValues works on plain HTTP too.
   const bytes = crypto.getRandomValues(new Uint8Array(16));
   bytes[6] = (bytes[6] & 0x0f) | 0x40;
   bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  const hex = Array.from(bytes, /*
+     * Handle the callback result for from in the current workflow.
+     */
+    (byte) => byte.toString(16).padStart(2, "0")).join("");
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
@@ -53,10 +59,16 @@ function deviceId(): string {
   }
 }
 
+/*
+ * Build the public check-in endpoint using the encoded token.
+ */
 function checkinUrl(token: string): string {
   return `/api/access/checkin/${encodeURIComponent(token)}`;
 }
 
+/*
+ * Send the feature API request and translate its response into data or a typed error.
+ */
 async function send(
   url: string,
   init?: RequestInit,
@@ -74,8 +86,14 @@ async function send(
   }
 }
 
+/*
+ * Extract the safe error-detail text from the check-in API response.
+ */
 async function detail(response: Response): Promise<string | undefined> {
-  const body: unknown = await response.json().catch(() => null);
+  const body: unknown = await response.json().catch(/*
+     * Handle an asynchronous failure using the workflow’s error state.
+     */
+    () => null);
   const value = (body as { detail?: unknown } | null)?.detail;
   return typeof value === "string" ? value : undefined;
 }

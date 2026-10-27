@@ -5,4 +5,7 @@
 
 import SessionListScreen from "@/components/class-sessions/session-list";
 export const metadata = { title: "Class sessions" };
+/*
+ * Render the class-session list route.
+ */
 export default function Page() { return <SessionListScreen />; }

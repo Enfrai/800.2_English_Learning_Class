@@ -1,3 +1,9 @@
+/*
+ * Display paginated enquiries with Coordinator-session checks and failure recovery.
+ * Author: Leonwu2026
+ * Date: 25 Oct 2026
+ */
+
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -9,6 +15,9 @@ type State = "loading" | "ready" | "login" | "forbidden" | "error";
 const PAGE_SIZE = 20;
 const MAX_OFFSET = 10000;
 
+/*
+ * Validate an unknown enquiry API record.
+ */
 function isEnquiry(value: unknown): value is Enquiry {
   if (!value || typeof value !== "object") return false;
   const row = value as Record<string, unknown>;
@@ -30,7 +39,10 @@ export default function CoordinatorEnquiries() {
   const active = useRef<AbortController | null>(null);
   const pending = useRef(false);
 
-  const load = useCallback(async (nextOffset: number) => {
+  const load = useCallback(/*
+     * Run the memoized load operation for the current dependencies.
+     */
+    async (nextOffset: number) => {
     active.current?.abort();
     const controller = new AbortController();
     active.current = controller;
@@ -63,14 +75,27 @@ export default function CoordinatorEnquiries() {
     }
   }, [identity, session?.role]);
 
-  useEffect(() => {
+  useEffect(/*
+     * Synchronize the component with its current dependencies and manage effect
+     * resources.
+     */
+    () => {
     void load(0);
+    /*
+     * Reload enquiry data when the browser returns to the visible tab.
+     */
     const recheck = () => { void load(0); };
     // Clear/revalidate on tab changes; no polling or session activity refresh is added.
     window.addEventListener("focus", recheck);
+    /*
+     * Release resources installed by the enclosing component effect.
+     */
     return () => { active.current?.abort(); window.removeEventListener("focus", recheck); };
   }, [load]);
 
+  /*
+   * Load the selected enquiry page with bounded pagination.
+   */
   function navigate(nextOffset: number) {
     if (!pending.current) void load(nextOffset);
   }
@@ -85,12 +110,18 @@ export default function CoordinatorEnquiries() {
     {displayState === "login" && <p className="msg msg-error" role="alert">Please log in to view enquiries. <a href="/">Log in</a></p>}
     {displayState === "forbidden" && <p className="msg msg-error" role="alert">You do not have permission</p>}
     {displayState === "loading" && <p role="status">Loading enquiries…</p>}
-    {displayState === "error" && <div className="msg msg-error" role="alert"><p>Unable to load enquiries. Please try again.</p><button className="btn" onClick={() => navigate(offset)}>Retry</button></div>}
+    {displayState === "error" && <div className="msg msg-error" role="alert"><p>Unable to load enquiries. Please try again.</p><button className="btn" onClick={/*
+     * Handle the click event for this control.
+     */
+    () => navigate(offset)}>Retry</button></div>}
     {displayState === "ready" && <>
       <p className="sub" role="status">Page {offset / PAGE_SIZE + 1}. Newest enquiries first.</p>
       {rows.length === 0 && <p className="msg msg-info">No enquiries on this page.</p>}
       <ul className={styles.list} aria-label="Enquiries">
-        {rows.map(row => <li key={row.id} className={`card ${styles.card}`}>
+        {rows.map(/*
+     * Transform the current collection item into its displayed or normalized value.
+     */
+    row => <li key={row.id} className={`card ${styles.card}`}>
           <h2>{row.name}</h2>
           <dl><dt>Contact</dt><dd>{row.contact}</dd>
             <dt>Message</dt><dd className={styles.message}>{row.message || "No message"}</dd>
@@ -98,9 +129,18 @@ export default function CoordinatorEnquiries() {
         </li>)}
       </ul>
       <nav className={styles.actions} aria-label="Enquiry pages">
-        <button className="btn btn-secondary" disabled={offset === 0} onClick={() => navigate(offset - PAGE_SIZE)}>Previous</button>
-        <button className="btn" disabled={rows.length < PAGE_SIZE || offset + PAGE_SIZE > MAX_OFFSET} onClick={() => navigate(offset + PAGE_SIZE)}>Next</button>
-        <button className="btn btn-secondary" onClick={() => navigate(0)}>Refresh</button>
+        <button className="btn btn-secondary" disabled={offset === 0} onClick={/*
+     * Handle the click event for this control.
+     */
+    () => navigate(offset - PAGE_SIZE)}>Previous</button>
+        <button className="btn" disabled={rows.length < PAGE_SIZE || offset + PAGE_SIZE > MAX_OFFSET} onClick={/*
+     * Handle the click event for this control.
+     */
+    () => navigate(offset + PAGE_SIZE)}>Next</button>
+        <button className="btn btn-secondary" onClick={/*
+     * Handle the click event for this control.
+     */
+    () => navigate(0)}>Refresh</button>
       </nav>
     </>}
   </section>;

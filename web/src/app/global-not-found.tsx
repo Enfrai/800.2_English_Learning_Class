@@ -1,3 +1,9 @@
+/*
+ * Render the global not-found page with public navigation.
+ * Author: SandhyaCodes1
+ * Date: 26 Oct 2026
+ */
+
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { PUBLIC_COPY as copy } from "@/lib/club-information";
@@ -6,6 +12,9 @@ import "@/styles/ako/components.css";
 
 export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 export const metadata: Metadata = { title: "Page not found · Ako" };
+/*
+ * Render the global not found interface and its associated content.
+ */
 export default function GlobalNotFound() {
   return <html lang="en"><body>
     <header className="bar"><Link className="logo" href="/" aria-label="Ako home">Ako</Link></header>

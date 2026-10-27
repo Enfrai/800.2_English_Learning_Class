@@ -6,4 +6,7 @@
 import AttendanceReports from "@/components/attendance-reports/attendance-reports";
 
 export const metadata = { title: "Attendance reports" };
+/*
+ * Render the attendance reports page interface and its associated content.
+ */
 export default function AttendanceReportsPage() { return <AttendanceReports />; }

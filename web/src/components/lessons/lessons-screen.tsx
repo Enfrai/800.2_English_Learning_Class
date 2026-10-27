@@ -1,3 +1,9 @@
+/*
+ * Display and filter the lesson library with permitted create and copy actions.
+ * Author: collegelogin
+ * Date: 24 Oct 2026
+ */
+
 "use client";
 
 import Link from "next/link";
@@ -7,6 +13,9 @@ import { listLessons, listTags, LoginRequiredError, messageFor, type Lesson } fr
 import ReviewPill from "./review-pill";
 import styles from "./lessons.module.css";
 
+/*
+ * Render the lessons screen interface and its associated content.
+ */
 export default function LessonsScreen() {
   const router = useRouter();
   const [lessons, setLessons] = useState<Lesson[]>([]);
@@ -18,27 +27,62 @@ export default function LessonsScreen() {
   const [error, setError] = useState("");
   const [tagError, setTagError] = useState("");
   const latest = useRef(0);
-  useEffect(() => {
+  useEffect(/*
+     * Synchronize the component with its current dependencies and manage effect
+     * resources.
+     */
+    () => {
     let active = true;
-    void listTags().then(rows => { if (active) { setTopics(rows.map(row => row.name)); setTagError(""); } }).catch(error => {
+    void listTags().then(/*
+     * Apply the completed asynchronous result to the component’s data or state.
+     */
+    rows => { if (active) { setTopics(rows.map(/*
+     * Transform the current collection item into its displayed or normalized value.
+     */
+    row => row.name)); setTagError(""); } }).catch(/*
+     * Handle an asynchronous failure using the workflow’s error state.
+     */
+    error => {
       if (!active) return;
       if (error instanceof LoginRequiredError) router.replace("/");
       else setTagError("Topic filters could not be loaded. Choose Refresh to try again.");
     });
+    /*
+     * Release resources installed by the enclosing component effect.
+     */
     return () => { active = false; };
   }, [refresh, router]);
-  useEffect(() => {
+  useEffect(/*
+     * Synchronize the component with its current dependencies and manage effect
+     * resources.
+     */
+    () => {
     const request = ++latest.current;
     setLoading(true); setError("");
-    const timer = window.setTimeout(() => {
-      void listLessons({ q: keyword, tag }).then(rows => {
+    const timer = window.setTimeout(/*
+     * Compute the next timeout state from its previous value.
+     */
+    () => {
+      void listLessons({ q: keyword, tag }).then(/*
+     * Apply the completed asynchronous result to the component’s data or state.
+     */
+    rows => {
         if (latest.current === request) setLessons(rows);
-      }).catch(error => {
+      }).catch(/*
+     * Handle an asynchronous failure using the workflow’s error state.
+     */
+    error => {
         if (latest.current !== request) return;
         if (error instanceof LoginRequiredError) router.replace("/");
         else setError(messageFor(error));
-      }).finally(() => { if (latest.current === request) setLoading(false); });
+      }).finally(/*
+     * Restore operation state after the asynchronous request finishes.
+     */
+    () => { if (latest.current === request) setLoading(false); });
     }, 250);
+    /*
+     * Release resources installed by the enclosing component effect.
+     */
     return () => { window.clearTimeout(timer); if (latest.current === request) latest.current++; };
   }, [keyword, tag, refresh, router]);
   return <>
@@ -46,20 +90,44 @@ export default function LessonsScreen() {
     <p className="sub">Keep lesson plans, topic tags and teaching materials together.</p>
     <div className={`row no-print ${styles.toolbar}`}>
       <Link href="/lessons/new" className="btn">New lesson</Link>
-      <button className="btn btn-secondary" onClick={() => setRefresh(value => value + 1)}>Refresh</button>
+      <button className="btn btn-secondary" onClick={/*
+     * Handle the click event for this control.
+     */
+    () => setRefresh(/*
+     * Compute the next refresh state from its previous value.
+     */
+    value => value + 1)}>Refresh</button>
     </div>
-    <form className={`no-print ${styles.search}`} role="search" onSubmit={event => { event.preventDefault(); setRefresh(value => value + 1); }}>
+    <form className={`no-print ${styles.search}`} role="search" onSubmit={/*
+     * Handle the submit event for this control.
+     */
+    event => { event.preventDefault(); setRefresh(/*
+     * Compute the next refresh state from its previous value.
+     */
+    value => value + 1); }}>
       <div className="grid-2">
         <div className="field"><label htmlFor="lesson-search">Search lessons</label>
-          <input id="lesson-search" type="search" maxLength={255} value={keyword} onChange={event => setKeyword(event.target.value)} aria-describedby="lesson-search-hint" />
+          <input id="lesson-search" type="search" maxLength={255} value={keyword} onChange={/*
+     * Handle the change event for this control.
+     */
+    event => setKeyword(event.target.value)} aria-describedby="lesson-search-hint" />
           <p id="lesson-search-hint" className="hint">Search titles and topic tags. File contents are not searched.</p></div>
         <div className="field"><label htmlFor="lesson-topic">Topic tag</label>
-          <select id="lesson-topic" value={tag} onChange={event => setTag(event.target.value)}>
-            <option value="">All topics</option>{topics.map(topic => <option key={topic} value={topic}>{topic}</option>)}
+          <select id="lesson-topic" value={tag} onChange={/*
+     * Handle the change event for this control.
+     */
+    event => setTag(event.target.value)}>
+            <option value="">All topics</option>{topics.map(/*
+     * Transform the current collection item into its displayed or normalized value.
+     */
+    topic => <option key={topic} value={topic}>{topic}</option>)}
           </select></div>
       </div>
       <div className="row"><button className="btn btn-secondary" type="submit">Search</button>
-        <button className="btn btn-secondary" type="button" onClick={() => { setKeyword(""); setTag(""); }} disabled={!keyword && !tag}>Clear filters</button></div>
+        <button className="btn btn-secondary" type="button" onClick={/*
+     * Handle the click event for this control.
+     */
+    () => { setKeyword(""); setTag(""); }} disabled={!keyword && !tag}>Clear filters</button></div>
     </form>
     {tagError && <p className="msg msg-warning" role="status">{tagError}</p>}
     {loading && <p role="status">Searching lessons…</p>}
@@ -69,11 +137,17 @@ export default function LessonsScreen() {
     {!loading && !error && lessons.length > 0 && <div className={styles.table} role="region" aria-label="Lesson results" tabIndex={0}>
       <table className="data">
         <thead><tr><th scope="col">Title</th><th scope="col">Date</th><th scope="col">Topics</th><th scope="col">Materials</th><th scope="col" className="no-print">Actions</th></tr></thead>
-        <tbody>{lessons.map(lesson => <tr key={lesson.id}>
+        <tbody>{lessons.map(/*
+     * Transform the current collection item into its displayed or normalized value.
+     */
+    lesson => <tr key={lesson.id}>
           <td><Link href={`/lessons/${lesson.id}`}>{lesson.title}</Link>
             {lesson.review_label && <p><ReviewPill lesson={lesson} /></p>}</td>
           <td><time dateTime={lesson.lesson_date}>{lesson.lesson_date}</time></td>
-          <td>{lesson.tags.map(topic => <span className="chip" key={topic}>{topic}</span>)}</td>
+          <td>{lesson.tags.map(/*
+     * Transform the current collection item into its displayed or normalized value.
+     */
+    topic => <span className="chip" key={topic}>{topic}</span>)}</td>
           <td>{lesson.materials.length}</td>
           <td className="no-print"><div className={styles.actions}>
             {lesson.can_edit ? <Link className="btn btn-secondary" href={`/lessons/${lesson.id}/edit`} aria-label={`Edit ${lesson.title}`}>Edit</Link> : <span>View only</span>}

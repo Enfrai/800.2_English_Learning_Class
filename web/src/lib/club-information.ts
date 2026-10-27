@@ -1,3 +1,10 @@
+/*
+ * Validate sample club configuration before publishing approved schedule, contact or
+ * greeting content.
+ * Author: SandhyaCodes1
+ * Date: 26 Oct 2026
+ */
+
 export type ClubInformation = {
   day: string; time: string; venue: string; address: string;
   sample: boolean;
@@ -23,21 +30,42 @@ export const PUBLIC_COPY = {
   notFound: "Page not found", notFoundNote: "We could not find that page.",
   returnHome: "Go to home page",
 };
+/*
+ * Check whether the supplied value is a nonarray object record.
+ */
 const record = (value: unknown): Record<string, unknown> =>
   value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+/*
+ * Count words in trimmed public-information text.
+ */
 export function wordCount(value: string): number { return value.trim().split(/\s+/u).filter(Boolean).length; }
+/*
+ * Check whether public-information sentences meet the configured readability limit.
+ */
 export function shortSentences(value: string): boolean {
-  return value.split(/[.!?]+(?:\s|$)/u).every(sentence => wordCount(sentence) <= 15);
+  return value.split(/[.!?]+(?:\s|$)/u).every(/*
+     * Check whether every collection entry satisfies this validation rule.
+     */
+    sentence => wordCount(sentence) <= 15);
 }
+/*
+ * Normalize and bound an optional public-information text value.
+ */
 function text(value: unknown): string | null {
   if (typeof value !== "string" || !value.trim() || value.length > 250 || !shortSentences(value)) return null;
   return value.trim();
 }
+/*
+ * Validate a calendar date used for approved public-information content.
+ */
 function validDay(value: unknown): value is string {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const date = new Date(value + "T00:00:00Z");
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
+/*
+ * Validate club configuration and expose only approved public information.
+ */
 export function clubInformation(config: unknown, today = new Intl.DateTimeFormat("en-CA", { timeZone: "Pacific/Auckland", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date())): ClubInformation {
   const root = record(config), schedule = record(root.schedule), contact = record(root.contact), greeting = record(root.greeting);
   const values = [schedule.day, schedule.time, schedule.venue, schedule.address].map(text);
@@ -50,7 +78,10 @@ export function clubInformation(config: unknown, today = new Intl.DateTimeFormat
     const email = parts.length === 2 && value.length <= 254 && local.length <= 64
       && /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+$/.test(local) && !local.startsWith(".")
       && !local.endsWith(".") && !local.includes("..") && domain.includes(".")
-      && domain.split(".").every(label => /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/.test(label));
+      && domain.split(".").every(/*
+     * Check whether every collection entry satisfies this validation rule.
+     */
+    label => /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/.test(label));
     if (contact.type === "email" && email) {
       details = { label: "Email", value, href: "mailto:" + encodeURIComponent(local) + "@" + domain };
     } else if (contact.type === "phone" && /^\+?[0-9 ()-]+$/.test(value) && value.replace(/\D/g, "").length >= 7 && value.replace(/\D/g, "").length <= 15) {

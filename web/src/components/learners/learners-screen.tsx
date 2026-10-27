@@ -18,6 +18,9 @@ type LoadState = "loading" | "ready" | "login-required" | "failed";
 
 const LEARNER_SAVED = "Learner saved";
 
+/*
+ * Render the learners screen interface and its associated content.
+ */
 export default function LearnersScreen() {
   const session = useSession();
   const [showImport, setShowImport] = useState(false);
@@ -26,7 +29,10 @@ export default function LearnersScreen() {
   const [formTarget, setFormTarget] = useState<FormTarget>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(/*
+     * Run the memoized load operation for the current dependencies.
+     */
+    async () => {
     try {
       setLearners(await listLearners());
       setLoadState("ready");
@@ -35,15 +41,25 @@ export default function LearnersScreen() {
     }
   }, []);
 
-  useEffect(() => {
+  useEffect(/*
+     * Synchronize the component with its current dependencies and manage effect
+     * resources.
+     */
+    () => {
     void load();
   }, [load]);
 
+  /*
+   * Open the learner editor for a new or existing learner.
+   */
   function openForm(learner: Learner | null) {
     setNotice(null);
     setFormTarget({ learner });
   }
 
+  /*
+   * Apply the saved learner and close the editor after a successful save.
+   */
   async function handleSaved() {
     setFormTarget(null);
     setNotice(LEARNER_SAVED);
@@ -68,17 +84,29 @@ export default function LearnersScreen() {
 
       {/* The kit's .row has no margin, so keep the button off the table. */}
       <div className="row no-print" style={{ marginBottom: "var(--space-4)" }}>
-        <button type="button" className="btn" onClick={() => openForm(null)}>
+        <button type="button" className="btn" onClick={/*
+     * Handle the click event for this control.
+     */
+    () => openForm(null)}>
           Add learner
         </button>
         {/* Visibility uses SessionShell's validated role; the import API also enforces it. */}
         {session?.role === "coordinator" && <button type="button" className="btn btn-secondary"
-          aria-expanded={showImport} onClick={() => setShowImport(current => !current)}>
+          aria-expanded={showImport} onClick={/*
+     * Handle the click event for this control.
+     */
+    () => setShowImport(/*
+     * Compute the next show import state from its previous value.
+     */
+    current => !current)}>
           {showImport ? "Close CSV import" : "Import CSV"}
         </button>}
       </div>
       {session?.role === "coordinator" && showImport && <div className="no-print">
-        <CsvUpload onImported={() => void load()} />
+        <CsvUpload onImported={/*
+     * Handle the imported event for this control.
+     */
+    () => void load()} />
       </div>}
       {notice && (
         <div className="msg msg-success" role="status">
@@ -90,7 +118,10 @@ export default function LearnersScreen() {
       {loadState === "failed" && (
         <div className="msg msg-error" role="alert">
           The learners could not be loaded. Please try again.{" "}
-          <button type="button" className="btn btn-secondary" onClick={() => void load()}>
+          <button type="button" className="btn btn-secondary" onClick={/*
+     * Handle the click event for this control.
+     */
+    () => void load()}>
             Try again
           </button>
         </div>
@@ -107,15 +138,27 @@ export default function LearnersScreen() {
           // A new key gives a fresh form when another learner is chosen.
           key={formTarget.learner?.id ?? "new"}
           learner={formTarget.learner}
-          onSaved={() => void handleSaved()}
-          onCancel={() => setFormTarget(null)}
-          onLoginRequired={() => setLoadState("login-required")}
+          onSaved={/*
+     * Handle the saved event for this control.
+     */
+    () => void handleSaved()}
+          onCancel={/*
+     * Handle the cancel event for this control.
+     */
+    () => setFormTarget(null)}
+          onLoginRequired={/*
+     * Handle the login required event for this control.
+     */
+    () => setLoadState("login-required")}
         />
       )}
     </>
   );
 }
 
+/*
+ * Render the learner table interface and its associated content.
+ */
 function LearnerTable({
   learners,
   onEdit,
@@ -136,7 +179,10 @@ function LearnerTable({
         </tr>
       </thead>
       <tbody>
-        {learners.map((learner) => {
+        {learners.map(/*
+     * Transform the current collection item into its displayed or normalized value.
+     */
+    (learner) => {
           const name = `${learner.first_name} ${learner.family_name}`;
           return (
             <tr key={learner.id}>
@@ -150,7 +196,10 @@ function LearnerTable({
                     type="button"
                     className="btn btn-secondary"
                     aria-label={`Edit ${name}`}
-                    onClick={() => onEdit(learner)}
+                    onClick={/*
+     * Handle the click event for this control.
+     */
+    () => onEdit(learner)}
                   >
                     Edit
                   </button>

@@ -23,6 +23,9 @@ import { formatSessionDate } from "@/lib/dates";
 type PageState = "loading" | "open" | "signed-in" | "closed" | "failed";
 type Message = { kind: "info" | "error"; text: string };
 
+/*
+ * Render the sign in screen interface and its associated content.
+ */
 export default function SignInScreen({ token }: { token: string }) {
   const [state, setState] = useState<PageState>("loading");
   const [sessionDate, setSessionDate] = useState("");
@@ -32,26 +35,48 @@ export default function SignInScreen({ token }: { token: string }) {
   const [sending, setSending] = useState(false);
   const firstFieldRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+  useEffect(/*
+     * Synchronize the component with its current dependencies and manage effect
+     * resources.
+     */
+    () => {
     let active = true;
-    void getCheckin(token).then((checkin) => {
+    void getCheckin(token).then(/*
+     * Apply the completed asynchronous result to the component’s data or state.
+     */
+    (checkin) => {
       if (!active) return;
       if (checkin.kind === "open") {
         setSessionDate(checkin.sessionDate);
         setState("open");
       } else setState(checkin.kind);
     });
+    /*
+     * Release resources installed by the enclosing component effect.
+     */
     return () => {
       active = false;
     };
   }, [token]);
 
+  /*
+   * Update the edited form field and clear its obsolete feedback.
+   */
   function change(field: string, value: string) {
-    setName((current) => ({ ...current, [field]: value }));
-    setErrors((current) => ({ ...current, [field]: undefined }));
+    setName(/*
+     * Compute the next name state from its previous value.
+     */
+    (current) => ({ ...current, [field]: value }));
+    setErrors(/*
+     * Compute the next errors state from its previous value.
+     */
+    (current) => ({ ...current, [field]: undefined }));
     setMessage(null);
   }
 
+  /*
+   * Validate and submit the sign in screen form, updating its success and error state.
+   */
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (sending) return;
@@ -105,7 +130,10 @@ export default function SignInScreen({ token }: { token: string }) {
       )}
 
       {state === "open" && (
-        <form onSubmit={(event) => void submit(event)} noValidate aria-busy={sending}>
+        <form onSubmit={/*
+     * Handle the submit event for this control.
+     */
+    (event) => void submit(event)} noValidate aria-busy={sending}>
           <TextField
             ref={firstFieldRef}
             name="first_name"

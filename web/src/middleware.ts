@@ -11,9 +11,15 @@ import { NextResponse, type NextRequest } from "next/server";
 // server-side call would otherwise share the web container's one rate limit.
 const userApi = process.env.USER_API_URL || "http://user-service:8000";
 
+/*
+ * Check live staff authentication and role before rendering protected pages.
+ */
 export async function middleware(request: NextRequest) {
   const noStore = { "Cache-Control": "no-store" };
   const cookie = request.cookies.get("ako_session");
+  /*
+   * Build the login redirect while preserving protected-route response headers.
+   */
   const login = () => {
     // Next middleware requires an absolute redirect. Its internal request URL
     // may contain the Next server's port, so use the incoming public Host here.

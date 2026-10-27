@@ -31,6 +31,10 @@ export type LearnerDetails = {
 export class LearnerFieldError extends Error {
   readonly field: string;
 
+  /*
+   * Initialize the error instance and retain the supplied message and structured
+   * details.
+   */
   constructor(field: string, message: string) {
     super(message);
     this.field = field;
@@ -41,6 +45,10 @@ export class LearnerFieldError extends Error {
 export class DuplicateNameError extends Error {
   readonly duplicates: Learner[];
 
+  /*
+   * Initialize the error instance and retain the supplied message and structured
+   * details.
+   */
   constructor(message: string, duplicates: Learner[]) {
     super(message);
     this.duplicates = duplicates;
@@ -54,6 +62,9 @@ export function throwIfFieldError(status: number, detail: Record<string, unknown
   }
 }
 
+/*
+ * Send the feature API request and translate its response into data or a typed error.
+ */
 async function send<T>(url: string, init: RequestInit = {}): Promise<T> {
   const { status, body, detail } = await apiRequest(url, init);
   if (status >= 200 && status < 300) return body as T;
@@ -64,10 +75,16 @@ async function send<T>(url: string, init: RequestInit = {}): Promise<T> {
   throw new RequestFailedError();
 }
 
+/*
+ * Load the active learner list.
+ */
 export function listLearners(): Promise<Learner[]> {
   return send<Learner[]>(LEARNERS_URL);
 }
 
+/*
+ * Submit a new learner with explicit namesake confirmation when requested.
+ */
 export function addLearner(
   details: LearnerDetails,
   allowDuplicate: boolean,
@@ -78,6 +95,9 @@ export function addLearner(
   });
 }
 
+/*
+ * Save changes to the selected learner record.
+ */
 export function updateLearner(
   id: string,
   details: LearnerDetails,

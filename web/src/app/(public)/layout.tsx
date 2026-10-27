@@ -16,6 +16,9 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 
+/*
+ * Render the public layout interface and its associated content.
+ */
 export default function PublicLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {

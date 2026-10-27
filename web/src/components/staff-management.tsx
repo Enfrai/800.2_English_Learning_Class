@@ -23,6 +23,9 @@ type Notice = { kind: "success" | "error"; message: string };
 const LAST_COORDINATOR = "At least one coordinator must stay active";
 class AccessLost extends Error {}
 
+/*
+ * Validate an unknown staff-account API record.
+ */
 function isAccount(value: unknown): value is StaffAccount {
   if (!value || typeof value !== "object") return false;
   const row = value as Record<string, unknown>;
@@ -55,7 +58,10 @@ export default function StaffManagement() {
   const disabled = loading || busy || !loaded || blocked;
 
   /** Never supply Origin or tokens manually: same-origin cookies use the existing CSRF checks. */
-  const request = useCallback(async (path: string, init: RequestInit = {}) => {
+  const request = useCallback(/*
+     * Run the memoized request operation for the current dependencies.
+     */
+    async (path: string, init: RequestInit = {}) => {
     const response = await fetch(`/api/user${path}`, {
       ...init, credentials: "same-origin", cache: "no-store",
     });
@@ -74,7 +80,10 @@ export default function StaffManagement() {
       throw new AccessLost();
     }
     if (!response.ok) {
-      const body: unknown = await response.json().catch(() => null);
+      const body: unknown = await response.json().catch(/*
+     * Handle an asynchronous failure using the workflow’s error state.
+     */
+    () => null);
       const detail = body && typeof body === "object" && "detail" in body ? body.detail : null;
       // Render only agreed API messages, never arbitrary server errors or validation input.
       if (response.status === 409 && detail === "Username already taken") throw new Error(detail);
@@ -88,32 +97,57 @@ export default function StaffManagement() {
   }, [router]);
 
   /** Loading is passive: it reads staff without refreshing the authentication session. */
-  const loadTeachers = useCallback(async (signal?: AbortSignal) => {
+  const loadTeachers = useCallback(/*
+     * Run the memoized load teachers operation for the current dependencies.
+     */
+    async (signal?: AbortSignal) => {
     const response = await request("/staff", { signal });
     const data: unknown = await response.json();
     if (!Array.isArray(data) || !data.every(isAccount)) throw new Error("Unable to read the staff list. Please try again.");
     if (mounted.current && !accessLost.current && !signal?.aborted) {
       // Teachers get every action; Coordinators can only be deactivated (AC5).
-      setTeachers(data.filter(account => account.role === "teacher"));
-      setCoordinators(data.filter(account => account.role === "coordinator"));
+      setTeachers(data.filter(/*
+     * Select collection entries matching this predicate.
+     */
+    account => account.role === "teacher"));
+      setCoordinators(data.filter(/*
+     * Select collection entries matching this predicate.
+     */
+    account => account.role === "coordinator"));
       setLoaded(true);
       setLoadError("");
     }
   }, [request]);
 
-  useEffect(() => {
+  useEffect(/*
+     * Synchronize the component with its current dependencies and manage effect
+     * resources.
+     */
+    () => {
     mounted.current = true;
     const controller = new AbortController();
-    void loadTeachers(controller.signal).catch(reason => {
+    void loadTeachers(controller.signal).catch(/*
+     * Handle an asynchronous failure using the workflow’s error state.
+     */
+    reason => {
       if (!controller.signal.aborted && mounted.current && !(reason instanceof AccessLost)) {
         setLoadError("Unable to load Teacher accounts. Please try again.");
       }
-    }).finally(() => {
+    }).finally(/*
+     * Restore operation state after the asynchronous request finishes.
+     */
+    () => {
       if (!controller.signal.aborted && mounted.current) setLoading(false);
     });
+    /*
+     * Release resources installed by the enclosing component effect.
+     */
     return () => { mounted.current = false; controller.abort(); };
   }, [loadTeachers]);
 
+  /*
+   * Reload staff accounts while preserving authentication failure handling.
+   */
   async function refreshList() {
     if (pending.current || loading || accessLost.current) return;
     setLoading(true);
@@ -139,8 +173,17 @@ export default function StaffManagement() {
       if (!mounted.current || accessLost.current) return false;
       // Show the committed change immediately; a failed follow-up GET must not imply the write failed.
       const setList = account.role === "teacher" ? setTeachers : setCoordinators;
-      setList(current => [...current.filter(row => row.id !== account.id), account]
-        .sort((a, b) => a.username.localeCompare(b.username)));
+      setList(/*
+     * Compute the next list state from its previous value.
+     */
+    current => [...current.filter(/*
+     * Select collection entries matching this predicate.
+     */
+    row => row.id !== account.id), account]
+        .sort(/*
+     * Handle the callback result for sort in the current workflow.
+     */
+    (a, b) => a.username.localeCompare(b.username)));
       setNotice({ kind: "success", message });
       setEditing(null);
       setConfirming(null);
@@ -161,6 +204,9 @@ export default function StaffManagement() {
     }
   }
 
+  /*
+   * Validate and submit a new Teacher account, then refresh the staff list.
+   */
   async function createTeacher(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (pending.current || disabled) return;
@@ -182,6 +228,9 @@ export default function StaffManagement() {
     }
   }
 
+  /*
+   * Submit the edited Teacher display name.
+   */
   async function renameTeacher(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!editing || pending.current || disabled) return;
@@ -190,6 +239,9 @@ export default function StaffManagement() {
     await mutate(`/staff/${encodeURIComponent(editing.id)}`, "PATCH", { display_name: editName }, "Teacher name updated.");
   }
 
+  /*
+   * Submit account deactivation after confirmation and refresh the list.
+   */
   async function deactivateTeacher() {
     if (!confirming || !confirming.is_active) return;
     // This action is reached only from the separate confirmation step; it never deletes history.
@@ -206,9 +258,18 @@ export default function StaffManagement() {
       <section aria-labelledby="create-heading" className={styles.section}>
         <h2 id="create-heading">Add Teacher</h2>
         <form onSubmit={createTeacher} noValidate aria-label="Add Teacher" aria-busy={busy}>
-          <TextField label="Name" name="display_name" maxLength={150} required disabled={disabled} value={name} onInput={e => setName((e.target as HTMLInputElement).value)} />
-          <TextField label="Username" name="username" maxLength={100} autocomplete="off" required disabled={disabled} value={username} onInput={e => setUsername((e.target as HTMLInputElement).value)} />
-          <TextField label="Temporary Password" name="temporary_password" type="password" autocomplete="new-password" required disabled={disabled} value={password} onInput={e => setPassword((e.target as HTMLInputElement).value)} />
+          <TextField label="Name" name="display_name" maxLength={150} required disabled={disabled} value={name} onInput={/*
+     * Handle the input event for this control.
+     */
+    e => setName((e.target as HTMLInputElement).value)} />
+          <TextField label="Username" name="username" maxLength={100} autocomplete="off" required disabled={disabled} value={username} onInput={/*
+     * Handle the input event for this control.
+     */
+    e => setUsername((e.target as HTMLInputElement).value)} />
+          <TextField label="Temporary Password" name="temporary_password" type="password" autocomplete="new-password" required disabled={disabled} value={password} onInput={/*
+     * Handle the input event for this control.
+     */
+    e => setPassword((e.target as HTMLInputElement).value)} />
           <Button type="submit" disabled={disabled}>{busy ? "Saving…" : "Create Teacher"}</Button>
         </form>
       </section>
@@ -216,10 +277,16 @@ export default function StaffManagement() {
         <h2 id="edit-heading">Edit Teacher name</h2>
         <p>Username: {editing.username}</p>
         <form onSubmit={renameTeacher} noValidate aria-label="Edit Teacher name" aria-busy={busy}>
-          <TextField label="Name" name="edit_display_name" maxLength={150} required disabled={disabled} value={editName} onInput={e => setEditName((e.target as HTMLInputElement).value)} />
+          <TextField label="Name" name="edit_display_name" maxLength={150} required disabled={disabled} value={editName} onInput={/*
+     * Handle the input event for this control.
+     */
+    e => setEditName((e.target as HTMLInputElement).value)} />
           <div className={styles.actions}>
             <Button type="submit" disabled={disabled}>Save name</Button>
-            <Button className="btn-secondary" type="button" disabled={busy} onClick={() => setEditing(null)}>Cancel edit</Button>
+            <Button className="btn-secondary" type="button" disabled={busy} onClick={/*
+     * Handle the click event for this control.
+     */
+    () => setEditing(null)}>Cancel edit</Button>
           </div>
         </form>
       </section>}
@@ -228,23 +295,41 @@ export default function StaffManagement() {
         <p>Deactivate {confirming.display_name} ({confirming.username})? They will no longer be able to sign in. Their lessons and attendance history will be kept.
           {confirming.role === "coordinator" && " At least one coordinator must stay active."}</p>
         <div className={styles.actions}>
-          <Button className="btn-danger" type="button" disabled={disabled} onClick={() => void deactivateTeacher()}>Confirm deactivation</Button>
-          <Button className="btn-secondary" type="button" disabled={busy} onClick={() => setConfirming(null)}>Cancel deactivation</Button>
+          <Button className="btn-danger" type="button" disabled={disabled} onClick={/*
+     * Handle the click event for this control.
+     */
+    () => void deactivateTeacher()}>Confirm deactivation</Button>
+          <Button className="btn-secondary" type="button" disabled={busy} onClick={/*
+     * Handle the click event for this control.
+     */
+    () => setConfirming(null)}>Cancel deactivation</Button>
         </div>
       </section>}
       <section className={styles.section} aria-labelledby="list-heading" aria-busy={loading}>
         <div className={styles.listHeader}>
           <h2 id="list-heading">Teacher accounts</h2>
-          <Button className="btn-secondary" type="button" disabled={busy || loading} onClick={() => void refreshList()}>Refresh list</Button>
+          <Button className="btn-secondary" type="button" disabled={busy || loading} onClick={/*
+     * Handle the click event for this control.
+     */
+    () => void refreshList()}>Refresh list</Button>
         </div>
         {loading && <p role="status">Loading Teacher accounts…</p>}
         {!loading && loaded && teachers.length === 0 && <p role="status">No Teacher accounts yet.</p>}
         <ul className={styles.list} aria-label="Teacher accounts">
-          {teachers.map(teacher => <li key={teacher.id} className={`card ${styles.card}`}>
+          {teachers.map(/*
+     * Transform the current collection item into its displayed or normalized value.
+     */
+    teacher => <li key={teacher.id} className={`card ${styles.card}`}>
             <div className={styles.details}><h3>{teacher.display_name}</h3><p>Username: {teacher.username}</p><p>Status: <span className={`badge ${teacher.is_active ? "badge-reviewed" : "badge-inactive"}`}>{teacher.is_active ? "Active" : "Inactive"}</span></p></div>
             <div className={styles.actions}>
-              <Button className="btn-secondary" type="button" disabled={disabled} aria-label={`Edit ${teacher.username}`} onClick={() => { setEditing(teacher); setEditName(teacher.display_name); setConfirming(null); setNotice(null); }}>Edit name</Button>
-              {teacher.is_active && <Button className="btn-secondary" type="button" disabled={disabled} aria-label={`Deactivate ${teacher.username}`} onClick={() => { setConfirming(teacher); setEditing(null); setNotice(null); }}>Deactivate</Button>}
+              <Button className="btn-secondary" type="button" disabled={disabled} aria-label={`Edit ${teacher.username}`} onClick={/*
+     * Handle the click event for this control.
+     */
+    () => { setEditing(teacher); setEditName(teacher.display_name); setConfirming(null); setNotice(null); }}>Edit name</Button>
+              {teacher.is_active && <Button className="btn-secondary" type="button" disabled={disabled} aria-label={`Deactivate ${teacher.username}`} onClick={/*
+     * Handle the click event for this control.
+     */
+    () => { setConfirming(teacher); setEditing(null); setNotice(null); }}>Deactivate</Button>}
             </div>
           </li>)}
         </ul>
@@ -252,10 +337,16 @@ export default function StaffManagement() {
       <section className={styles.section} aria-labelledby="coordinator-list-heading">
         <h2 id="coordinator-list-heading">Coordinator accounts</h2>
         <ul className={styles.list} aria-label="Coordinator accounts">
-          {coordinators.map(account => <li key={account.id} className={`card ${styles.card}`}>
+          {coordinators.map(/*
+     * Transform the current collection item into its displayed or normalized value.
+     */
+    account => <li key={account.id} className={`card ${styles.card}`}>
             <div className={styles.details}><h3>{account.display_name}</h3><p>Username: {account.username}</p><p>Status: <span className={`badge ${account.is_active ? "badge-reviewed" : "badge-inactive"}`}>{account.is_active ? "Active" : "Inactive"}</span></p></div>
             <div className={styles.actions}>
-              {account.is_active && <Button className="btn-secondary" type="button" disabled={disabled} aria-label={`Deactivate ${account.username}`} onClick={() => { setConfirming(account); setEditing(null); setNotice(null); }}>Deactivate</Button>}
+              {account.is_active && <Button className="btn-secondary" type="button" disabled={disabled} aria-label={`Deactivate ${account.username}`} onClick={/*
+     * Handle the click event for this control.
+     */
+    () => { setConfirming(account); setEditing(null); setNotice(null); }}>Deactivate</Button>}
             </div>
           </li>)}
         </ul>
