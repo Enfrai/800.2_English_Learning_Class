@@ -1,5 +1,12 @@
 # US-011: Open check-in with a QR code
 
+For the complete real-phone setup and operation procedure, see the
+[user manual walkthrough](../manual/Ako_User_Manual.md#77-verify-qr-sign-in-step-by-step)
+and [validation checklist](../manual/Ako_User_Manual.md#78-additional-validation-cases-and-results).
+These cover a fresh learner, shared PDF, successful scan, live attendance,
+repeat sign-in, immediate closure and materials access after closure.
+Record actual results; the procedure does not certify a successful run.
+
 ## User workflow
 
 1. A Teacher or Coordinator opens **Class sessions** and starts today's class.
@@ -37,13 +44,19 @@ and computer should be on the same reachable Wi-Fi network. Use HTTPS as the
 public origin when the deployment serves HTTPS. The bind-address default remains
 127.0.0.1 unless configured. This feature needs no paid QR service or app.
 
-From the repository root:
+Use the current feature/v1.0/pre_release checkout. From the repository root:
 
 ```bash
-git switch feature/v1.0/US_011
-git pull --ff-only
-docker compose -f server/compose.yaml up -d --build --force-recreate --wait
+cd server
+docker compose up -d --build
+docker compose restart nginx
+docker compose ps
 ```
+
+On the phone, first open the configured LAN origin followed by /class-information.
+Do not proceed until that page loads. Then open today's check-in and confirm
+that the displayed QR link uses the same reachable origin. For local HTTP, keep
+COOKIE_SECURE=false; use the appropriate secure-cookie setting for HTTPS.
 
 Keep existing database volumes. No schema migration is added. Local Python
 installs must reinstall the Accessment requirements for `qrcode`.

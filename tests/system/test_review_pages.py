@@ -21,6 +21,9 @@ AXE_URL = "https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js"
 
 
 def run_axe(page: Page) -> list[str]:
+    """
+    Run the accessibility audit against the rendered page and inspect its violations.
+    """
     page.add_script_tag(
         **(
             {"path": os.environ["AXE_SCRIPT_PATH"]}
@@ -39,6 +42,9 @@ def run_axe(page: Page) -> list[str]:
 def test_st09_lesson_with_maori_content_on_the_pages(
     teacher_page: Page, logged_in_page: Page
 ) -> None:
+    """
+    Verify that st09 lesson with maori content on the pages.
+    """
     title = unique("Matariki")
     teacher = LessonPages(teacher_page)
     coordinator = LessonPages(logged_in_page)
@@ -67,6 +73,9 @@ def test_st09_lesson_with_maori_content_on_the_pages(
 def test_lesson_without_the_tick_has_no_label_or_review_form(
     teacher_page: Page, logged_in_page: Page
 ) -> None:
+    """
+    Verify that lesson without the tick has no label or review form.
+    """
     lesson_id = LessonPages(teacher_page).create(unique("Bus"), maori_content=False)
     coordinator = LessonPages(logged_in_page)
 
@@ -79,6 +88,9 @@ def test_lesson_without_the_tick_has_no_label_or_review_form(
 def test_only_coordinators_see_the_review_form(
     teacher_page: Page, logged_in_page: Page
 ) -> None:
+    """
+    Verify that only coordinators see the review form.
+    """
     teacher = LessonPages(teacher_page)
     lesson_id = teacher.create(unique("Waiata"), maori_content=True)
     coordinator = LessonPages(logged_in_page)
@@ -96,6 +108,9 @@ def test_only_coordinators_see_the_review_form(
 def test_ac3_empty_name_and_future_date_are_refused_on_the_page(
     teacher_page: Page, logged_in_page: Page
 ) -> None:
+    """
+    Verify that ac3 empty name and future date are refused on the page.
+    """
     lesson_id = LessonPages(teacher_page).create(unique("Haka"), maori_content=True)
     coordinator = LessonPages(logged_in_page)
     coordinator.open(lesson_id)
@@ -116,6 +131,9 @@ def test_ac3_empty_name_and_future_date_are_refused_on_the_page(
 def test_unticking_removes_the_label_and_the_review(
     teacher_page: Page, logged_in_page: Page
 ) -> None:
+    """
+    Verify that unticking removes the label and the review.
+    """
     teacher = LessonPages(teacher_page)
     lesson_id = teacher.create(unique("Karakia"), maori_content=True)
     coordinator = LessonPages(logged_in_page)
@@ -142,6 +160,9 @@ def test_unticking_removes_the_label_and_the_review(
 def test_nt10_macrons_are_kept_in_the_list_and_on_the_page(
     teacher_page: Page, logged_in_page: Page
 ) -> None:
+    """
+    Verify that nt10 macrons are kept in the list and on the page.
+    """
     title = unique("Te reo Māori: ā ē ī ō ū")
     teacher = LessonPages(teacher_page)
     lesson_id = teacher.create(title, maori_content=True)
@@ -164,6 +185,9 @@ def test_nt10_macrons_are_kept_in_the_list_and_on_the_page(
 def test_nt06_lesson_form_and_review_form_have_no_accessibility_violations(
     teacher_page: Page, logged_in_page: Page
 ) -> None:
+    """
+    Verify that nt06 lesson form and review form have no accessibility violations.
+    """
     teacher = LessonPages(teacher_page)
     lesson_id = teacher.create(unique("Matariki"), maori_content=True)
     teacher_page.goto(f"/lessons/{lesson_id}/edit")
@@ -180,6 +204,9 @@ def test_nt06_lesson_form_and_review_form_have_no_accessibility_violations(
 def test_nt06_review_can_be_recorded_with_the_keyboard(
     teacher_page: Page, logged_in_page: Page
 ) -> None:
+    """
+    Verify that nt06 review can be recorded with the keyboard.
+    """
     lesson_id = LessonPages(teacher_page).create(unique("Pepeha"), maori_content=True)
     coordinator = LessonPages(logged_in_page)
     coordinator.open(lesson_id)

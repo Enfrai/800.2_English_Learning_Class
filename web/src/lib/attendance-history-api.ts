@@ -11,8 +11,15 @@ export type AttendanceHistory = {
   start_date: string | null; end_date: string | null;
 };
 export class HistoryError extends Error {
+  /*
+   * Initialize the error instance and retain the supplied message and structured
+   * details.
+   */
   constructor(message: string, readonly status: number, readonly field?: string) { super(message); }
 }
+/*
+ * Load and validate a learner’s attendance history with optional date filters.
+ */
 export async function getAttendanceHistory(id: string, start = "", end = ""): Promise<AttendanceHistory> {
   const query = new URLSearchParams();
   if (start) query.set("start_date", start);
@@ -26,7 +33,13 @@ export async function getAttendanceHistory(id: string, start = "", end = ""): Pr
   if (!value?.learner || value.learner.id !== id || typeof value.learner.name !== "string"
       || !Array.isArray(value.sessions) || typeof value.has_records !== "boolean"
       || value.total_count !== value.sessions.length
-      || !value.sessions.every(row => typeof row.session_id === "string" && /^\d{4}-\d{2}-\d{2}$/.test(row.session_date) && ["Present", "Absent"].includes(row.status))
-      || value.present_count !== value.sessions.filter(row => row.status === "Present").length) throw new RequestFailedError();
+      || !value.sessions.every(/*
+     * Check whether every collection entry satisfies this validation rule.
+     */
+    row => typeof row.session_id === "string" && /^\d{4}-\d{2}-\d{2}$/.test(row.session_date) && ["Present", "Absent"].includes(row.status))
+      || value.present_count !== value.sessions.filter(/*
+     * Select collection entries matching this predicate.
+     */
+    row => row.status === "Present").length) throw new RequestFailedError();
   return value;
 }

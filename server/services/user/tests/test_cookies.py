@@ -14,6 +14,9 @@ from test_login import LoginContext
 
 
 def cookie_headers(context: AuthContext) -> dict[str, str]:
+    """
+    Construct browser cookie and origin headers for authentication scenarios.
+    """
     return {"Cookie": f"ako_session={context['token']}"}
 
 
@@ -34,6 +37,9 @@ def test_login_cookie_attributes(
     public_origin: str | None,
     secure: bool,
 ) -> None:
+    """
+    Verify that login cookie attributes.
+    """
     module, _, _, _, _ = api
     security = importlib.import_module("security")
     module.app.state.session_security = security.SessionSecurity(public_origin, forced)
@@ -57,6 +63,9 @@ def test_login_cookie_attributes(
 
 
 def test_cookie_only_authentication_is_read_only(context: AuthContext) -> None:
+    """
+    Verify that cookie only authentication is read only.
+    """
     c = context
 
     with c["factory"]() as db:
@@ -85,6 +94,9 @@ def test_cookie_only_authentication_is_read_only(context: AuthContext) -> None:
 def test_credentials_never_silently_fall_back(
     context: AuthContext, authorization: str | None, cookie: str, status: int
 ) -> None:
+    """
+    Verify that credentials never silently fall back.
+    """
     c = context
     headers = {"Cookie": f"ako_session={c['token'] if cookie == 'valid' else cookie}"}
     if authorization is not None:
@@ -104,6 +116,9 @@ def test_credentials_never_silently_fall_back(
 
 @pytest.mark.parametrize("kind", ["cookie", "authorization"])
 def test_duplicate_credentials_rejected(context: AuthContext, kind: str) -> None:
+    """
+    Verify that duplicate credentials rejected.
+    """
     token = context["token"]
     headers = (
         [("Cookie", f"ako_session={token}; ako_session=other")]
@@ -124,6 +139,9 @@ def test_duplicate_credentials_rejected(context: AuthContext, kind: str) -> None
     ],
 )
 def test_login_origin_rejected_before_database(api: LoginContext, origin: str) -> None:
+    """
+    Verify that login origin rejected before database.
+    """
     _, client, db, _, _ = api
     response = client.post(
         "/login",
@@ -147,6 +165,9 @@ def test_login_origin_rejected_before_database(api: LoginContext, origin: str) -
 def test_browser_login_requires_origin(
     api: LoginContext, headers: dict[str, str]
 ) -> None:
+    """
+    Verify that browser login requires origin.
+    """
     _, client, db, _, _ = api
     response = client.post(
         "/login",
@@ -158,6 +179,9 @@ def test_browser_login_requires_origin(
 
 
 def test_same_origin_browser_login(api: LoginContext) -> None:
+    """
+    Verify that same origin browser login.
+    """
     _, client, _, _, _ = api
     response = client.post(
         "/login",
@@ -169,6 +193,9 @@ def test_same_origin_browser_login(api: LoginContext) -> None:
 
 
 def test_public_origin_proxy_configuration(api: LoginContext) -> None:
+    """
+    Verify that public origin proxy configuration.
+    """
     module, client, _, _, _ = api
     security = importlib.import_module("security")
     module.app.state.session_security = security.SessionSecurity(
@@ -196,11 +223,18 @@ def test_public_origin_proxy_configuration(api: LoginContext) -> None:
 def test_cookie_mutation_guard(
     context: AuthContext, origin: str | None, with_bearer: bool, status: int
 ) -> None:
+    """
+    Verify that cookie mutation guard.
+    """
     c = context
     calls = []
 
     @c["module"].app.post("/test/cookie-mutation")
     def guarded(user: Any = Depends(c["auth"].get_current_user)) -> dict[str, str]:
+        """
+        Handle POST /test/cookie-mutation for guarded, applying the route’s validation
+        and authorization rules.
+        """
         calls.append(user.user_id)
         return {"user_id": str(user.user_id)}
 
@@ -216,6 +250,9 @@ def test_cookie_mutation_guard(
 
 @pytest.mark.parametrize("status", [401, 422, 423])
 def test_failed_login_never_issues_cookie(api: LoginContext, status: int) -> None:
+    """
+    Verify that failed login never issues cookie.
+    """
     _, client, _, row, _ = api
     if status == 423:
         row["failed_login_attempts"] = 4
@@ -229,6 +266,9 @@ def test_failed_login_never_issues_cookie(api: LoginContext, status: int) -> Non
 def test_cookie_settings_reject_insecure_override(
     monkeypatch: pytest.MonkeyPatch, api: LoginContext
 ) -> None:
+    """
+    Verify that cookie settings reject insecure override.
+    """
     security = importlib.import_module("security")
     monkeypatch.setenv("SESSION_COOKIE_SECURE", "false")
     with pytest.raises(ValueError):
@@ -236,10 +276,17 @@ def test_cookie_settings_reject_insecure_override(
 
 
 def test_bearer_only_mutation_does_not_require_origin(context: AuthContext) -> None:
+    """
+    Verify that bearer only mutation does not require origin.
+    """
     c = context
 
     @c["module"].app.post("/test/bearer-mutation")
     def guarded(user: Any = Depends(c["auth"].get_current_user)) -> dict[str, str]:
+        """
+        Handle POST /test/bearer-mutation for guarded, applying the route’s validation
+        and authorization rules.
+        """
         return {"user_id": str(user.user_id)}
 
     response = c["client"].post(
@@ -250,6 +297,9 @@ def test_bearer_only_mutation_does_not_require_origin(context: AuthContext) -> N
 
 
 def test_raw_forwarded_header_is_not_a_trusted_origin(api: LoginContext) -> None:
+    """
+    Verify that raw forwarded header is not a trusted origin.
+    """
     _, client, db, _, _ = api
     response = client.post(
         "/login",

@@ -23,6 +23,9 @@ API = tuple[TestClient, Engine]
 @pytest.fixture
 def api(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[API]:
     # Pin even the lazy import-time engine to temporary storage; bypass demo seeding.
+    """
+    Provide injected API client and isolated application fixture.
+    """
     url = f"sqlite:///{tmp_path / 'listing.sqlite'}"
     monkeypatch.setenv("DATABASE_URL", url)
     application = importlib.import_module("app")
@@ -86,10 +89,16 @@ def api(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[API]:
 
 
 def headers(token: str = "coordinator") -> dict[str, str]:
+    """
+    Prepare or exercise headers in the test enquiry listing test scenario.
+    """
     return {"Authorization": f"Bearer {token}"}
 
 
 def test_coordinator_fields_order_and_cache(api: API) -> None:
+    """
+    Verify that coordinator fields order and cache.
+    """
     client, _ = api
     response = client.get("/enquiries", headers=headers())
     assert response.status_code == 200
@@ -115,6 +124,9 @@ def test_coordinator_fields_order_and_cache(api: API) -> None:
     ],
 )
 def test_denied(api: API, token: str | None, status: int) -> None:
+    """
+    Verify that denied.
+    """
     client, _ = api
     response = client.get("/enquiries", headers=headers(token) if token else {})
     assert response.status_code == status
@@ -128,6 +140,9 @@ def test_denied(api: API, token: str | None, status: int) -> None:
     "query", ["limit=0", "limit=101", "limit=no", "offset=-1", "offset=10001"]
 )
 def test_invalid_pagination(api: API, query: str) -> None:
+    """
+    Verify that invalid pagination.
+    """
     client, _ = api
     response = client.get(f"/enquiries?{query}", headers=headers())
     assert response.status_code == 422
@@ -135,6 +150,9 @@ def test_invalid_pagination(api: API, query: str) -> None:
 
 
 def test_pagination_and_empty(api: API) -> None:
+    """
+    Verify that pagination and empty.
+    """
     client, engine = api
     assert client.get("/enquiries?limit=1&offset=1", headers=headers()).json()[0][
         "id"
@@ -146,6 +164,9 @@ def test_pagination_and_empty(api: API) -> None:
 
 
 def test_default_and_maximum_limit(api: API) -> None:
+    """
+    Verify that default and maximum limit.
+    """
     client, engine = api
     with engine.begin() as db:
         db.execute(
@@ -157,6 +178,9 @@ def test_default_and_maximum_limit(api: API) -> None:
 
 
 def test_database_role_not_client_claim(api: API) -> None:
+    """
+    Verify that database role not client claim.
+    """
     client, engine = api
     response = client.get(
         "/enquiries?role=coordinator",
@@ -173,6 +197,9 @@ def test_database_role_not_client_claim(api: API) -> None:
 
 
 def test_post_still_public_and_session_read_is_passive(api: API) -> None:
+    """
+    Verify that post still public and session read is passive.
+    """
     client, engine = api
     with engine.connect() as db:
         before = db.execute(select(user_sessions)).all()
@@ -201,6 +228,9 @@ def test_post_still_public_and_session_read_is_passive(api: API) -> None:
     ],
 )
 def test_cookie_authorization(api: API, token: str, status: int) -> None:
+    """
+    Verify that cookie authorization.
+    """
     client, _ = api
     client.cookies.set("ako_session", token)
     response = client.get("/enquiries")
@@ -211,6 +241,9 @@ def test_cookie_authorization(api: API, token: str, status: int) -> None:
 
 
 def test_conflicting_credentials_and_idle_session(api: API) -> None:
+    """
+    Verify that conflicting credentials and idle session.
+    """
     client, engine = api
     client.cookies.set("ako_session", "teacher")
     assert client.get("/enquiries", headers=headers()).status_code == 401
@@ -225,6 +258,9 @@ def test_conflicting_credentials_and_idle_session(api: API) -> None:
 
 
 def test_public_post_ignores_invalid_cookie_and_errors_are_not_cached(api: API) -> None:
+    """
+    Verify that public post ignores invalid cookie and errors are not cached.
+    """
     client, engine = api
     client.cookies.set("ako_session", "invalid")
     payload = dict(

@@ -23,6 +23,9 @@ AuthContext = dict[str, Any]
 
 @pytest.fixture
 def context(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[AuthContext]:
+    """
+    Provide isolated browser context or test context supplied by the fixture.
+    """
     service = Path(__file__).resolve().parents[1]
     monkeypatch.syspath_prepend(str(service))
     monkeypatch.setenv(
@@ -46,6 +49,9 @@ def context(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[AuthCon
     class Clock:
         @staticmethod
         def now(tz: tzinfo | None) -> datetime:
+            """
+            Return the current timezone-aware UTC instant.
+            """
             return clock["now"]
 
     monkeypatch.setattr(auth, "datetime", Clock)
@@ -77,11 +83,19 @@ def context(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[AuthCon
 
     @module.app.get("/test/coordinator")
     def coordinator(user: Any = Depends(auth.require_coordinator)) -> dict[str, str]:
+        """
+        Handle GET /test/coordinator for coordinator, applying the route’s validation
+        and authorization rules.
+        """
         calls.append("coordinator")
         return {"user_id": str(user.user_id)}
 
     @module.app.get("/test/teacher")
     def teacher(user: Any = Depends(auth.require_teacher)) -> dict[str, str]:
+        """
+        Handle GET /test/teacher for teacher, applying the route’s validation and
+        authorization rules.
+        """
         calls.append("teacher")
         return {"user_id": str(user.user_id)}
 
@@ -108,6 +122,9 @@ def context(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[AuthCon
 
 @contextmanager
 def _client(app: FastAPI) -> Iterator[TestClient]:
+    """
+    Provide the client context and release its resources after use.
+    """
     client = TestClient(app)
     try:
         yield client
@@ -116,20 +133,32 @@ def _client(app: FastAPI) -> Iterator[TestClient]:
 
 
 def headers(ctx: AuthContext) -> dict[str, str]:
+    """
+    Prepare or exercise headers in the test auth test scenario.
+    """
     return {"Authorization": f"Bearer {ctx['token']}"}
 
 
 def change_session(ctx: AuthContext, **values: Any) -> None:
+    """
+    Prepare or exercise change session in the test auth test scenario.
+    """
     with ctx["factory"].begin() as db:
         db.execute(ctx["sessions"].update().values(**values))
 
 
 def change_user(ctx: AuthContext, **values: Any) -> None:
+    """
+    Prepare or exercise change user in the test auth test scenario.
+    """
     with ctx["factory"].begin() as db:
         db.execute(ctx["users"].update().values(**values))
 
 
 def test_valid_session_minimal_identity(context: AuthContext) -> None:
+    """
+    Verify that valid session minimal identity.
+    """
     c = context
     response = c["client"].get("/session", headers=headers(c))
     assert response.status_code == 200
@@ -148,6 +177,9 @@ def test_valid_session_minimal_identity(context: AuthContext) -> None:
 def test_missing_malformed_and_unknown_tokens(
     context: AuthContext, authorization: str | None
 ) -> None:
+    """
+    Verify that missing malformed and unknown tokens.
+    """
     c = context
     response = c["client"].get(
         "/session",
@@ -163,6 +195,9 @@ def test_missing_malformed_and_unknown_tokens(
     ["expired", "boundary", "revoked", "inactive", "deleted_session", "deleted_user"],
 )
 def test_invalid_database_states(context: AuthContext, state: str) -> None:
+    """
+    Verify that invalid database states.
+    """
     c = context
     if state == "expired":
         change_session(c, expires_at=c["now"] - timedelta(seconds=1))
@@ -194,6 +229,9 @@ def test_invalid_database_states(context: AuthContext, state: str) -> None:
 def test_exact_role_authorization_before_handler(
     context: AuthContext, role: str, path: str, status: int
 ) -> None:
+    """
+    Verify that exact role authorization before handler.
+    """
     c = context
     change_user(c, role=role)
     response = c["client"].get(path, headers=headers(c))
@@ -206,6 +244,9 @@ def test_exact_role_authorization_before_handler(
 
 
 def test_unauthenticated_role_route_never_runs(context: AuthContext) -> None:
+    """
+    Verify that unauthenticated role route never runs.
+    """
     c = context
     response = c["client"].get("/test/coordinator")
     assert response.status_code == 401
@@ -213,6 +254,9 @@ def test_unauthenticated_role_route_never_runs(context: AuthContext) -> None:
 
 
 def test_client_role_and_query_token_are_not_trusted(context: AuthContext) -> None:
+    """
+    Verify that client role and query token are not trusted.
+    """
     c = context
     response = c["client"].get(
         "/test/coordinator?role=coordinator",
@@ -224,6 +268,9 @@ def test_client_role_and_query_token_are_not_trusted(context: AuthContext) -> No
 
 
 def test_database_role_change_applies_on_next_request(context: AuthContext) -> None:
+    """
+    Verify that database role change applies on next request.
+    """
     c = context
     assert c["client"].get("/test/teacher", headers=headers(c)).status_code == 200
     change_user(c, role="coordinator")
@@ -232,6 +279,9 @@ def test_database_role_change_applies_on_next_request(context: AuthContext) -> N
 
 
 def test_validation_is_read_only(context: AuthContext) -> None:
+    """
+    Verify that validation is read only.
+    """
     c = context
     statements = []
     with c["factory"]() as db:
@@ -245,6 +295,9 @@ def test_validation_is_read_only(context: AuthContext) -> None:
         context: Any,
         executemany: bool,
     ) -> None:
+        """
+        Inspect or record capture events for the surrounding database or HTTP test.
+        """
         statements.append(statement)
 
     event.listen(c["engine"], "before_cursor_execute", capture)
@@ -263,11 +316,17 @@ def test_validation_is_read_only(context: AuthContext) -> None:
 def test_overlapping_validation_cannot_reactivate_session(
     context: AuthContext, monkeypatch: pytest.MonkeyPatch, transition: str
 ) -> None:
+    """
+    Verify that overlapping validation cannot reactivate session.
+    """
     c = context
     validated, resume = Event(), Event()
     original = c["auth"].authenticate_session
 
     def paused_validation(token: str, db: Session) -> Any:
+        """
+        Pause session validation to exercise a concurrent account or session transition.
+        """
         user = original(token, db)
         validated.set()
         assert resume.wait(5), "test did not release validation"
@@ -298,6 +357,9 @@ def test_overlapping_validation_cannot_reactivate_session(
 def test_login_and_validation_share_injected_factory(
     context: AuthContext, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """
+    Verify that login and validation share injected factory.
+    """
     c = context
     module = c["module"]
     monkeypatch.setattr(module, "datetime", c["auth"].datetime)

@@ -14,10 +14,16 @@ import user_client
 def test_minimal_roster_uses_one_authenticated_post_and_keeps_duplicate_names(
     monkeypatch,
 ):
+    """
+    Verify that minimal roster uses one authenticated post and keeps duplicate names.
+    """
     first, second = uuid4(), uuid4()
     calls = []
 
     def request(method, path, authorization, body):
+        """
+        Send a REQUEST request through the test client with the supplied scenario data.
+        """
         calls.append((method, path, authorization, body))
         return 200, [
             {
@@ -44,6 +50,9 @@ def test_minimal_roster_uses_one_authenticated_post_and_keeps_duplicate_names(
 
 @pytest.mark.parametrize("status", [401, 403, 404, 409, 500, 503])
 def test_http_errors_never_become_empty_report(monkeypatch, status):
+    """
+    Verify that http errors never become empty report.
+    """
     monkeypatch.setattr(user_client, "_request", lambda *args: (status, {}))
     with pytest.raises(
         user_client.LoginRequiredError
@@ -66,12 +75,18 @@ def test_http_errors_never_become_empty_report(monkeypatch, status):
     ],
 )
 def test_malformed_rosters_fail_closed(monkeypatch, body):
+    """
+    Verify that malformed rosters fail closed.
+    """
     monkeypatch.setattr(user_client, "_request", lambda *args: (200, body))
     with pytest.raises(user_client.UserServiceError):
         report_client.report_names("Bearer coordinator", set())
 
 
 def test_duplicate_uuid_or_missing_historical_name_is_rejected(monkeypatch):
+    """
+    Verify that duplicate uuid or missing historical name is rejected.
+    """
     identifier = uuid4()
     row = {"id": str(identifier), "first_name": "A", "family_name": "B"}
     for body in ([row, row], []):
@@ -81,7 +96,14 @@ def test_duplicate_uuid_or_missing_historical_name_is_rejected(monkeypatch):
 
 
 def test_transport_failure_is_not_swallowed(monkeypatch):
+    """
+    Verify that transport failure is not swallowed.
+    """
     def fail(*args):
+        """
+        Simulate an unavailable dependency or failing operation for the surrounding
+        test.
+        """
         raise user_client.UserServiceError()
 
     monkeypatch.setattr(user_client, "_request", fail)

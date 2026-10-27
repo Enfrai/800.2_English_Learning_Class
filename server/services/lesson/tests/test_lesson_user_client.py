@@ -12,6 +12,9 @@ import user_client
 
 @pytest.mark.parametrize("role", ["teacher", "coordinator"])
 def test_valid_staff(monkeypatch, role):
+    """
+    Verify that valid staff.
+    """
     identifier = uuid4()
     monkeypatch.setattr(
         user_client,
@@ -30,12 +33,18 @@ def test_valid_staff(monkeypatch, role):
     "body", [None, {}, {"id": "bad"}, {"id": str(uuid4()), "display_name": "Staff"}]
 )
 def test_malformed_identity_is_service_failure(monkeypatch, body):
+    """
+    Verify that malformed identity is service failure.
+    """
     monkeypatch.setattr(user_client, "_request", lambda *args: (200, body))
     with pytest.raises(user_client.UserServiceError):
         user_client.current_staff("Bearer opaque")
 
 
 def test_non_staff_role_cannot_access_lesson_library(monkeypatch):
+    """
+    Verify that non staff role cannot access lesson library.
+    """
     monkeypatch.setattr(
         user_client,
         "_request",
@@ -53,12 +62,18 @@ def test_non_staff_role_cannot_access_lesson_library(monkeypatch):
     [(401, user_client.LoginRequiredError), (503, user_client.UserServiceError)],
 )
 def test_identity_service_errors(monkeypatch, status, error):
+    """
+    Verify that identity service errors.
+    """
     monkeypatch.setattr(user_client, "_request", lambda *args: (status, None))
     with pytest.raises(error):
         user_client.current_staff("Bearer opaque")
 
 
 def test_request_forwards_identity_without_cookies(monkeypatch):
+    """
+    Verify that request forwards identity without cookies.
+    """
     import io
     import json
 
@@ -66,6 +81,9 @@ def test_request_forwards_identity_without_cookies(monkeypatch):
         status = 200
 
     def open_request(request, timeout):
+        """
+        Prepare or exercise open request in the test lesson user client test scenario.
+        """
         assert request.get_header("Authorization") == "Bearer opaque"
         assert request.get_header("Cookie") is None
         assert timeout == user_client.TIMEOUT_SECONDS
@@ -77,6 +95,9 @@ def test_request_forwards_identity_without_cookies(monkeypatch):
 
 @pytest.mark.parametrize("kind", ["network", "timeout", "invalid-json"])
 def test_request_failures_are_sanitized(monkeypatch, kind):
+    """
+    Verify that request failures are sanitized.
+    """
     import io
     import urllib.error
 
@@ -84,6 +105,10 @@ def test_request_failures_are_sanitized(monkeypatch, kind):
         status = 200
 
     def fail(*args, **kwargs):
+        """
+        Simulate an unavailable dependency or failing operation for the surrounding
+        test.
+        """
         if kind == "network":
             raise urllib.error.URLError("private hostname")
         if kind == "timeout":
@@ -100,10 +125,17 @@ def test_request_failures_are_sanitized(monkeypatch, kind):
     [(b'{"detail":"expired"}', {"detail": "expired"}), (b"invalid", None)],
 )
 def test_http_errors_preserve_status(monkeypatch, body, expected):
+    """
+    Verify that http errors preserve status.
+    """
     import io
     import urllib.error
 
     def fail(*args, **kwargs):
+        """
+        Simulate an unavailable dependency or failing operation for the surrounding
+        test.
+        """
         raise urllib.error.HTTPError(
             "http://user-service/me", 401, "Unauthorized", {}, io.BytesIO(body)
         )

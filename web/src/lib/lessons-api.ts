@@ -1,3 +1,10 @@
+/*
+ * Call the protected lesson APIs and expose lesson, material, copy and review
+ * contracts.
+ * Author: collegelogin
+ * Date: 24 Oct 2026
+ */
+
 import { apiRequest, LoginRequiredError } from "./api";
 
 export { LoginRequiredError };
@@ -17,8 +24,15 @@ export type Lesson = {
 };
 export type LessonInput = { title: string; lesson_date: string; description: string; tags: string[] };
 export class LessonError extends Error {
+  /*
+   * Initialize the error instance and retain the supplied message and structured
+   * details.
+   */
   constructor(message: string, public fields: Record<string, string> = {}) { super(message); }
 }
+/*
+ * Send the feature API request and translate its response into data or a typed error.
+ */
 async function send<T>(path: string, init: RequestInit = {}): Promise<T> {
   const { status, body, message, detail } = await apiRequest("/api/lesson/" + path, init);
   if (status >= 200 && status < 300) return body as T;
@@ -44,31 +58,61 @@ export type CopyDraft = {
   source_lesson_id: string; title: string; lesson_date: null; description: string;
   tags: string[]; materials: Material[]; has_maori_content: boolean;
 };
+/*
+ * Search and filter the reusable lesson library.
+ */
 export const listLessons = (filters: LessonSearch = {}) => {
   const params = new URLSearchParams();
   if (filters.q?.trim()) params.set("q", filters.q.trim());
   if (filters.tag?.trim()) params.set("tag", filters.tag.trim());
   return send<Lesson[]>("lessons" + (params.size ? "?" + params.toString() : ""));
 };
+/*
+ * Load the source lesson and selectable materials for a copy draft.
+ */
 export const getCopyDraft = (id: string) => send<CopyDraft>(`lessons/${encodeURIComponent(id)}/copy`);
+/*
+ * Create an independently owned copy of the source lesson and selected files.
+ */
 export const copyLesson = (id: string, input: LessonInput, materialIds: string[]) =>
   send<Lesson>(`lessons/${encodeURIComponent(id)}/copy`, {
     method: "POST", body: JSON.stringify({ ...input, material_ids: materialIds }),
   });
+/*
+ * Load a lesson with its tags, materials and edit/review state.
+ */
 export const getLesson = (id: string) => send<Lesson>(`lessons/${encodeURIComponent(id)}`);
+/*
+ * Load available lesson topic tags.
+ */
 export const listTags = () => send<{ id: string; name: string }[]>("tags");
+/*
+ * Create or update the lesson fields according to the supplied identifier.
+ */
 export const saveLesson = (id: string | null, input: LessonInput) =>
   send<Lesson>(id ? `lessons/${encodeURIComponent(id)}` : "lessons", {
     method: id ? "PUT" : "POST", body: JSON.stringify(input),
   });
+/*
+ * Request deletion of the selected lesson.
+ */
 export const deleteLesson = (id: string) => send<void>(`lessons/${encodeURIComponent(id)}`, { method: "DELETE" });
+/*
+ * Upload the selected file and learner-sharing flag to its lesson.
+ */
 export function uploadMaterial(id: string, file: File, share: boolean) {
   const body = new FormData();
   body.append("file", file);
   body.append("share_with_learners", String(share));
   return send<Material>(`lessons/${encodeURIComponent(id)}/materials`, { method: "POST", body });
 }
+/*
+ * Remove a lesson attachment through the authenticated API.
+ */
 export const deleteMaterial = (id: string) => send<void>(`materials/${encodeURIComponent(id)}`, { method: "DELETE" });
+/*
+ * Update a lesson material’s learner-sharing flag.
+ */
 export const shareMaterial = (id: string, value: boolean) => send<Material>(`materials/${encodeURIComponent(id)}`, {
   method: "PATCH", body: JSON.stringify({ share_with_learners: value }),
 });
@@ -81,5 +125,11 @@ export const recordReview = (id: string, review: { reviewer_name: string; review
   send<unknown>(`lessons/${encodeURIComponent(id)}/review`, {
     method: "POST", body: JSON.stringify({ ...review, review_date: review.review_date || null }),
   });
+/*
+ * Build the staff material download URL.
+ */
 export const materialUrl = (id: string) => `/api/staff/lesson/materials/${encodeURIComponent(id)}/download`;
+/*
+ * Return the safe lesson error message for display.
+ */
 export const messageFor = (error: unknown) => error instanceof LessonError ? error.message : "Unable to complete the request. Please try again.";

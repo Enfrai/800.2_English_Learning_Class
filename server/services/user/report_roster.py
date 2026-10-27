@@ -29,10 +29,17 @@ class ReportLearner(BaseModel):
 def create_report_roster_router(
     factory: Callable[[], Session], coordinator: Callable
 ) -> APIRouter:
+    """
+    Build the report roster API router with its injected dependencies.
+    """
     router = APIRouter(tags=["Attendance reports"])
 
     @router.post("/reports/attendance/learners", response_model=list[ReportLearner])
     def roster(payload: RosterIn, user: Any = Depends(coordinator)):
+        """
+        Handle POST /reports/attendance/learners for roster, applying the route’s
+        validation and authorization rules.
+        """
         ids = set(payload.learner_ids)
         with factory() as db:
             rows = (

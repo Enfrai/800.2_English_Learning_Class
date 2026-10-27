@@ -52,6 +52,9 @@ def open_window(
         closed_after: timedelta | None = None,
         hours: int = 4,
     ) -> tuple[str, UUID]:
+        """
+        Prepare or exercise create in the test checkin test scenario.
+        """
         session_id = new_session(session_date or today)
         token = secrets.token_urlsafe(32)
         db.execute(
@@ -71,6 +74,9 @@ def open_window(
 
 
 def find(db: Session, token: str | None, after: timedelta, today: date):
+    """
+    Prepare or exercise find in the test checkin test scenario.
+    """
     return find_open_checkin(db, token, now=OPENED + after, today=today)
 
 
@@ -80,6 +86,9 @@ def find(db: Session, token: str | None, after: timedelta, today: date):
 def test_open_check_in_gives_the_class_and_its_date(
     db: Session, open_window: OpenWindow, today: date
 ) -> None:
+    """
+    Verify that open check in gives the class and its date.
+    """
     token, session_id = open_window()
 
     found = find(db, token, timedelta(minutes=1), today)
@@ -92,6 +101,9 @@ def test_open_check_in_gives_the_class_and_its_date(
 def test_check_in_works_at_3h59_and_is_refused_from_4_hours(
     db: Session, open_window: OpenWindow, today: date
 ) -> None:
+    """
+    Verify that check in works at 3h59 and is refused from 4 hours.
+    """
     token, _ = open_window()
 
     find(db, token, timedelta(hours=3, minutes=59), today)
@@ -104,6 +116,9 @@ def test_check_in_works_at_3h59_and_is_refused_from_4_hours(
 def test_check_in_is_refused_once_the_teacher_closes_it(
     db: Session, open_window: OpenWindow, today: date
 ) -> None:
+    """
+    Verify that check in is refused once the teacher closes it.
+    """
     token, _ = open_window(closed_after=timedelta(minutes=30))
 
     find(db, token, timedelta(minutes=29), today)
@@ -115,6 +130,9 @@ def test_check_in_is_refused_once_the_teacher_closes_it(
 def test_unknown_empty_or_overlong_token_is_refused(
     db: Session, open_window: OpenWindow, today: date, token: str | None
 ) -> None:
+    """
+    Verify that unknown empty or overlong token is refused.
+    """
     open_window()
 
     with pytest.raises(UnknownCheckinTokenError):
@@ -124,6 +142,9 @@ def test_unknown_empty_or_overlong_token_is_refused(
 def test_check_in_for_a_class_before_today_is_refused(
     db: Session, open_window: OpenWindow, today: date
 ) -> None:
+    """
+    Verify that check in for a class before today is refused.
+    """
     token, _ = open_window(session_date=today - timedelta(days=1))
 
     with pytest.raises(CheckinSessionPastError):
@@ -131,6 +152,9 @@ def test_check_in_for_a_class_before_today_is_refused(
 
 
 def test_every_refusal_shows_the_same_closed_message() -> None:
+    """
+    Verify that every refusal shows the same closed message.
+    """
     errors = [
         UnknownCheckinTokenError(),
         CheckinClosedError(),
@@ -148,6 +172,9 @@ def test_every_refusal_shows_the_same_closed_message() -> None:
 def test_only_the_token_hash_is_stored_and_each_token_finds_its_class(
     db: Session, open_window: OpenWindow, today: date
 ) -> None:
+    """
+    Verify that only the token hash is stored and each token finds its class.
+    """
     first, first_session = open_window()
     second, second_session = open_window(session_date=today + timedelta(days=1))
 
@@ -165,6 +192,9 @@ def test_only_the_token_hash_is_stored_and_each_token_finds_its_class(
 def test_sign_in_marks_present_under_the_teacher_who_opened_check_in(
     db: Session, open_window: OpenWindow, today: date
 ) -> None:
+    """
+    Verify that sign in marks present under the teacher who opened check in.
+    """
     token, session_id = open_window()
     checkin = find(db, token, timedelta(minutes=1), today)
 
@@ -179,6 +209,9 @@ def test_sign_in_marks_present_under_the_teacher_who_opened_check_in(
 def test_second_sign_in_says_already_signed_in_and_adds_nothing(
     db: Session, open_window: OpenWindow, today: date
 ) -> None:
+    """
+    Verify that second sign in says already signed in and adds nothing.
+    """
     token, session_id = open_window()
     checkin = find(db, token, timedelta(minutes=1), today)
     learner_id = uuid4()
@@ -192,6 +225,9 @@ def test_second_sign_in_says_already_signed_in_and_adds_nothing(
 
 
 def test_sign_in_stores_no_location_or_device_detail() -> None:
+    """
+    Verify that sign in stores no location or device detail.
+    """
     columns = set(attendance_records.c.keys())
 
     assert columns == {
@@ -215,6 +251,9 @@ START = datetime(2026, 10, 25, 6, 0, tzinfo=UTC)
 def test_eleventh_try_after_ten_wrong_names_is_blocked_for_ten_minutes(
     db: Session,
 ) -> None:
+    """
+    Verify that eleventh try after ten wrong names is blocked for ten minutes.
+    """
     key = device_key("203.0.113.7", "secret")
     for n in range(10):
         assert blocked_until(db, key, START + timedelta(seconds=30 * n)) is None
@@ -229,6 +268,9 @@ def test_eleventh_try_after_ten_wrong_names_is_blocked_for_ten_minutes(
 
 
 def test_nine_wrong_names_do_not_block(db: Session) -> None:
+    """
+    Verify that nine wrong names do not block.
+    """
     key = device_key("203.0.113.8", "secret")
     for n in range(9):
         record_wrong_name(db, key, START + timedelta(seconds=n))
@@ -239,6 +281,9 @@ def test_nine_wrong_names_do_not_block(db: Session) -> None:
 def test_ten_wrong_names_spread_over_more_than_ten_minutes_do_not_block(
     db: Session,
 ) -> None:
+    """
+    Verify that ten wrong names spread over more than ten minutes do not block.
+    """
     key = device_key("203.0.113.9", "secret")
     for n in range(10):
         record_wrong_name(db, key, START + timedelta(minutes=2 * n))
@@ -247,6 +292,9 @@ def test_ten_wrong_names_spread_over_more_than_ten_minutes_do_not_block(
 
 
 def test_block_applies_to_one_device_only(db: Session) -> None:
+    """
+    Verify that block applies to one device only.
+    """
     blocked = device_key("203.0.113.10", "secret")
     for n in range(10):
         record_wrong_name(db, blocked, START + timedelta(seconds=n))
@@ -256,6 +304,9 @@ def test_block_applies_to_one_device_only(db: Session) -> None:
 
 
 def test_device_address_is_never_stored(db: Session) -> None:
+    """
+    Verify that device address is never stored.
+    """
     key = device_key("203.0.113.12", "secret")
 
     record_wrong_name(db, key, START)
@@ -267,6 +318,9 @@ def test_device_address_is_never_stored(db: Session) -> None:
 
 
 def test_wrong_names_older_than_an_hour_are_deleted(db: Session) -> None:
+    """
+    Verify that wrong names older than an hour are deleted.
+    """
     key = device_key("203.0.113.13", "secret")
     record_wrong_name(db, key, START)
 
@@ -282,6 +336,9 @@ DEVICE = "3f2c8f6e-1d2a-4c1e-9a6b-6f1d2e3c4b5a"
 
 
 def test_a_phone_with_an_id_has_its_own_limit_and_the_address_a_higher_one() -> None:
+    """
+    Verify that a phone with an id has its own limit and the address a higher one.
+    """
     limits = wrong_name_limits("203.0.113.20", DEVICE, "secret")
 
     assert [limit for _, limit in limits] == [10, 50]
@@ -294,6 +351,9 @@ def test_a_phone_with_an_id_has_its_own_limit_and_the_address_a_higher_one() -> 
 def test_without_a_valid_phone_id_the_address_gets_the_strict_limit(
     device_id: str | None,
 ) -> None:
+    """
+    Verify that without a valid phone id the address gets the strict limit.
+    """
     limits = wrong_name_limits("203.0.113.21", device_id, "secret")
 
     assert [limit for _, limit in limits] == [10]
@@ -301,6 +361,9 @@ def test_without_a_valid_phone_id_the_address_gets_the_strict_limit(
 
 
 def test_phones_on_one_address_count_separately(db: Session) -> None:
+    """
+    Verify that phones on one address count separately.
+    """
     other = "8b1e2d3c-4f5a-4b6c-8d7e-9f0a1b2c3d4e"
     phone_key, _ = wrong_name_limits("203.0.113.22", DEVICE, "secret")[0]
     other_key, _ = wrong_name_limits("203.0.113.22", other, "secret")[0]
@@ -312,6 +375,9 @@ def test_phones_on_one_address_count_separately(db: Session) -> None:
 
 
 def test_address_is_blocked_after_fifty_wrong_names(db: Session) -> None:
+    """
+    Verify that address is blocked after fifty wrong names.
+    """
     address_key, limit = wrong_name_limits("203.0.113.23", DEVICE, "secret")[1]
     for n in range(49):
         record_wrong_name(db, address_key, START + timedelta(seconds=n))

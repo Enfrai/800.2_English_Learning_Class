@@ -40,6 +40,9 @@ class UserServiceStandIn:
     calls: int = 0
 
     def find(self, first: str, family: str) -> dict[str, Any]:
+        """
+        Prepare or exercise find in the test signin api test scenario.
+        """
         self.calls += 1
         if self.down:
             raise user_client.UserServiceError("User service unavailable")
@@ -59,6 +62,9 @@ class SignInApi:
     opened_by: UUID = field(default_factory=uuid4)
 
     def open_check_in(self, closed: bool = False) -> tuple[str, UUID]:
+        """
+        Prepare or exercise open check in in the test signin api test scenario.
+        """
         session_id = self.session.execute(
             class_sessions.insert()
             .values(id=uuid4(), session_date=TODAY, created_by=self.opened_by)
@@ -87,6 +93,9 @@ class SignInApi:
         device: str,
         phone_id: str | None = None,
     ) -> Any:
+        """
+        Prepare or exercise sign in in the test signin api test scenario.
+        """
         headers = {"X-Real-IP": device}
         if phone_id:
             headers["X-Device-Id"] = phone_id
@@ -97,6 +106,9 @@ class SignInApi:
         )
 
     def count(self, table: Any) -> int:
+        """
+        Prepare or exercise count in the test signin api test scenario.
+        """
         return self.session.execute(
             select(func.count()).select_from(table)
         ).scalar_one()
@@ -105,6 +117,9 @@ class SignInApi:
 @pytest.fixture
 def app_module(monkeypatch: pytest.MonkeyPatch) -> ModuleType:
     # Importing app creates an engine but does not connect.
+    """
+    Prepare or exercise app module in the test signin api test scenario.
+    """
     monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://unused@localhost/unused")
     return importlib.import_module("app")
 
@@ -113,6 +128,9 @@ def app_module(monkeypatch: pytest.MonkeyPatch) -> ModuleType:
 def api(
     engine: Engine, app_module: ModuleType, monkeypatch: pytest.MonkeyPatch
 ) -> Iterator[SignInApi]:
+    """
+    Provide injected API client and isolated application fixture.
+    """
     users = UserServiceStandIn()
     monkeypatch.setattr(user_client, "find_learner_for_sign_in", users.find)
     monkeypatch.setattr(app_module, "club_today", lambda: TODAY)
@@ -132,6 +150,9 @@ def api(
 
 @pytest.fixture
 def aroha(api: SignInApi) -> str:
+    """
+    Prepare or exercise aroha in the test signin api test scenario.
+    """
     learner_id = str(uuid4())
     api.users.learners[("aroha", "ngata")] = learner_id
     return learner_id
@@ -141,6 +162,9 @@ def aroha(api: SignInApi) -> str:
 
 
 def test_open_check_in_tells_the_page_its_class_date(api: SignInApi) -> None:
+    """
+    Verify that open check in tells the page its class date.
+    """
     token, _ = api.open_check_in()
 
     response = api.client.get(f"/checkin/{token}")
@@ -153,6 +177,9 @@ def test_open_check_in_tells_the_page_its_class_date(api: SignInApi) -> None:
 def test_closed_or_unknown_check_in_shows_the_closed_message(
     api: SignInApi, closed: bool
 ) -> None:
+    """
+    Verify that closed or unknown check in shows the closed message.
+    """
     token, _ = api.open_check_in(closed=True)
     path = f"/checkin/{token if closed else 'made-up-token'}"
 
@@ -171,6 +198,9 @@ def test_closed_or_unknown_check_in_shows_the_closed_message(
 def test_matching_name_signs_in_under_the_teacher_who_opened_check_in(
     api: SignInApi, aroha: str
 ) -> None:
+    """
+    Verify that matching name signs in under the teacher who opened check in.
+    """
     token, session_id = api.open_check_in()
 
     response = api.sign_in(token, "Aroha", "Ngata", "198.51.100.1")
@@ -187,6 +217,9 @@ def test_matching_name_signs_in_under_the_teacher_who_opened_check_in(
 
 
 def test_second_sign_in_says_already_signed_in(api: SignInApi, aroha: str) -> None:
+    """
+    Verify that second sign in says already signed in.
+    """
     token, _ = api.open_check_in()
     api.sign_in(token, "Aroha", "Ngata", "198.51.100.1")
 
@@ -200,6 +233,9 @@ def test_second_sign_in_says_already_signed_in(api: SignInApi, aroha: str) -> No
 def test_unknown_name_is_refused_counted_and_records_nothing(
     api: SignInApi,
 ) -> None:
+    """
+    Verify that unknown name is refused counted and records nothing.
+    """
     token, _ = api.open_check_in()
 
     response = api.sign_in(token, "Nobody", "Here", "198.51.100.1")
@@ -213,6 +249,9 @@ def test_unknown_name_is_refused_counted_and_records_nothing(
 def test_shared_name_asks_for_the_teacher_and_is_not_counted(
     api: SignInApi,
 ) -> None:
+    """
+    Verify that shared name asks for the teacher and is not counted.
+    """
     api.users.shared_names.add(("mere", "walker"))
     token, _ = api.open_check_in()
 
@@ -225,6 +264,9 @@ def test_shared_name_asks_for_the_teacher_and_is_not_counted(
 
 
 def test_user_service_down_is_reported_and_not_counted(api: SignInApi) -> None:
+    """
+    Verify that user service down is reported and not counted.
+    """
     api.users.down = True
     token, _ = api.open_check_in()
 
@@ -241,6 +283,9 @@ def test_user_service_down_is_reported_and_not_counted(api: SignInApi) -> None:
 def test_eleventh_try_is_blocked_even_with_a_real_name(
     api: SignInApi, aroha: str
 ) -> None:
+    """
+    Verify that eleventh try is blocked even with a real name.
+    """
     token, _ = api.open_check_in()
     for n in range(10):
         assert api.sign_in(token, f"Guess{n}", "X", "198.51.100.7").status_code == 404
@@ -257,6 +302,9 @@ def test_eleventh_try_is_blocked_even_with_a_real_name(
 def test_one_phone_is_blocked_but_classmates_on_the_same_wifi_are_not(
     api: SignInApi, aroha: str
 ) -> None:
+    """
+    Verify that one phone is blocked but classmates on the same wifi are not.
+    """
     token, _ = api.open_check_in()
     wifi, phone, classmate = "198.51.100.20", str(uuid4()), str(uuid4())
     for n in range(10):
@@ -272,6 +320,9 @@ def test_one_phone_is_blocked_but_classmates_on_the_same_wifi_are_not(
 def test_changing_the_phone_id_every_time_still_hits_the_address_limit(
     api: SignInApi, aroha: str
 ) -> None:
+    """
+    Verify that changing the phone id every time still hits the address limit.
+    """
     token, _ = api.open_check_in()
     wifi = "198.51.100.21"
     for n in range(50):

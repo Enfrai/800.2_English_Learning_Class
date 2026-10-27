@@ -42,6 +42,9 @@ OWNER = uuid4()
 
 @pytest.fixture
 def api(tmp_path, monkeypatch):
+    """
+    Provide injected API client and isolated application fixture.
+    """
     monkeypatch.setenv("CHECKIN_TOKEN_SECRET", "a-shared-random-test-secret")
     monkeypatch.setenv("CHECKIN_PUBLIC_ORIGIN", "http://192.168.1.20:8080")
     monkeypatch.setenv("CLUB_TIMEZONE", "Pacific/Auckland")
@@ -56,9 +59,15 @@ def api(tmp_path, monkeypatch):
     clock = [NOW]
 
     def today():
+        """
+        Prepare or exercise today in the test checkin management test scenario.
+        """
         return clock[0].astimezone(ZoneInfo("Pacific/Auckland")).date()
 
     def staff(authorization: str | None = Header(default=None)):
+        """
+        Prepare or exercise staff in the test checkin management test scenario.
+        """
         if not authorization:
             raise HTTPException(401, "Login required")
         return SimpleNamespace(
@@ -73,6 +82,9 @@ def api(tmp_path, monkeypatch):
     client = TestClient(app)
 
     def call(method="GET", identifier=None, role="teacher"):
+        """
+        Prepare or exercise call in the test checkin management test scenario.
+        """
         return client.request(
             method,
             f"/sessions/{identifier or sid}/check-in",
@@ -93,10 +105,16 @@ def api(tmp_path, monkeypatch):
 
 
 def token(data):
+    """
+    Prepare or exercise token in the test checkin management test scenario.
+    """
     return data["sign_in_url"].rsplit("/", 1)[1]
 
 
 def test_open_displays_scannable_svg_and_link_within_two_seconds(api):
+    """
+    Verify that open displays scannable svg and link within two seconds.
+    """
     begin = monotonic()
     response = api.call("POST")
     assert monotonic() - begin < 2
@@ -116,6 +134,9 @@ def test_open_displays_scannable_svg_and_link_within_two_seconds(api):
 
 
 def test_status_and_repeated_open_reuse_token_owner_and_expiry(api):
+    """
+    Verify that status and repeated open reuse token owner and expiry.
+    """
     first = api.call("POST").json()
     api.clock[0] += timedelta(minutes=30)
     assert api.call().json()["sign_in_url"] == first["sign_in_url"]
@@ -129,6 +150,9 @@ def test_status_and_repeated_open_reuse_token_owner_and_expiry(api):
 
 
 def test_replicas_can_recover_same_token_without_storing_it(api):
+    """
+    Verify that replicas can recover same token without storing it.
+    """
     first = api.call("POST").json()
     with api.factory() as db:
         window = db.execute(select(checkin_windows)).mappings().one()
@@ -138,6 +162,9 @@ def test_replicas_can_recover_same_token_without_storing_it(api):
 
 
 def test_different_class_codes_never_cross_sessions(api):
+    """
+    Verify that different class codes never cross sessions.
+    """
     first = api.call("POST").json()
     other = uuid4()
     # Model permits only one class per date; another school day gets its own code.
@@ -160,6 +187,9 @@ def test_different_class_codes_never_cross_sessions(api):
 
 
 def test_close_is_immediate_idempotent_and_reopening_invalidates_old_token(api):
+    """
+    Verify that close is immediate idempotent and reopening invalidates old token.
+    """
     first = api.call("POST").json()
     assert api.call("DELETE").json()["state"] == "closed"
     assert api.call("DELETE").json()["state"] == "closed"
@@ -173,6 +203,9 @@ def test_close_is_immediate_idempotent_and_reopening_invalidates_old_token(api):
 
 
 def test_exact_four_hour_boundary_and_new_open_does_not_revive_old_code(api):
+    """
+    Verify that exact four hour boundary and new open does not revive old code.
+    """
     first = api.call("POST").json()
     api.clock[0] = NOW + timedelta(hours=3, minutes=59, seconds=59)
     assert api.call().json()["state"] == "open"
@@ -186,6 +219,9 @@ def test_exact_four_hour_boundary_and_new_open_does_not_revive_old_code(api):
 
 
 def test_club_midnight_is_an_earlier_deadline(api):
+    """
+    Verify that club midnight is an earlier deadline.
+    """
     api.clock[0] = datetime(2026, 10, 26, 10, 50, tzinfo=UTC)
     data = api.call("POST").json()
     assert datetime.fromisoformat(data["expires_at"]) == datetime(
@@ -198,6 +234,9 @@ def test_club_midnight_is_an_earlier_deadline(api):
 
 @pytest.mark.parametrize("offset", [-1, 1])
 def test_non_today_class_cannot_open(api, offset):
+    """
+    Verify that non today class cannot open.
+    """
     other = uuid4()
     with api.factory.begin() as db:
         db.execute(
@@ -210,6 +249,9 @@ def test_non_today_class_cannot_open(api, offset):
 
 
 def test_closed_class_cannot_open_or_keep_valid_link(api):
+    """
+    Verify that closed class cannot open or keep valid link.
+    """
     data = api.call("POST").json()
     with api.factory.begin() as db:
         db.execute(class_sessions.update().values(status="closed"))
@@ -223,9 +265,15 @@ def test_closed_class_cannot_open_or_keep_valid_link(api):
     "role,status", [(None, 401), ("learner", 403), ("visitor", 403), ("admin", 403)]
 )
 def test_unauthorized_staff_calls_never_read_or_write(api, role, status):
+    """
+    Verify that unauthorized staff calls never read or write.
+    """
     statements = []
 
     def trace(*args):
+        """
+        Inspect or record trace events for the surrounding database or HTTP test.
+        """
         statements.append(args[2])
 
     event.listen(api.engine, "before_cursor_execute", trace)
@@ -239,6 +287,9 @@ def test_unauthorized_staff_calls_never_read_or_write(api, role, status):
 
 @pytest.mark.parametrize("role", ["teacher", "coordinator"])
 def test_both_staff_roles_manage_checkin(api, role):
+    """
+    Verify that both staff roles manage checkin.
+    """
     assert api.call("POST", role=role).status_code == 200
     assert api.call("GET", role=role).json()["state"] == "open"
     assert api.call("DELETE", role=role).json()["state"] == "closed"
@@ -257,6 +308,9 @@ def test_both_staff_roles_manage_checkin(api, role):
     ],
 )
 def test_bad_deployment_origin_saves_no_window(api, monkeypatch, origin):
+    """
+    Verify that bad deployment origin saves no window.
+    """
     monkeypatch.setenv("CHECKIN_PUBLIC_ORIGIN", origin)
     assert api.call("POST").status_code == 503
     with api.factory() as db:
@@ -264,6 +318,9 @@ def test_bad_deployment_origin_saves_no_window(api, monkeypatch, origin):
 
 
 def test_missing_secret_and_rotated_secret_fail_safely(api, monkeypatch):
+    """
+    Verify that missing secret and rotated secret fail safely.
+    """
     monkeypatch.delenv("CHECKIN_TOKEN_SECRET")
     monkeypatch.delenv("INTERNAL_API_KEY", raising=False)
     assert api.call("POST").status_code == 503
@@ -277,11 +334,17 @@ def test_missing_secret_and_rotated_secret_fail_safely(api, monkeypatch):
 
 
 def test_missing_class_returns_404(api):
+    """
+    Verify that missing class returns 404.
+    """
     for method in ("GET", "POST", "DELETE"):
         assert api.call(method, uuid4()).status_code == 404
 
 
 def test_prefetched_signin_cannot_write_after_close(api):
+    """
+    Verify that prefetched signin cannot write after close.
+    """
     data = api.call("POST").json()
     with api.factory() as db:
         opened = find_open_checkin(db, token(data), now=NOW, today=DAY)
@@ -295,6 +358,9 @@ def test_prefetched_signin_cannot_write_after_close(api):
 
 
 def test_prefetched_signin_cannot_write_after_expiry(api):
+    """
+    Verify that prefetched signin cannot write after expiry.
+    """
     data = api.call("POST").json()
     with api.factory() as db:
         opened = find_open_checkin(db, token(data), now=NOW, today=DAY)
@@ -304,6 +370,9 @@ def test_prefetched_signin_cannot_write_after_expiry(api):
 
 
 def test_public_signin_updates_same_attendance_and_material_grant(api, monkeypatch):
+    """
+    Verify that public signin updates same attendance and material grant.
+    """
     monkeypatch.setenv("DATABASE_URL", "sqlite://")
     module = importlib.import_module("app")
     monkeypatch.setattr(module, "SessionLocal", api.factory)
@@ -312,6 +381,9 @@ def test_public_signin_updates_same_attendance_and_material_grant(api, monkeypat
     class Clock:
         @staticmethod
         def now(tz):
+            """
+            Return the current timezone-aware UTC instant.
+            """
             return api.clock[0].astimezone(tz)
 
     monkeypatch.setattr(module, "datetime", Clock)
@@ -373,6 +445,9 @@ def test_public_signin_updates_same_attendance_and_material_grant(api, monkeypat
 
 @pytest.mark.parametrize("change", ["close", "expire"])
 def test_public_request_rechecks_after_slow_name_lookup(api, monkeypatch, change):
+    """
+    Verify that public request rechecks after slow name lookup.
+    """
     monkeypatch.setenv("DATABASE_URL", "sqlite://")
     module = importlib.import_module("app")
     monkeypatch.setattr(module, "SessionLocal", api.factory)
@@ -381,12 +456,18 @@ def test_public_request_rechecks_after_slow_name_lookup(api, monkeypatch, change
     class Clock:
         @staticmethod
         def now(tz):
+            """
+            Return the current timezone-aware UTC instant.
+            """
             return api.clock[0].astimezone(tz)
 
     monkeypatch.setattr(module, "datetime", Clock)
     data = api.call("POST").json()
 
     def lookup(*args):
+        """
+        Prepare or exercise lookup in the test checkin management test scenario.
+        """
         if change == "close":
             assert api.call("DELETE").status_code == 200
         else:
@@ -408,6 +489,9 @@ def test_public_request_rechecks_after_slow_name_lookup(api, monkeypatch, change
 
 
 def test_existing_wrong_name_limit_still_applies_without_attendance(api, monkeypatch):
+    """
+    Verify that existing wrong name limit still applies without attendance.
+    """
     monkeypatch.setenv("DATABASE_URL", "sqlite://")
     module = importlib.import_module("app")
     monkeypatch.setattr(module, "SessionLocal", api.factory)
@@ -416,11 +500,17 @@ def test_existing_wrong_name_limit_still_applies_without_attendance(api, monkeyp
     class Clock:
         @staticmethod
         def now(tz):
+            """
+            Return the current timezone-aware UTC instant.
+            """
             return api.clock[0].astimezone(tz)
 
     monkeypatch.setattr(module, "datetime", Clock)
 
     def unknown(*args):
+        """
+        Prepare or exercise unknown in the test checkin management test scenario.
+        """
         raise user_client.SignInNameNotFoundError()
 
     monkeypatch.setattr(user_client, "find_learner_for_sign_in", unknown)

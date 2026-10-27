@@ -22,7 +22,10 @@ async function forward(request: NextRequest, context: { params: Promise<{ path: 
   const path = (await context.params).path.join("/");
   if (!route.test(path) && !historyRoute.test(path) && path !== "reports/attendance") return NextResponse.json({ detail: "Not found" }, { status: 404, headers: noStore });
   const cookies = request.cookies.getAll("ako_session");
-  const sessionCookieCount = (request.headers.get("cookie") || "").split(";").filter(part => part.trim().split("=", 1)[0] === "ako_session").length;
+  const sessionCookieCount = (request.headers.get("cookie") || "").split(";").filter(/*
+     * Select collection entries matching this predicate.
+     */
+    part => part.trim().split("=", 1)[0] === "ako_session").length;
   if (sessionCookieCount !== 1 || cookies.length !== 1 || !cookies[0].value || request.headers.has("authorization")) {
     return NextResponse.json({ detail: "Not authenticated" }, { status: 401, headers: noStore });
   }

@@ -14,6 +14,9 @@ LABEL = "ako.us001.phase22"
 
 
 def docker(*args: str) -> str:
+    """
+    Run the Docker command against the disposable test infrastructure.
+    """
     return subprocess.check_output(["docker", *args], text=True).strip()
 
 
@@ -35,6 +38,9 @@ def verify_container(container_id: str, run_id: str) -> dict:
 
 
 def main() -> int:
+    """
+    Parse command-line options and run the module’s documented command-line workflow.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--browser-only", action="store_true")
     parser.add_argument("--test-file", action="append", default=[])

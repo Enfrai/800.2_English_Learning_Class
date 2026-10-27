@@ -25,6 +25,9 @@ from test_postgres import PgContext
 
 @pytest.fixture
 def bootstrap(pg: PgContext) -> Iterator[tuple[Engine, ModuleType, PgContext]]:
+    """
+    Provide isolated Coordinator-bootstrap test environment.
+    """
     module = importlib.import_module("init_coordinator")
     schema = f"bootstrap_{uuid4().hex}"
     with pg.engine.begin() as db:
@@ -44,6 +47,9 @@ def bootstrap(pg: PgContext) -> Iterator[tuple[Engine, ModuleType, PgContext]]:
 
 
 def rows(engine: Engine, pg: PgContext) -> list[dict[str, Any]]:
+    """
+    Prepare or exercise rows in the test init coordinator test scenario.
+    """
     with engine.connect() as db:
         return [dict(row) for row in db.execute(select(pg.users)).mappings()]
 
@@ -51,12 +57,18 @@ def rows(engine: Engine, pg: PgContext) -> list[dict[str, Any]]:
 def test_create_uuid_hash_and_no_ddl(
     bootstrap: tuple[Engine, ModuleType, PgContext],
 ) -> None:
+    """
+    Verify that create uuid hash and no ddl.
+    """
     engine, module, pg = bootstrap
     statements = []
 
     def record(
         conn: Any, cursor: Any, statement: str, params: Any, context: Any, many: bool
     ) -> None:
+        """
+        Inspect or record record events for the surrounding database or HTTP test.
+        """
         statements.append(statement)
 
     event.listen(engine, "before_cursor_execute", record)
@@ -82,6 +94,9 @@ def test_create_uuid_hash_and_no_ddl(
 def test_repeat_preserves_existing_account(
     bootstrap: tuple[Engine, ModuleType, PgContext],
 ) -> None:
+    """
+    Verify that repeat preserves existing account.
+    """
     engine, module, pg = bootstrap
     module.initialize_coordinator(
         engine, "first", "First", "TestPass123!", pg.a.password_hash
@@ -99,6 +114,9 @@ def test_repeat_preserves_existing_account(
 def test_username_conflict_preserves_teacher(
     bootstrap: tuple[Engine, ModuleType, PgContext],
 ) -> None:
+    """
+    Verify that username conflict preserves teacher.
+    """
     engine, module, pg = bootstrap
     with engine.begin() as db:
         db.execute(
@@ -122,6 +140,9 @@ def test_username_conflict_preserves_teacher(
 def test_inactive_account_is_not_reactivated(
     bootstrap: tuple[Engine, ModuleType, PgContext],
 ) -> None:
+    """
+    Verify that inactive account is not reactivated.
+    """
     engine, module, pg = bootstrap
     with engine.begin() as db:
         db.execute(
@@ -146,10 +167,16 @@ def test_inactive_account_is_not_reactivated(
 def test_concurrent_initialization_creates_only_one(
     bootstrap: tuple[Engine, ModuleType, PgContext],
 ) -> None:
+    """
+    Verify that concurrent initialization creates only one.
+    """
     engine, module, pg = bootstrap
     barrier = Barrier(2)
 
     def run(name: str) -> Any:
+        """
+        Execute a subprocess with the requested exit-code and output-capture policy.
+        """
         barrier.wait(5)
         return module.initialize_coordinator(
             engine, name, name, "TestPass123!", pg.a.password_hash
@@ -165,11 +192,18 @@ def test_concurrent_initialization_creates_only_one(
 def test_insert_failure_rolls_back(
     bootstrap: tuple[Engine, ModuleType, PgContext],
 ) -> None:
+    """
+    Verify that insert failure rolls back.
+    """
     engine, module, pg = bootstrap
 
     def fail(
         conn: Any, cursor: Any, statement: str, params: Any, context: Any, many: bool
     ) -> None:
+        """
+        Simulate an unavailable dependency or failing operation for the surrounding
+        test.
+        """
         if statement.startswith("INSERT"):
             cursor.execute("SELECT 1 / 0")
 
@@ -200,6 +234,9 @@ def test_invalid_input_no_writes(
     name: str,
     password: str,
 ) -> None:
+    """
+    Verify that invalid input no writes.
+    """
     engine, module, pg = bootstrap
     with pytest.raises(ValueError):
         module.initialize_coordinator(
@@ -209,6 +246,9 @@ def test_invalid_input_no_writes(
 
 
 def test_cli_requires_explicit_source(pg: PgContext) -> None:
+    """
+    Verify that cli requires explicit source.
+    """
     script = Path(__file__).resolve().parents[1] / "init_coordinator.py"
     result = subprocess.run(
         [sys.executable, str(script), "--username", "test", "--display-name", "Test"],
@@ -223,6 +263,9 @@ def test_cli_requires_explicit_source(pg: PgContext) -> None:
 def test_cli_rejects_nonterminal(
     bootstrap: tuple[Engine, ModuleType, PgContext],
 ) -> None:
+    """
+    Verify that cli rejects nonterminal.
+    """
     engine, module, pg = bootstrap
     result = subprocess.run(
         [
@@ -248,6 +291,9 @@ def test_cli_rejects_nonterminal(
 def test_real_hidden_terminal_password(
     bootstrap: tuple[Engine, ModuleType, PgContext],
 ) -> None:
+    """
+    Verify that real hidden terminal password.
+    """
     engine, module, pg = bootstrap
     password = uuid4().hex
     master, slave = pty.openpty()

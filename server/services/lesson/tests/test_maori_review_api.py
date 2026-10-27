@@ -32,14 +32,23 @@ STAFF = {"author": AUTHOR, "other": OTHER_TEACHER, "coordinator": COORDINATOR}
 
 class Api:
     def __init__(self, client: TestClient, session: Session) -> None:
+        """
+        Initialize Api and retain the supplied constructor state.
+        """
         self.client = client
         self.session = session
 
     def call(self, method: str, path: str, who: str | None, **kwargs: Any) -> Any:
+        """
+        Prepare or exercise call in the test maori review api test scenario.
+        """
         headers = {"Authorization": f"Bearer {who}"} if who else {}
         return self.client.request(method, path, headers=headers, **kwargs)
 
     def new_lesson(self, **values: Any) -> UUID:
+        """
+        Provide fixture factory creating a lesson and its scenario data.
+        """
         return self.session.execute(
             lessons.insert()
             .values(
@@ -53,13 +62,22 @@ class Api:
         ).scalar_one()
 
     def lesson(self, lesson_id: UUID) -> dict[str, Any]:
+        """
+        Prepare or exercise lesson in the test maori review api test scenario.
+        """
         query = select(lessons).where(lessons.c.id == lesson_id)
         return dict(self.session.execute(query).mappings().one())
 
 
 @pytest.fixture
 def api(engine: Engine, monkeypatch: pytest.MonkeyPatch) -> Iterator[Api]:
+    """
+    Provide injected API client and isolated application fixture.
+    """
     def current_staff(authorization: str) -> user_client.Staff:
+        """
+        Prepare or exercise current staff in the test maori review api test scenario.
+        """
         who = authorization.removeprefix("Bearer ")
         if who == "down":
             raise user_client.UserServiceError("User service unavailable")
@@ -74,6 +92,10 @@ def api(engine: Engine, monkeypatch: pytest.MonkeyPatch) -> Iterator[Api]:
         session = Session(bind=connection, join_transaction_mode="create_savepoint")
 
         def session_factory() -> Session:
+            """
+            Prepare or exercise session factory in the test maori review api test
+            scenario.
+            """
             return Session(bind=connection, join_transaction_mode="create_savepoint")
 
         app = FastAPI()
@@ -86,6 +108,9 @@ def api(engine: Engine, monkeypatch: pytest.MonkeyPatch) -> Iterator[Api]:
 
 
 def flag(api: Api, lesson_id: UUID, who: str, value: bool = True) -> Any:
+    """
+    Prepare or exercise flag in the test maori review api test scenario.
+    """
     return api.call(
         "PUT",
         f"/lessons/{lesson_id}/maori-content",
@@ -95,6 +120,9 @@ def flag(api: Api, lesson_id: UUID, who: str, value: bool = True) -> Any:
 
 
 def review(api: Api, lesson_id: UUID, who: str, **body: Any) -> Any:
+    """
+    Provide fixture helper recording a lesson review.
+    """
     body = {"reviewer_name": "Aroha", "review_date": "2026-10-08", **body}
     return api.call("POST", f"/lessons/{lesson_id}/review", who, json=body)
 
@@ -104,6 +132,9 @@ def review(api: Api, lesson_id: UUID, who: str, **body: Any) -> Any:
 
 @pytest.mark.parametrize(("who", "status"), [(None, 401), ("nobody", 401)])
 def test_login_is_required(api: Api, who: str | None, status: int) -> None:
+    """
+    Verify that login is required.
+    """
     lesson_id = api.new_lesson()
 
     assert api.call("GET", f"/lessons/{lesson_id}/review", who).status_code == status
@@ -111,6 +142,9 @@ def test_login_is_required(api: Api, who: str | None, status: int) -> None:
 
 
 def test_user_service_down_is_reported_not_hidden(api: Api) -> None:
+    """
+    Verify that user service down is reported not hidden.
+    """
     response = api.call("GET", f"/lessons/{api.new_lesson()}/review", "down")
 
     assert response.status_code == 503
@@ -121,6 +155,9 @@ def test_user_service_down_is_reported_not_hidden(api: Api) -> None:
 
 
 def test_author_ticks_maori_content_and_sees_not_yet_reviewed(api: Api) -> None:
+    """
+    Verify that author ticks maori content and sees not yet reviewed.
+    """
     lesson_id = api.new_lesson()
 
     response = flag(api, lesson_id, "author")
@@ -138,6 +175,9 @@ def test_author_ticks_maori_content_and_sees_not_yet_reviewed(api: Api) -> None:
 
 
 def test_another_teacher_cannot_tick_someone_elses_lesson(api: Api) -> None:
+    """
+    Verify that another teacher cannot tick someone elses lesson.
+    """
     lesson_id = api.new_lesson()
 
     response = flag(api, lesson_id, "other")
@@ -148,10 +188,16 @@ def test_another_teacher_cannot_tick_someone_elses_lesson(api: Api) -> None:
 
 
 def test_coordinator_may_tick_any_lesson(api: Api) -> None:
+    """
+    Verify that coordinator may tick any lesson.
+    """
     assert flag(api, api.new_lesson(), "coordinator").status_code == 200
 
 
 def test_unknown_lesson_is_not_found(api: Api) -> None:
+    """
+    Verify that unknown lesson is not found.
+    """
     assert flag(api, uuid4(), "coordinator").status_code == 404
     assert api.call("GET", f"/lessons/{uuid4()}/review", "author").status_code == 404
 
@@ -160,6 +206,9 @@ def test_unknown_lesson_is_not_found(api: Api) -> None:
 
 
 def test_coordinator_records_review_and_label_changes(api: Api) -> None:
+    """
+    Verify that coordinator records review and label changes.
+    """
     lesson_id = api.new_lesson()
     flag(api, lesson_id, "author")
 
@@ -176,6 +225,9 @@ def test_coordinator_records_review_and_label_changes(api: Api) -> None:
 
 
 def test_teacher_cannot_record_a_review(api: Api) -> None:
+    """
+    Verify that teacher cannot record a review.
+    """
     lesson_id = api.new_lesson()
     flag(api, lesson_id, "author")
 
@@ -186,6 +238,9 @@ def test_teacher_cannot_record_a_review(api: Api) -> None:
 
 
 def test_bad_review_returns_every_message_and_changes_nothing(api: Api) -> None:
+    """
+    Verify that bad review returns every message and changes nothing.
+    """
     lesson_id = api.new_lesson()
     flag(api, lesson_id, "author")
 
@@ -206,6 +261,9 @@ def test_bad_review_returns_every_message_and_changes_nothing(api: Api) -> None:
 
 
 def test_lesson_without_maori_content_cannot_be_reviewed(api: Api) -> None:
+    """
+    Verify that lesson without maori content cannot be reviewed.
+    """
     response = review(api, api.new_lesson(), "coordinator")
 
     assert response.status_code == 409

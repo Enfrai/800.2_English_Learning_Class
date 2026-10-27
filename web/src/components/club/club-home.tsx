@@ -1,7 +1,16 @@
+/*
+ * Render approved club information and entry points for public visitors.
+ * Author: SandhyaCodes1
+ * Date: 26 Oct 2026
+ */
+
 import config from "@/content/club.json";
 import { clubInformation, PUBLIC_COPY as copy } from "@/lib/club-information";
 import styles from "./club-home.module.css";
 
+/*
+ * Render the club home interface and its associated content.
+ */
 export default function ClubHome() {
   const info = clubInformation(config);
   return <div className={styles.home}>

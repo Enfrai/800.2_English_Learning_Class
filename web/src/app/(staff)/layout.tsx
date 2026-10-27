@@ -14,6 +14,9 @@ export const metadata: Metadata = {
   description: "English Learning Class",
 };
 
+/*
+ * Render the staff layout interface and its associated content.
+ */
 export default function StaffLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {

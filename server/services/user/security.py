@@ -41,6 +41,9 @@ class SessionSecurity:
 
     @classmethod
     def from_environment(cls) -> "SessionSecurity":
+        """
+        Load and validate session cookie and public-origin security settings.
+        """
         origin = os.getenv("SESSION_PUBLIC_ORIGIN") or None
         if origin is not None:
             origin_identity(origin)
@@ -50,6 +53,9 @@ class SessionSecurity:
         return cls(public_origin=origin, force_secure=secure == "true")
 
     def secure_cookie(self, request: Request) -> bool:
+        """
+        Determine whether the browser session cookie must use the Secure attribute.
+        """
         return (
             self.force_secure
             or request.url.scheme == "https"
@@ -60,6 +66,9 @@ class SessionSecurity:
 
 
 def require_same_origin(request: Request, *, required: bool) -> None:
+    """
+    Validate the request origin against the configured or incoming public origin.
+    """
     settings: SessionSecurity = request.app.state.session_security
     origins = request.headers.getlist("origin")
     if not origins:
@@ -87,6 +96,9 @@ def protect_login(request: Request) -> None:
 
 
 def set_session_cookie(request: Request, response: Response, token: str) -> None:
+    """
+    Attach the staff token as a scoped HttpOnly browser cookie.
+    """
     settings: SessionSecurity = request.app.state.session_security
     response.set_cookie(
         key=SESSION_COOKIE,
@@ -100,6 +112,9 @@ def set_session_cookie(request: Request, response: Response, token: str) -> None
 
 
 def clear_session_cookie(request: Request, response: Response) -> None:
+    """
+    Expire the staff session cookie in the response.
+    """
     settings: SessionSecurity = request.app.state.session_security
     response.delete_cookie(
         SESSION_COOKIE,

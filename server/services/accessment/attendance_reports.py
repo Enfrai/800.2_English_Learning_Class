@@ -71,6 +71,10 @@ def collect_report(
     factory: Callable[[], Session], start: date, end: date, authorization: str
 ) -> AttendanceReport:
     # One SELECT takes a consistent snapshot of sessions and current attendance.
+    """
+    Build a dated attendance matrix using local attendance and the authorized learner
+    roster.
+    """
     with factory() as db:
         records = (
             db.execute(
@@ -133,6 +137,9 @@ def collect_report(
 
 def spreadsheet_text(value: str) -> str:
     # Quoting CSV alone does not stop spreadsheets evaluating a formula.
+    """
+    Protect spreadsheet text from formula interpretation in CSV exports.
+    """
     if value.lstrip().startswith(("=", "+", "-", "@")) or value.startswith(
         ("\t", "\r", "\n")
     ):
@@ -141,6 +148,9 @@ def spreadsheet_text(value: str) -> str:
 
 
 def render_csv(report: AttendanceReport) -> bytes:
+    """
+    Encode the attendance report as spreadsheet-safe UTF-8 CSV bytes.
+    """
     output = StringIO(newline="")
     writer = csv.writer(output)
     writer.writerow(["Learner name", *(day.isoformat() for day in report.dates)])
@@ -150,6 +160,9 @@ def render_csv(report: AttendanceReport) -> bytes:
 
 
 def register_font() -> None:
+    """
+    Register the bundled Unicode report font under a thread lock.
+    """
     with FONT_LOCK:
         if FONT not in pdfmetrics.getRegisteredFontNames():
             pdfmetrics.registerFont(
@@ -158,6 +171,9 @@ def register_font() -> None:
 
 
 def render_pdf(report: AttendanceReport) -> bytes:
+    """
+    Render the attendance matrix as a paginated PDF attachment.
+    """
     register_font()
     stream = BytesIO()
     document = SimpleDocTemplate(
@@ -232,6 +248,9 @@ def render_pdf(report: AttendanceReport) -> bytes:
         story.append(table)
 
     def page_header(canvas, doc):
+        """
+        Draw the report heading and page furniture on the PDF canvas.
+        """
         width, height = landscape(A4)
         canvas.saveState()
         canvas.setFillColor(colors.black)
@@ -260,10 +279,17 @@ def render_pdf(report: AttendanceReport) -> bytes:
 def create_report_router(
     factory: Callable[[], Session], staff_dependency: Callable
 ) -> APIRouter:
+    """
+    Build the report API router with its injected dependencies.
+    """
     router = APIRouter(tags=["US-005 attendance reports"])
 
     @router.post("/reports/attendance")
     def export(payload: ReportIn, request: Any = Depends(staff_dependency)) -> Response:
+        """
+        Handle POST /reports/attendance for export, applying the route’s validation and
+        authorization rules.
+        """
         if request.staff.role != "coordinator":
             raise HTTPException(403, "You do not have permission")
         for field, label in (("start_date", "Start date"), ("end_date", "End date")):

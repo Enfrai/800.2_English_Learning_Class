@@ -37,10 +37,16 @@ class Staff:
 
     @property
     def is_coordinator(self) -> bool:
+        """
+        Return whether the staff identity has the Coordinator role.
+        """
         return self.role == "coordinator"
 
 
 def _request(method: str, path: str, authorization: str) -> tuple[int, Any]:
+    """
+    Send an authenticated internal service request and decode its status and JSON body.
+    """
     request = urllib.request.Request(
         f"{USER_SERVICE_URL}{path}",
         method=method,

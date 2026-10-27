@@ -68,11 +68,17 @@ AUTH_PATHS = frozenset(
 
 
 def password_hash(password: str, salt: bytes) -> str:
+    """
+    Derive the salted password representation stored for staff authentication.
+    """
     digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, ROUNDS).hex()
     return f"pbkdf2_sha256${ROUNDS}${salt.hex()}${digest}"
 
 
 def verify_password(password: str, encoded: str) -> bool:
+    """
+    Verify a plaintext password against its stored salted representation.
+    """
     try:
         algorithm, rounds, salt, digest = encoded.split("$")
         if algorithm != "pbkdf2_sha256" or int(rounds) != ROUNDS:
@@ -85,6 +91,9 @@ def verify_password(password: str, encoded: str) -> bool:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """
+    Initialize the service database and application resources for the lifespan context.
+    """
     Base.metadata.create_all(bind=engine)
     username = os.getenv("DEMO_USERNAME", "demo")
     with SessionLocal.begin() as db:
@@ -124,6 +133,9 @@ app.include_router(create_enquiry_listing_router())
 async def authentication_cache_control(
     request: Request, call_next: RequestResponseEndpoint
 ) -> Response:
+    """
+    Set cache-control headers for authentication and learner responses.
+    """
     response = await call_next(request)
     if (
         request.url.path in AUTH_PATHS
@@ -153,6 +165,9 @@ class LoginResponse(BaseModel):
 
 
 def locked_response(locked_until: datetime, now: datetime) -> HTTPException:
+    """
+    Build the temporary login-lockout HTTP response and retry metadata.
+    """
     retry_after = max(1, math.ceil((locked_until - now).total_seconds()))
     return HTTPException(
         status_code=423,
@@ -169,6 +184,10 @@ def locked_response(locked_until: datetime, now: datetime) -> HTTPException:
 
 @app.get("/health")
 def health():
+    """
+    Handle GET /health for health, applying the route’s validation and authorization
+    rules.
+    """
     return {"status": "ok", "instance": INSTANCE}
 
 
@@ -179,6 +198,10 @@ def login(
     response: Response,
     db: Annotated[Session, Depends(get_db)],
 ) -> LoginResponse:
+    """
+    Handle POST /login for login, applying the route’s validation and authorization
+    rules.
+    """
     with db.begin():
         row = (
             db.execute(
@@ -258,6 +281,10 @@ def current_session(
     response: Response,
     user: Annotated[AuthenticatedUser, Depends(get_current_user)],
 ) -> SessionResponse:
+    """
+    Handle GET /session for current session, applying the route’s validation and
+    authorization rules.
+    """
     response.headers["Cache-Control"] = "no-store"
     response.headers["X-Session-Expires-At"] = user.expires_at.isoformat()
     return SessionResponse(
@@ -268,6 +295,9 @@ def current_session(
 @app.exception_handler(Exception)
 async def unexpected_error(request: Request, exc: Exception) -> JSONResponse:
     # Do not include SQL parameters, credentials or tokens in the response/log entry.
+    """
+    Return a sanitized server error without exposing exception internals.
+    """
     logging.getLogger(__name__).error(
         "User service request failed: %s", type(exc).__name__
     )
@@ -323,6 +353,10 @@ def logout(
     token: Annotated[str, Depends(get_session_token)],
     db: Annotated[Session, Depends(get_db)],
 ) -> Response:
+    """
+    Handle POST /logout for logout, applying the route’s validation and authorization
+    rules.
+    """
     try:
         with db.begin():
             session_id, now = lock_active_session(db, token)
@@ -356,6 +390,10 @@ def activity(
     token: Annotated[str, Depends(get_session_token)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ActivityResponse:
+    """
+    Handle POST /activity for activity, applying the route’s validation and
+    authorization rules.
+    """
     with db.begin():
         session_id, now = lock_active_session(db, token)
         expires = now + SESSION_DURATION
@@ -383,6 +421,9 @@ def account_management_access(
 def current_user_id(
     user: Annotated[AuthenticatedUser, Depends(get_current_user)],
 ) -> UUID:
+    """
+    Extract the authenticated user UUID for learner write attribution.
+    """
     return user.user_id
 
 
@@ -443,6 +484,10 @@ def learner_http_error(exc: LearnerError) -> HTTPException:
 
 @app.post("/learners", response_model=LearnerOut, status_code=201)
 def create_learner(payload: LearnerIn, user_id: CurrentUser, request: Request) -> dict:
+    """
+    Handle POST /learners for create learner, applying the route’s validation and
+    authorization rules.
+    """
     try:
         with request.app.state.session_factory.begin() as db:
             return add_learner(
@@ -460,12 +505,20 @@ def create_learner(payload: LearnerIn, user_id: CurrentUser, request: Request) -
 
 @app.get("/learners", response_model=list[LearnerOut])
 def read_learners(user_id: CurrentUser, request: Request, search: str | None = None):
+    """
+    Handle GET /learners for read learners, applying the route’s validation and
+    authorization rules.
+    """
     with request.app.state.session_factory() as db:
         return list_learners(db, search)
 
 
 @app.get("/learners/{learner_id}", response_model=LearnerOut)
 def read_learner(learner_id: UUID, user_id: CurrentUser, request: Request):
+    """
+    Handle GET /learners/{learner_id} for read learner, applying the route’s validation
+    and authorization rules.
+    """
     try:
         with request.app.state.session_factory() as db:
             return get_learner(db, learner_id)
@@ -477,6 +530,10 @@ def read_learner(learner_id: UUID, user_id: CurrentUser, request: Request):
 def change_learner(
     learner_id: UUID, payload: LearnerIn, user_id: CurrentUser, request: Request
 ):
+    """
+    Handle PUT /learners/{learner_id} for change learner, applying the route’s
+    validation and authorization rules.
+    """
     try:
         with request.app.state.session_factory.begin() as db:
             return update_learner(
@@ -503,6 +560,9 @@ def require_internal_key(
     x_internal_key: Annotated[str | None, Header()] = None,
 ) -> None:
     # Without a configured key the endpoint stays closed.
+    """
+    Reject internal learner lookups unless the shared key matches.
+    """
     if not (
         INTERNAL_API_KEY
         and x_internal_key

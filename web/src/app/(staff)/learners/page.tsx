@@ -8,6 +8,9 @@ import LearnersScreen from "@/components/learners/learners-screen";
 
 export const metadata: Metadata = { title: "Learners" };
 
+/*
+ * Render the learners page interface and its associated content.
+ */
 export default function LearnersPage() {
   return <LearnersScreen />;
 }

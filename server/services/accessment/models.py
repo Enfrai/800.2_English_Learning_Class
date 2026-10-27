@@ -30,15 +30,27 @@ class Base(DeclarativeBase):
     pass
 
 def id_col():
+    """
+    Define a UUID primary-key column with a generated UUID default.
+    """
     return Column("id", UUID(as_uuid=True), primary_key=True, default=uuid4)
 
 def timestamps():
+    """
+    Define database-managed creation and update timestamp columns.
+    """
     return [Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()), Column("updated_at", DateTime(timezone=True), nullable=False, server_default=func.now())]
 
 def ref(name, target=None, nullable=False):
+    """
+    Define a UUID reference column with an optional local foreign-key constraint.
+    """
     return Column(name, UUID(as_uuid=True), ForeignKey(target), nullable=nullable) if target else Column(name, UUID(as_uuid=True), nullable=nullable)
 
 def value(name, typ, nullable=False, unique=False):
+    """
+    Define a named SQLAlchemy value column with nullability and uniqueness options.
+    """
     return Column(name, typ, nullable=nullable, unique=unique)
 
 

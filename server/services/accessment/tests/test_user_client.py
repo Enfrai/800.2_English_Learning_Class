@@ -33,10 +33,16 @@ class FakeUserService:
 
 @pytest.fixture
 def user_service(monkeypatch: pytest.MonkeyPatch) -> Iterator[FakeUserService]:
+    """
+    Provide stubbed or isolated User Service used for cross-service scenarios.
+    """
     fake = FakeUserService()
 
     class Handler(BaseHTTPRequestHandler):
         def _answer(self) -> None:
+            """
+            Prepare or exercise answer in the test user client test scenario.
+            """
             length = int(self.headers.get("Content-Length") or 0)
             body = self.rfile.read(length) if length else b""
             fake.requests.append(
@@ -59,6 +65,9 @@ def user_service(monkeypatch: pytest.MonkeyPatch) -> Iterator[FakeUserService]:
         do_GET = do_POST = _answer
 
         def log_message(self, *args: Any) -> None:
+            """
+            Apply the test HTTP server logging policy to the formatted request message.
+            """
             pass
 
     server = HTTPServer(("127.0.0.1", 0), Handler)
@@ -73,6 +82,9 @@ def user_service(monkeypatch: pytest.MonkeyPatch) -> Iterator[FakeUserService]:
 
 
 def learner(first: str, family: str, created_at: str) -> dict[str, Any]:
+    """
+    Prepare or exercise learner in the test user client test scenario.
+    """
     return {
         "id": str(uuid4()),
         "first_name": first,
@@ -97,6 +109,9 @@ DETAILS = {
 def test_new_name_adds_the_learner_as_the_logged_in_staff_member(
     user_service: FakeUserService,
 ) -> None:
+    """
+    Verify that new name adds the learner as the logged in staff member.
+    """
     added = learner("Mere", "Walker", "2026-10-23T09:00:00Z")
     user_service.answers[("POST", "/learners")] = (201, added)
 
@@ -111,6 +126,9 @@ def test_new_name_adds_the_learner_as_the_logged_in_staff_member(
 def test_existing_name_uses_the_learner_added_first(
     user_service: FakeUserService,
 ) -> None:
+    """
+    Verify that existing name uses the learner added first.
+    """
     newer = learner("Mere", "Walker", "2026-10-20T09:00:00Z")
     older = learner("Mere", "Walker", "2026-10-01T09:00:00Z")
     user_service.answers[("POST", "/learners")] = (
@@ -131,6 +149,9 @@ def test_existing_name_uses_the_learner_added_first(
 def test_invalid_name_is_reported_with_the_user_service_message(
     user_service: FakeUserService,
 ) -> None:
+    """
+    Verify that invalid name is reported with the user service message.
+    """
     user_service.answers[("POST", "/learners")] = (
         422,
         {"detail": {"field": "first_name", "message": "First name is required"}},
@@ -148,6 +169,9 @@ def test_invalid_name_is_reported_with_the_user_service_message(
 def test_ended_session_asks_for_login_when_adding_a_learner(
     user_service: FakeUserService,
 ) -> None:
+    """
+    Verify that ended session asks for login when adding a learner.
+    """
     user_service.answers[("POST", "/learners")] = (401, {"detail": "Login required"})
 
     with pytest.raises(user_client.LoginRequiredError):
@@ -160,6 +184,9 @@ def test_ended_session_asks_for_login_when_adding_a_learner(
 def test_current_staff_is_read_from_the_user_service(
     user_service: FakeUserService,
 ) -> None:
+    """
+    Verify that current staff is read from the user service.
+    """
     staff_id = uuid4()
     user_service.answers[("GET", "/me")] = (
         200,
@@ -175,6 +202,9 @@ def test_current_staff_is_read_from_the_user_service(
 def test_ended_session_is_reported_as_login_required(
     user_service: FakeUserService,
 ) -> None:
+    """
+    Verify that ended session is reported as login required.
+    """
     user_service.answers[("GET", "/me")] = (401, {"detail": "Login required"})
 
     with pytest.raises(user_client.LoginRequiredError):
@@ -185,6 +215,9 @@ def test_ended_session_is_reported_as_login_required(
 def test_learner_exists_follows_the_user_service(
     user_service: FakeUserService, status: int, exists: bool
 ) -> None:
+    """
+    Verify that learner exists follows the user service.
+    """
     learner_id = uuid4()
     user_service.answers[("GET", f"/learners/{learner_id}")] = (status, {})
 
@@ -194,6 +227,9 @@ def test_learner_exists_follows_the_user_service(
 def test_unexpected_answer_is_not_turned_into_not_found(
     user_service: FakeUserService,
 ) -> None:
+    """
+    Verify that unexpected answer is not turned into not found.
+    """
     learner_id = uuid4()
     user_service.answers[("GET", f"/learners/{learner_id}")] = (500, {})
 
@@ -205,6 +241,9 @@ def test_unreachable_user_service_is_reported(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # Port 9 (discard) is closed on test machines, so the connection fails.
+    """
+    Verify that unreachable user service is reported.
+    """
     monkeypatch.setattr(user_client, "USER_SERVICE_URL", "http://127.0.0.1:9")
 
     with pytest.raises(user_client.UserServiceError):
@@ -221,6 +260,9 @@ MATCH = ("POST", "/internal/learners/match")
 
 @pytest.fixture
 def internal_key(monkeypatch: pytest.MonkeyPatch) -> str:
+    """
+    Require the configured shared key for an internal material endpoint.
+    """
     monkeypatch.setattr(user_client, "INTERNAL_API_KEY", "test-internal-key")
     return "test-internal-key"
 
@@ -228,6 +270,9 @@ def internal_key(monkeypatch: pytest.MonkeyPatch) -> str:
 def test_sign_in_lookup_sends_the_internal_key_and_no_login(
     user_service: FakeUserService, internal_key: str
 ) -> None:
+    """
+    Verify that sign in lookup sends the internal key and no login.
+    """
     found = {"id": str(uuid4()), "first_name": "Tāne", "family_name": "Māhina"}
     user_service.answers[MATCH] = (200, found)
 
@@ -250,6 +295,9 @@ def test_sign_in_lookup_sends_the_internal_key_and_no_login(
 def test_sign_in_lookup_reports_unknown_and_shared_names(
     user_service: FakeUserService, internal_key: str, status: int, error: type
 ) -> None:
+    """
+    Verify that sign in lookup reports unknown and shared names.
+    """
     user_service.answers[MATCH] = (status, {"detail": "x"})
 
     with pytest.raises(error):
@@ -259,6 +307,9 @@ def test_sign_in_lookup_reports_unknown_and_shared_names(
 def test_refused_key_is_reported_as_unavailable_not_as_unknown_name(
     user_service: FakeUserService, internal_key: str
 ) -> None:
+    """
+    Verify that refused key is reported as unavailable not as unknown name.
+    """
     user_service.answers[MATCH] = (403, {"detail": "Internal access only"})
 
     with pytest.raises(user_client.UserServiceError):
@@ -269,6 +320,9 @@ def test_refused_key_is_reported_as_unavailable_not_as_unknown_name(
 
 
 def test_staff_names_are_read_by_id(user_service: FakeUserService) -> None:
+    """
+    Verify that staff names are read by id.
+    """
     coordinator_id = uuid4()
     user_service.answers[("GET", "/staff")] = (
         200,
@@ -286,6 +340,9 @@ def test_staff_names_are_read_by_id(user_service: FakeUserService) -> None:
 def test_staff_names_report_login_and_refusal(
     user_service: FakeUserService, status: int, error: type
 ) -> None:
+    """
+    Verify that staff names report login and refusal.
+    """
     user_service.answers[("GET", "/staff")] = (status, {"detail": "x"})
 
     with pytest.raises(error):
@@ -295,6 +352,9 @@ def test_staff_names_report_login_and_refusal(
 def test_learner_names_include_learners_no_longer_on_the_list(
     user_service: FakeUserService,
 ) -> None:
+    """
+    Verify that learner names include learners no longer on the list.
+    """
     listed, former, deleted = uuid4(), uuid4(), uuid4()
     user_service.answers[("GET", "/learners")] = (
         200,
@@ -312,5 +372,8 @@ def test_learner_names_include_learners_no_longer_on_the_list(
 
 
 def test_learner_names_for_no_ids_make_no_call(user_service: FakeUserService) -> None:
+    """
+    Verify that learner names for no ids make no call.
+    """
     assert user_client.learner_names(AUTHORIZATION, set()) == {}
     assert user_service.requests == []

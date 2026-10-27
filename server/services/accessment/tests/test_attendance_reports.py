@@ -30,6 +30,9 @@ START = date(2026, 10, 1)
 
 @pytest.fixture
 def api(tmp_path, monkeypatch):
+    """
+    Provide injected API client and isolated application fixture.
+    """
     engine = create_engine(f"sqlite:///{tmp_path / 'reports.sqlite'}")
     class_sessions.create(engine)
     attendance_records.create(engine)
@@ -66,6 +69,9 @@ def api(tmp_path, monkeypatch):
     calls = []
 
     def roster(authorization, recorded):
+        """
+        Prepare or exercise roster in the test attendance reports test scenario.
+        """
         calls.append((authorization, recorded))
         assert authorization == "Bearer coordinator"
         return names.copy()
@@ -73,6 +79,9 @@ def api(tmp_path, monkeypatch):
     monkeypatch.setattr(report_client, "report_names", roster)
 
     def staff(authorization: str | None = Header(default=None)):
+        """
+        Prepare or exercise staff in the test attendance reports test scenario.
+        """
         if not authorization:
             raise HTTPException(401, "Login required")
         return SimpleNamespace(
@@ -96,6 +105,9 @@ def api(tmp_path, monkeypatch):
 
 
 def export(api, format="csv", **changes):
+    """
+    Prepare or exercise export in the test attendance reports test scenario.
+    """
     return api.client.post(
         "/reports/attendance",
         headers={"Authorization": "Bearer coordinator"},
@@ -109,16 +121,25 @@ def export(api, format="csv", **changes):
 
 
 def csv_rows(response):
+    """
+    Decode the exported CSV into rows for report assertions.
+    """
     return list(csv.reader(io.StringIO(response.content.decode("utf-8-sig"))))
 
 
 def pdf_text(content):
+    """
+    Extract text from the generated PDF for content assertions.
+    """
     return "\n".join(
         page.extract_text() for page in PdfReader(io.BytesIO(content)).pages
     )
 
 
 def test_csv_dates_are_inclusive_sorted_and_skip_nonclass_days(api):
+    """
+    Verify that csv dates are inclusive sorted and skip nonclass days.
+    """
     response = export(api)
     assert response.status_code == 200
     assert response.content.startswith(b"\xef\xbb\xbf")
@@ -133,6 +154,9 @@ def test_csv_dates_are_inclusive_sorted_and_skip_nonclass_days(api):
 
 
 def test_matrix_keeps_same_name_ids_separate_and_distinguishes_absent(api):
+    """
+    Verify that matrix keeps same name ids separate and distinguishes absent.
+    """
     rows = csv_rows(export(api))[1:]
     maia = [row for row in rows if row[0] == "Māia Test"]
     assert sorted(row[1:] for row in maia) == sorted(
@@ -148,6 +172,9 @@ def test_matrix_keeps_same_name_ids_separate_and_distinguishes_absent(api):
 
 @pytest.mark.parametrize("format", ["csv", "pdf"])
 def test_attachment_headers_no_cache_and_no_contact_data(api, format):
+    """
+    Verify that attachment headers no cache and no contact data.
+    """
     response = export(api, format)
     assert response.status_code == 200
     assert response.headers["cache-control"] == "no-store"
@@ -163,6 +190,9 @@ def test_attachment_headers_no_cache_and_no_contact_data(api, format):
 
 
 def test_pdf_is_real_a4_with_each_name_status_and_date(api):
+    """
+    Verify that pdf is real a4 with each name status and date.
+    """
     response = export(api, "pdf")
     assert response.content.startswith(b"%PDF-")
     reader = PdfReader(io.BytesIO(response.content))
@@ -183,6 +213,9 @@ def test_pdf_is_real_a4_with_each_name_status_and_date(api):
 def test_no_classes_has_exact_message_and_never_calls_roster_or_renderer(
     api, monkeypatch, format
 ):
+    """
+    Verify that no classes has exact message and never calls roster or renderer.
+    """
     monkeypatch.setattr(
         reports, "render_csv", lambda _: pytest.fail("No export allowed")
     )
@@ -197,6 +230,9 @@ def test_no_classes_has_exact_message_and_never_calls_roster_or_renderer(
 
 
 def test_reversed_range_has_exact_message_before_data_access(api):
+    """
+    Verify that reversed range has exact message before data access.
+    """
     response = export(api, start_date="2026-10-05", end_date="2026-10-01")
     assert response.status_code == 422
     assert response.json()["detail"] == {
@@ -207,6 +243,9 @@ def test_reversed_range_has_exact_message_before_data_access(api):
 
 
 def test_equal_start_and_end_exports_one_class(api):
+    """
+    Verify that equal start and end exports one class.
+    """
     response = export(api, start_date=START.isoformat(), end_date=START.isoformat())
     assert response.status_code == 200 and len(csv_rows(response)[0]) == 2
 
@@ -228,6 +267,9 @@ def test_equal_start_and_end_exports_one_class(api):
     ],
 )
 def test_bad_or_missing_inputs_export_nothing(api, payload):
+    """
+    Verify that bad or missing inputs export nothing.
+    """
     response = api.client.post(
         "/reports/attendance",
         headers={"Authorization": "Bearer coordinator"},
@@ -242,6 +284,9 @@ def test_bad_or_missing_inputs_export_nothing(api, payload):
     [(None, 401), ("teacher", 403), ("learner", 403), ("visitor", 403), ("admin", 403)],
 )
 def test_only_coordinator_can_export_before_queries(api, role, status):
+    """
+    Verify that only coordinator can export before queries.
+    """
     with api.engine.connect() as connection:
         before = connection.execute(select(attendance_records)).all()
     response = api.client.post(
@@ -262,7 +307,14 @@ def test_only_coordinator_can_export_before_queries(api, role, status):
 def test_roster_errors_do_not_produce_partial_or_empty_files(
     api, monkeypatch, failure, status
 ):
+    """
+    Verify that roster errors do not produce partial or empty files.
+    """
     def fail(*args):
+        """
+        Simulate an unavailable dependency or failing operation for the surrounding
+        test.
+        """
         raise failure
 
     monkeypatch.setattr(report_client, "report_names", fail)
@@ -273,6 +325,9 @@ def test_roster_errors_do_not_produce_partial_or_empty_files(
 
 
 def test_reports_are_readonly_and_reflect_latest_corrections(api):
+    """
+    Verify that reports are readonly and reflect latest corrections.
+    """
     first = list(api.names)[0]
     with api.factory.begin() as db:
         db.execute(
@@ -312,6 +367,9 @@ def test_reports_are_readonly_and_reflect_latest_corrections(api):
     ],
 )
 def test_csv_escaping_unicode_and_formula_safety(name):
+    """
+    Verify that csv escaping unicode and formula safety.
+    """
     report = reports.AttendanceReport(
         START, START, (START,), (reports.ReportRow(uuid4(), name, ("Present",)),)
     )
@@ -325,6 +383,9 @@ def test_csv_escaping_unicode_and_formula_safety(name):
 
 
 def test_pdf_escapes_markup_preserves_macrons_and_full_long_names():
+    """
+    Verify that pdf escapes markup preserves macrons and full long names.
+    """
     name = "A" * 100 + " " + "B" * 100
     report = reports.AttendanceReport(
         START,
@@ -342,6 +403,9 @@ def test_pdf_escapes_markup_preserves_macrons_and_full_long_names():
 
 
 def test_twelve_classes_fifty_learners_pdf_within_ten_seconds(api):
+    """
+    Verify that twelve classes fifty learners pdf within ten seconds.
+    """
     api.names.clear()
     api.names.update({uuid4(): f"Learner {i:02d} Māia Test" for i in range(50)})
     with api.factory.begin() as db:
@@ -366,6 +430,9 @@ def test_twelve_classes_fifty_learners_pdf_within_ten_seconds(api):
 
 
 def test_many_date_bands_and_empty_roster_still_generate_valid_exports():
+    """
+    Verify that many date bands and empty roster still generate valid exports.
+    """
     days = tuple(START + timedelta(days=i) for i in range(14))
     report = reports.AttendanceReport(days[0], days[-1], days, ())
     reader = PdfReader(io.BytesIO(reports.render_pdf(report)))
@@ -382,7 +449,13 @@ def test_many_date_bands_and_empty_roster_still_generate_valid_exports():
 
 
 def test_concurrent_pdf_requests_keep_correct_names():
+    """
+    Verify that concurrent pdf requests keep correct names.
+    """
     def render(i):
+        """
+        Prepare or exercise render in the test attendance reports test scenario.
+        """
         report = reports.AttendanceReport(
             START,
             START,
@@ -398,9 +471,15 @@ def test_concurrent_pdf_requests_keep_correct_names():
 
 
 def test_database_snapshot_is_one_select_and_report_does_not_write(api):
+    """
+    Verify that database snapshot is one select and report does not write.
+    """
     calls = []
 
     def trace(connection, cursor, statement, parameters, context, many):
+        """
+        Inspect or record trace events for the surrounding database or HTTP test.
+        """
         calls.append(statement)
 
     event.listen(api.engine, "before_cursor_execute", trace)
@@ -412,6 +491,9 @@ def test_database_snapshot_is_one_select_and_report_does_not_write(api):
 
 
 def test_actual_application_registers_report_auth_and_private_errors(api, monkeypatch):
+    """
+    Verify that actual application registers report auth and private errors.
+    """
     monkeypatch.setenv("DATABASE_URL", "sqlite://")
     module = importlib.import_module("app")
     monkeypatch.setattr(module, "SessionLocal", api.factory)

@@ -31,6 +31,9 @@ from test_postgres import postgres_url as postgres_url
 
 @pytest.fixture(scope="module")
 def engine(request: pytest.FixtureRequest) -> Iterator[Engine]:
+    """
+    Provide the engine context and release its resources after use.
+    """
     url = os.environ.get("TEST_DATABASE_URL")
     if not url and os.environ.get("US001_TEST_PG_URL"):
         # Reuse the identity-verified isolated US-001 runner, never the application URL.

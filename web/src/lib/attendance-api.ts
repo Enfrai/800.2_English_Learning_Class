@@ -52,6 +52,10 @@ export type Correction = {
 export class AlreadySignedInError extends Error {
   readonly record: AttendanceRecord;
 
+  /*
+   * Initialize the error instance and retain the supplied message and structured
+   * details.
+   */
   constructor(message: string, record: AttendanceRecord) {
     super(message);
     this.record = record;
@@ -67,6 +71,9 @@ export class SessionNotPastError extends Error {}
 /** The session, the learner or the present record does not exist. */
 export class NotFoundError extends Error {}
 
+/*
+ * Send the feature API request and translate its response into data or a typed error.
+ */
 async function send<T>(url: string, init: RequestInit = {}): Promise<T> {
   const { status, body, detail, message } = await apiRequest(url, init);
   if (status >= 200 && status < 300) return body as T;
@@ -80,14 +87,23 @@ async function send<T>(url: string, init: RequestInit = {}): Promise<T> {
   throw new RequestFailedError();
 }
 
+/*
+ * Build the attendance endpoint for the encoded class-session identifier.
+ */
 function attendanceUrl(sessionId: string): string {
   return `/api/access/sessions/${encodeURIComponent(sessionId)}/attendance`;
 }
 
+/*
+ * Load the class attendance list and current present count.
+ */
 export function getAttendance(sessionId: string): Promise<AttendanceList> {
   return send<AttendanceList>(attendanceUrl(sessionId));
 }
 
+/*
+ * Mark the selected learner present for the class session.
+ */
 export function markPresent(sessionId: string, learnerId: string): Promise<AttendanceChange> {
   return send<AttendanceChange>(attendanceUrl(sessionId), {
     method: "POST",
@@ -95,12 +111,18 @@ export function markPresent(sessionId: string, learnerId: string): Promise<Atten
   });
 }
 
+/*
+ * Remove the learner’s present attendance mark.
+ */
 export function unmarkPresent(sessionId: string, learnerId: string): Promise<AttendanceChange> {
   return send<AttendanceChange>(`${attendanceUrl(sessionId)}/${encodeURIComponent(learnerId)}`, {
     method: "DELETE",
   });
 }
 
+/*
+ * Create or find the learner and mark them present through the attendance API.
+ */
 export function addAndMarkPresent(
   sessionId: string,
   name: { first_name: string; family_name: string },
@@ -111,6 +133,9 @@ export function addAndMarkPresent(
   });
 }
 
+/*
+ * Build the historical-corrections endpoint for the class session.
+ */
 function correctionsUrl(sessionId: string): string {
   return `/api/access/sessions/${encodeURIComponent(sessionId)}/corrections`;
 }

@@ -32,6 +32,9 @@ PRIVATE_FIELDS = ("date_of_birth", "address", "id_number", "photo")
 def test_learner_with_first_and_family_name_is_saved_and_listed(
     db: Session, staff_id: UUID
 ) -> None:
+    """
+    Verify that learner with first and family name is saved and listed.
+    """
     saved = add_learner(
         db, first_name="Mere", family_name="Walker", created_by=staff_id
     )
@@ -45,6 +48,9 @@ def test_learner_with_first_and_family_name_is_saved_and_listed(
 def test_optional_details_are_saved_and_blank_ones_are_left_empty(
     db: Session, staff_id: UUID
 ) -> None:
+    """
+    Verify that optional details are saved and blank ones are left empty.
+    """
     saved = add_learner(
         db,
         first_name="Sione",
@@ -61,6 +67,9 @@ def test_optional_details_are_saved_and_blank_ones_are_left_empty(
 def test_learner_list_is_ordered_by_family_name_then_first_name(
     db: Session, staff_id: UUID
 ) -> None:
+    """
+    Verify that learner list is ordered by family name then first name.
+    """
     for first_name, family_name in [
         ("Wiremu", "Smith"),
         ("Ana", "Brown"),
@@ -78,6 +87,9 @@ def test_learner_list_is_ordered_by_family_name_then_first_name(
 def test_learner_search_matches_part_of_the_full_name_ignoring_case(
     db: Session, staff_id: UUID
 ) -> None:
+    """
+    Verify that learner search matches part of the full name ignoring case.
+    """
     add_learner(db, first_name="Hana", family_name="Ngata", created_by=staff_id)
     add_learner(db, first_name="Peter", family_name="Jones", created_by=staff_id)
 
@@ -108,6 +120,9 @@ def test_empty_name_is_refused_and_nothing_is_saved(
     field: str,
     message: str,
 ) -> None:
+    """
+    Verify that empty name is refused and nothing is saved.
+    """
     with pytest.raises(LearnerValidationError) as error:
         add_learner(
             db, first_name=first_name, family_name=family_name, created_by=staff_id
@@ -125,6 +140,9 @@ def test_empty_name_is_refused_and_nothing_is_saved(
 def test_name_of_100_characters_is_accepted(
     db: Session, staff_id: UUID, field: str
 ) -> None:
+    """
+    Verify that name of 100 characters is accepted.
+    """
     names = {"first_name": "Mere", "family_name": "Walker", field: "a" * 100}
 
     saved = add_learner(db, created_by=staff_id, **names)
@@ -136,6 +154,9 @@ def test_name_of_100_characters_is_accepted(
 def test_name_of_101_characters_is_rejected(
     db: Session, staff_id: UUID, field: str
 ) -> None:
+    """
+    Verify that name of 101 characters is rejected.
+    """
     names = {"first_name": "Mere", "family_name": "Walker", field: "a" * 101}
 
     with pytest.raises(LearnerValidationError) as error:
@@ -149,6 +170,9 @@ def test_name_of_101_characters_is_rejected(
 def test_name_length_is_counted_after_trimming_spaces(
     db: Session, staff_id: UUID
 ) -> None:
+    """
+    Verify that name length is counted after trimming spaces.
+    """
     saved = add_learner(
         db, first_name=f"  {'a' * 100}  ", family_name="Walker", created_by=staff_id
     )
@@ -162,6 +186,9 @@ def test_name_length_is_counted_after_trimming_spaces(
 def test_same_name_gives_a_warning_and_nothing_is_saved(
     db: Session, staff_id: UUID
 ) -> None:
+    """
+    Verify that same name gives a warning and nothing is saved.
+    """
     first = add_learner(
         db, first_name="Mere", family_name="Walker", created_by=staff_id
     )
@@ -177,6 +204,9 @@ def test_same_name_gives_a_warning_and_nothing_is_saved(
 def test_same_name_can_be_added_anyway_and_gives_two_records(
     db: Session, staff_id: UUID
 ) -> None:
+    """
+    Verify that same name can be added anyway and gives two records.
+    """
     first = add_learner(
         db, first_name="Mere", family_name="Walker", created_by=staff_id
     )
@@ -196,6 +226,9 @@ def test_same_name_can_be_added_anyway_and_gives_two_records(
 def test_renaming_to_another_learners_name_gives_a_warning(
     db: Session, staff_id: UUID
 ) -> None:
+    """
+    Verify that renaming to another learners name gives a warning.
+    """
     add_learner(db, first_name="Mere", family_name="Walker", created_by=staff_id)
     other = add_learner(db, first_name="Ana", family_name="Brown", created_by=staff_id)
 
@@ -214,6 +247,9 @@ def test_renaming_to_another_learners_name_gives_a_warning(
 def test_saving_a_learner_with_an_unchanged_name_gives_no_warning(
     db: Session, staff_id: UUID
 ) -> None:
+    """
+    Verify that saving a learner with an unchanged name gives no warning.
+    """
     add_learner(db, first_name="Mere", family_name="Walker", created_by=staff_id)
     second = add_learner(
         db,
@@ -241,6 +277,9 @@ def test_saving_a_learner_with_an_unchanged_name_gives_no_warning(
 def test_changing_first_language_keeps_the_other_fields(
     db: Session, staff_id: UUID
 ) -> None:
+    """
+    Verify that changing first language keeps the other fields.
+    """
     saved = add_learner(
         db,
         first_name="Sione",
@@ -269,6 +308,9 @@ def test_changing_first_language_keeps_the_other_fields(
 
 
 def test_update_is_validated_like_a_new_learner(db: Session, staff_id: UUID) -> None:
+    """
+    Verify that update is validated like a new learner.
+    """
     saved = add_learner(
         db, first_name="Mere", family_name="Walker", created_by=staff_id
     )
@@ -283,6 +325,9 @@ def test_update_is_validated_like_a_new_learner(db: Session, staff_id: UUID) -> 
 
 
 def test_unknown_learner_is_reported_as_not_found(db: Session, staff_id: UUID) -> None:
+    """
+    Verify that unknown learner is reported as not found.
+    """
     with pytest.raises(LearnerNotFoundError):
         get_learner(db, uuid4())
     with pytest.raises(LearnerNotFoundError):
@@ -295,6 +340,9 @@ def test_unknown_learner_is_reported_as_not_found(db: Session, staff_id: UUID) -
 
 
 def test_learner_table_has_no_private_fields() -> None:
+    """
+    Verify that learner table has no private fields.
+    """
     assert not set(PRIVATE_FIELDS) & set(learners.c.keys())
 
 
@@ -302,6 +350,9 @@ def test_private_fields_in_a_request_are_ignored(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # Importing app creates an engine but does not connect, so a dummy URL is fine.
+    """
+    Verify that private fields in a request are ignored.
+    """
     monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://unused@localhost/unused")
     app = importlib.import_module("app")
 
@@ -329,6 +380,9 @@ def test_private_fields_in_a_request_are_ignored(
 def test_names_with_macrons_and_apostrophes_are_kept_exactly(
     db: Session, staff_id: UUID, first_name: str, family_name: str
 ) -> None:
+    """
+    Verify that names with macrons and apostrophes are kept exactly.
+    """
     saved = add_learner(
         db, first_name=first_name, family_name=family_name, created_by=staff_id
     )

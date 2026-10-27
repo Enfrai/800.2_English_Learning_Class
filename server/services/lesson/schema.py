@@ -9,6 +9,9 @@ from sqlalchemy import inspect, text
 
 
 def prepare_schema(engine):
+    """
+    Initialize the service tables and apply the supported additive schema safeguards.
+    """
     with engine.begin() as connection:
         if connection.dialect.name == "postgresql":
             connection.execute(text("SELECT pg_advisory_xact_lock(800006)"))

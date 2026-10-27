@@ -14,6 +14,9 @@ from test_postgres import PgContext
 
 
 def rows(pg: PgContext, name: str) -> list:
+    """
+    Prepare or exercise rows in the test learner import test scenario.
+    """
     with pg.engine.connect() as db:
         return list(
             db.execute(
@@ -29,6 +32,9 @@ def upload(
     filename: str = "learners.csv",
     replica: int = 0,
 ):
+    """
+    Prepare or exercise upload in the test learner import test scenario.
+    """
     return pg.clients[replica].post(
         "/learners/import",
         headers=headers(token),
@@ -37,6 +43,9 @@ def upload(
 
 
 def test_ac1_ten_persisted(pg: PgContext) -> None:
+    """
+    Verify that ac1 ten persisted.
+    """
     actor, token = add_coordinator(pg)
     name = uuid4().hex
     response = upload(
@@ -56,6 +65,9 @@ def test_ac1_ten_persisted(pg: PgContext) -> None:
 
 
 def test_ac2_database_and_file_duplicates(pg: PgContext) -> None:
+    """
+    Verify that ac2 database and file duplicates.
+    """
     _, token = add_coordinator(pg)
     name = uuid4().hex
     content = document([["One", name, "", ""], ["Two", name, "", ""]])
@@ -90,6 +102,9 @@ def test_ac2_database_and_file_duplicates(pg: PgContext) -> None:
 
 
 def test_ac3_ac4_partial_valid_rows(pg: PgContext) -> None:
+    """
+    Verify that ac3 ac4 partial valid rows.
+    """
     _, token = add_coordinator(pg)
     name = uuid4().hex
     response = upload(
@@ -111,6 +126,9 @@ def test_ac3_ac4_partial_valid_rows(pg: PgContext) -> None:
     [("extension", 422), ("encoding", 422), ("size", 413), ("syntax", 422)],
 )
 def test_ac5_no_writes(pg: PgContext, kind: str, status: int) -> None:
+    """
+    Verify that ac5 no writes.
+    """
     _, token = add_coordinator(pg)
     name = uuid4().hex
     content = document([["Valid", name, "", ""]])
@@ -129,6 +147,9 @@ def test_ac5_no_writes(pg: PgContext, kind: str, status: int) -> None:
 
 @pytest.mark.parametrize("actor,status", [("anonymous", 401), ("teacher", 403)])
 def test_permissions(pg: PgContext, actor: str, status: int) -> None:
+    """
+    Verify that permissions.
+    """
     token = pg.login(0).json()["sessionid"] if actor == "teacher" else None
     response = upload(pg, token, document([]))
     assert response.status_code == status
@@ -140,6 +161,9 @@ def test_permissions(pg: PgContext, actor: str, status: int) -> None:
     [(None, 403), ("https://evil.invalid", 403), ("http://testserver", 200)],
 )
 def test_cookie_csrf(pg: PgContext, origin: str | None, status: int) -> None:
+    """
+    Verify that cookie csrf.
+    """
     _, token = add_coordinator(pg)
     name = uuid4().hex
     request_headers = {"Cookie": f"ako_session={token}"}
@@ -155,11 +179,17 @@ def test_cookie_csrf(pg: PgContext, origin: str | None, status: int) -> None:
 
 
 def test_database_failure_rolls_back_batch(pg: PgContext) -> None:
+    """
+    Verify that database failure rolls back batch.
+    """
     _, token = add_coordinator(pg)
     name = uuid4().hex
     inserted = 0
 
     def fail_second(conn, cursor, statement, parameters, context, executemany):
+        """
+        Fail the second learner write to verify that the import batch rolls back.
+        """
         nonlocal inserted
         if statement.startswith("INSERT INTO learners"):
             inserted += 1
@@ -179,6 +209,9 @@ def test_database_failure_rolls_back_batch(pg: PgContext) -> None:
 
 
 def test_concurrent_imports_across_replicas(pg: PgContext) -> None:
+    """
+    Verify that concurrent imports across replicas.
+    """
     _, token = add_coordinator(pg)
     content = document([["Concurrent", uuid4().hex, "", ""]])
     with ThreadPoolExecutor(max_workers=2) as pool:

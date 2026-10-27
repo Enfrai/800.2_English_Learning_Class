@@ -9,6 +9,9 @@ from learner_csv import CSV_HEADER, MAX_CSV_BYTES, CsvFileError, parse_learner_c
 
 
 def document(rows: list[list[str]], newline: str = "\n") -> bytes:
+    """
+    Prepare or exercise document in the test learner csv test scenario.
+    """
     stream = StringIO(newline="")
     writer = csv.writer(stream, lineterminator=newline)
     writer.writerow(CSV_HEADER)
@@ -17,6 +20,9 @@ def document(rows: list[list[str]], newline: str = "\n") -> bytes:
 
 
 def test_ac1_ten_valid_records() -> None:
+    """
+    Verify that ac1 ten valid records.
+    """
     result = parse_learner_csv(
         document([[f"Fiction{i}", "Example", "", ""] for i in range(10)]),
         filename="learners.csv",
@@ -29,6 +35,9 @@ def test_ac1_ten_valid_records() -> None:
 
 
 def test_ac2_file_duplicates_trimmed_case_insensitive() -> None:
+    """
+    Verify that ac2 file duplicates trimmed case insensitive.
+    """
     result = parse_learner_csv(
         document(
             [
@@ -53,6 +62,9 @@ def test_ac2_file_duplicates_trimmed_case_insensitive() -> None:
 def test_ac3_missing_name_skips_only_bad_row(
     index: int, field: str, value: str
 ) -> None:
+    """
+    Verify that ac3 missing name skips only bad row.
+    """
     row = ["Fiction", "Example", "", ""]
     row[index] = value
     result = parse_learner_csv(
@@ -67,6 +79,9 @@ def test_ac3_missing_name_skips_only_bad_row(
 @pytest.mark.parametrize("index", [0, 1])
 @pytest.mark.parametrize("character", ["a", "界", "😀"])
 def test_ac4_unicode_name_boundary(index: int, character: str) -> None:
+    """
+    Verify that ac4 unicode name boundary.
+    """
     good = ["Fiction", "Example", "", ""]
     good[index] = " " + character * 100 + " "
     bad = good.copy()
@@ -79,12 +94,18 @@ def test_ac4_unicode_name_boundary(index: int, character: str) -> None:
 
 @pytest.mark.parametrize("filename", ["learners.txt", "learners.xlsx", "learners"])
 def test_ac5_non_csv_extension(filename: str) -> None:
+    """
+    Verify that ac5 non csv extension.
+    """
     with pytest.raises(CsvFileError, match="must be a CSV"):
         parse_learner_csv(document([]), filename=filename)
 
 
 def test_ac5_byte_limit_inclusive() -> None:
     # CSV spaces are trimmed by the existing name validator; this is one valid row.
+    """
+    Verify that ac5 byte limit inclusive.
+    """
     start = (",".join(CSV_HEADER) + "\nFiction,Example,,").encode()
     content = start + b" " * (MAX_CSV_BYTES - len(start))
     assert len(parse_learner_csv(content, filename="a.csv").records) == 1
@@ -94,12 +115,18 @@ def test_ac5_byte_limit_inclusive() -> None:
 
 @pytest.mark.parametrize("content", [b"\xff", b"\xff\xfea\x00", b"a\x00b"])
 def test_encoding_or_binary_rejects_file(content: bytes) -> None:
+    """
+    Verify that encoding or binary rejects file.
+    """
     with pytest.raises(CsvFileError):
         parse_learner_csv(content, filename="a.csv")
 
 
 @pytest.mark.parametrize("ending", ["\n", "\r\n", "\r"])
 def test_bom_quotes_multiline_and_physical_row_numbers(ending: str) -> None:
+    """
+    Verify that bom quotes multiline and physical row numbers.
+    """
     content = document(
         [
             ["Fiction", 'Example, "quoted"', "", "line1\nline2"],
@@ -118,6 +145,9 @@ def test_bom_quotes_multiline_and_physical_row_numbers(ending: str) -> None:
     "content", [b"", b"first_name,family_name\n", b"wrong,header,here,now\n"]
 )
 def test_invalid_header(content: bytes) -> None:
+    """
+    Verify that invalid header.
+    """
     with pytest.raises(CsvFileError, match="CSV header"):
         parse_learner_csv(content, filename="a.csv")
 
@@ -126,6 +156,9 @@ def test_invalid_header(content: bytes) -> None:
     "tail", [b'"unfinished', b"too,few\n", b"too,many,fields,here,extra\n"]
 )
 def test_late_format_error_returns_no_partial_result(tail: bytes) -> None:
+    """
+    Verify that late format error returns no partial result.
+    """
     with pytest.raises(CsvFileError):
         parse_learner_csv(
             document([["Valid", "Example", "", ""]]) + tail, filename="a.csv"
@@ -133,6 +166,9 @@ def test_late_format_error_returns_no_partial_result(tail: bytes) -> None:
 
 
 def test_invalid_row_does_not_reserve_duplicate_name() -> None:
+    """
+    Verify that invalid row does not reserve duplicate name.
+    """
     result = parse_learner_csv(
         document(
             [["Fiction", "Example", "x" * 101, ""], ["Fiction", "Example", "", ""]]
@@ -144,5 +180,8 @@ def test_invalid_row_does_not_reserve_duplicate_name() -> None:
 
 
 def test_header_only_is_empty_result() -> None:
+    """
+    Verify that header only is empty result.
+    """
     result = parse_learner_csv(document([]), filename="a.csv")
     assert not result.records and not result.duplicates and not result.errors

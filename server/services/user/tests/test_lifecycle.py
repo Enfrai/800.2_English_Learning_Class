@@ -15,6 +15,9 @@ from test_postgres import PgContext
 def mutation(
     pg: PgContext, path: str, token: str, replica: int = 0, cookie: bool = False
 ) -> Any:
+    """
+    Prepare or exercise mutation in the test lifecycle test scenario.
+    """
     headers = {"Cookie": "", "Authorization": f"Bearer {token}"}
     if cookie:
         headers = {"Cookie": f"ako_session={token}", "Origin": "http://testserver"}
@@ -23,6 +26,9 @@ def mutation(
 
 @pytest.mark.parametrize("cookie", [False, True])
 def test_logout_revokes_and_clears_cookie(pg: PgContext, cookie: bool) -> None:
+    """
+    Verify that logout revokes and clears cookie.
+    """
     token = pg.login().json()["sessionid"]
     response = mutation(pg, "/logout", token, 1, cookie)
     assert response.status_code == 204 and response.content == b""
@@ -40,6 +46,9 @@ def test_logout_revokes_and_clears_cookie(pg: PgContext, cookie: bool) -> None:
 def test_explicit_activity_slides_expiry_and_passive_reads_do_not(
     pg: PgContext, cookie: bool
 ) -> None:
+    """
+    Verify that explicit activity slides expiry and passive reads do not.
+    """
     token = pg.login().json()["sessionid"]
     now = datetime.now(UTC)
     pg.update_session(
@@ -69,6 +78,9 @@ def test_explicit_activity_slides_expiry_and_passive_reads_do_not(
 def test_invalid_sessions_cannot_refresh(
     pg: PgContext, state: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """
+    Verify that invalid sessions cannot refresh.
+    """
     token = pg.login().json()["sessionid"]
     now = datetime.now(UTC)
     if state == "revoked":
@@ -101,6 +113,9 @@ def test_invalid_sessions_cannot_refresh(
 def test_csrf_rejected_without_session_changes(
     pg: PgContext, path: str, origin: str | None
 ) -> None:
+    """
+    Verify that csrf rejected without session changes.
+    """
     token = pg.login().json()["sessionid"]
     before = pg.session_rows()
     headers = {"Cookie": f"ako_session={token}"}
@@ -116,11 +131,17 @@ def test_csrf_rejected_without_session_changes(
 def test_both_serializations_of_logout_activity_race(
     pg: PgContext, first: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """
+    Verify that both serializations of logout activity race.
+    """
     token = pg.login().json()["sessionid"]
     held, release = Event(), Event()
     original = pg.a.lock_active_session
 
     def hold(db: Any, value: str) -> Any:
+        """
+        Prepare or exercise hold in the test lifecycle test scenario.
+        """
         row = original(db, value)
         held.set()
         assert release.wait(5)
@@ -149,12 +170,18 @@ def test_both_serializations_of_logout_activity_race(
 
 
 def test_expiry_is_rechecked_after_lock_wait(pg: PgContext) -> None:
+    """
+    Verify that expiry is rechecked after lock wait.
+    """
     token = pg.login().json()["sessionid"]
     waiting = Event()
 
     def query_started(
         conn: Any, cursor: Any, statement: str, params: Any, context: Any, many: bool
     ) -> None:
+        """
+        Signal that the observed database query has begun for the concurrency test.
+        """
         if "FOR UPDATE" in statement and "users" in statement:
             waiting.set()
 
@@ -185,14 +212,23 @@ def test_expiry_is_rechecked_after_lock_wait(pg: PgContext) -> None:
 
 
 def test_replacement_and_activity_do_not_restore_old_token(pg: PgContext) -> None:
+    """
+    Verify that replacement and activity do not restore old token.
+    """
     old = pg.login().json()["sessionid"]
     barrier = Barrier(2)
 
     def refresh() -> int:
+        """
+        Prepare or exercise refresh in the test lifecycle test scenario.
+        """
         barrier.wait(5)
         return mutation(pg, "/activity", old, 0).status_code
 
     def replace() -> str:
+        """
+        Prepare or exercise replace in the test lifecycle test scenario.
+        """
         barrier.wait(5)
         response = pg.login(1)
         assert response.status_code == 200
@@ -208,6 +244,9 @@ def test_replacement_and_activity_do_not_restore_old_token(pg: PgContext) -> Non
 
 
 def test_teacher_account_boundary_discloses_no_accounts(pg: PgContext) -> None:
+    """
+    Verify that teacher account boundary discloses no accounts.
+    """
     token = pg.login().json()["sessionid"]
     response = pg.clients[1].get(
         "/account-management/access",

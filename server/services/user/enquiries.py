@@ -86,6 +86,10 @@ def create_enquiries_router() -> APIRouter:
     def submit_enquiry(
         payload: EnquiryIn, response: Response, db: Annotated[Session, Depends(get_db)]
     ) -> EnquiryOut:
+        """
+        Handle POST /enquiries for submit enquiry, applying the route’s validation and
+        authorization rules.
+        """
         values = validated_values(payload)
         # This public route has no authentication read transaction. Commit before
         # returning success; a failed insert rolls back without creating an account.
@@ -118,6 +122,10 @@ def create_enquiry_listing_router() -> APIRouter:
         offset: int = Query(default=0, ge=0, le=10000),
     ) -> list[EnquiryRecord]:
         # UUID breaks timestamp ties; bounded offset pagination avoids unbounded reads.
+        """
+        Handle GET /enquiries for list enquiries, applying the route’s validation and
+        authorization rules.
+        """
         rows = db.execute(
             select(
                 public_enquiries.c.id,

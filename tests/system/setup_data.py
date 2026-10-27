@@ -98,9 +98,15 @@ class CheckIn:
     """
 
     def __init__(self, staff: APIRequestContext) -> None:
+        """
+        Initialize CheckIn and retain the supplied constructor state.
+        """
         self.staff = staff
 
     def _address(self, session_id: str) -> str:
+        """
+        Build the internal test endpoint address for the requested resource.
+        """
         return f"/api/staff/access/sessions/{UUID(session_id)}/check-in"
 
     def open(self, session_id: str) -> str:
@@ -113,5 +119,8 @@ class CheckIn:
         return response.json()["sign_in_url"].rsplit("/", 1)[1]
 
     def close(self, session_id: str) -> None:
+        """
+        Release the owned connection, browser context or helper resource.
+        """
         response = self.staff.delete(self._address(session_id), headers=ORIGIN)
         assert response.ok, f"Close check-in: {response.status} {response.text()}"

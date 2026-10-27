@@ -27,6 +27,9 @@ KEY = "test-internal-key"
 
 
 def add(db: Session, staff_id: UUID, first: str, family: str) -> UUID:
+    """
+    Prepare or exercise add in the test sign in lookup test scenario.
+    """
     return add_learner(
         db,
         first_name=first,
@@ -60,6 +63,9 @@ def test_name_matches_ignoring_case_spaces_and_macrons(
     typed_first: str,
     type_family: Callable[[str], str],
 ) -> None:
+    """
+    Verify that name matches ignoring case spaces and macrons.
+    """
     family = unique("Māhina")
     learner_id = add(db, staff_id, "Tāne", family)
 
@@ -71,6 +77,9 @@ def test_name_matches_ignoring_case_spaces_and_macrons(
 def test_only_the_matched_learner_is_returned_never_the_list(
     db: Session, staff_id: UUID
 ) -> None:
+    """
+    Verify that only the matched learner is returned never the list.
+    """
     family = unique("Walker")
     add(db, staff_id, "Mere", family)
     add(db, staff_id, "Sione", family)
@@ -84,6 +93,9 @@ def test_only_the_matched_learner_is_returned_never_the_list(
 def test_name_shared_by_several_learners_is_never_guessed(
     db: Session, staff_id: UUID
 ) -> None:
+    """
+    Verify that name shared by several learners is never guessed.
+    """
     family = unique("Walker")
     add(db, staff_id, "Mere", family)
     add(db, staff_id, "Mere", family)
@@ -95,6 +107,9 @@ def test_name_shared_by_several_learners_is_never_guessed(
 def test_inactive_learner_is_not_found_and_does_not_make_a_name_ambiguous(
     db: Session, staff_id: UUID
 ) -> None:
+    """
+    Verify that inactive learner is not found and does not make a name ambiguous.
+    """
     family = unique("Silva")
     former = add(db, staff_id, "Ana", family)
     current = add(db, staff_id, "Ana", family)
@@ -110,6 +125,9 @@ def test_inactive_learner_is_not_found_and_does_not_make_a_name_ambiguous(
 def test_unknown_empty_or_too_long_name_is_not_found(
     db: Session, staff_id: UUID, first: str | None, family: str | None
 ) -> None:
+    """
+    Verify that unknown empty or too long name is not found.
+    """
     add(db, staff_id, "Mere", "Walker")
 
     with pytest.raises(LearnerNotFoundError):
@@ -117,6 +135,9 @@ def test_unknown_empty_or_too_long_name_is_not_found(
 
 
 def test_part_of_a_name_does_not_match(db: Session, staff_id: UUID) -> None:
+    """
+    Verify that part of a name does not match.
+    """
     family = unique("Ngata")
     add(db, staff_id, "Aroha", family)
 
@@ -128,6 +149,9 @@ def test_part_of_a_name_does_not_match(db: Session, staff_id: UUID) -> None:
 
 
 def add_in_pg(pg: PgContext, first: str, family: str) -> UUID:
+    """
+    Prepare or exercise add in pg in the test sign in lookup test scenario.
+    """
     learner_id = uuid4()
     with pg.engine.begin() as db:
         db.execute(
@@ -142,6 +166,9 @@ def add_in_pg(pg: PgContext, first: str, family: str) -> UUID:
 
 
 def match(pg: PgContext, key: str | None, first: str, family: str) -> object:
+    """
+    Prepare or exercise match in the test sign in lookup test scenario.
+    """
     headers = {"Cookie": ""} | ({"X-Internal-Key": key} if key else {})
     return pg.clients[0].post(
         "/internal/learners/match",
@@ -152,6 +179,9 @@ def match(pg: PgContext, key: str | None, first: str, family: str) -> object:
 
 @pytest.fixture
 def keyed_pg(pg: PgContext) -> PgContext:
+    """
+    Provide postgreSQL fixture configured with matching internal API keys.
+    """
     for app_module in (pg.a, pg.b):
         app_module.INTERNAL_API_KEY = KEY
     return pg
@@ -160,6 +190,9 @@ def keyed_pg(pg: PgContext) -> PgContext:
 def test_endpoint_returns_the_matched_learner_with_the_key(
     keyed_pg: PgContext,
 ) -> None:
+    """
+    Verify that endpoint returns the matched learner with the key.
+    """
     family = unique("Māhina")
     learner_id = add_in_pg(keyed_pg, "Tāne", family)
 
@@ -177,6 +210,9 @@ def test_endpoint_returns_the_matched_learner_with_the_key(
 def test_endpoint_refuses_a_missing_or_wrong_key(
     keyed_pg: PgContext, key: str | None
 ) -> None:
+    """
+    Verify that endpoint refuses a missing or wrong key.
+    """
     family = unique("Ngata")
     add_in_pg(keyed_pg, "Aroha", family)
 
@@ -187,6 +223,9 @@ def test_endpoint_refuses_a_missing_or_wrong_key(
 
 
 def test_endpoint_is_closed_when_no_key_is_configured(pg: PgContext) -> None:
+    """
+    Verify that endpoint is closed when no key is configured.
+    """
     pg.a.INTERNAL_API_KEY = ""
 
     assert match(pg, "", "Aroha", "Ngata").status_code == 403
@@ -194,6 +233,9 @@ def test_endpoint_is_closed_when_no_key_is_configured(pg: PgContext) -> None:
 
 
 def test_endpoint_reports_not_found_and_shared_names(keyed_pg: PgContext) -> None:
+    """
+    Verify that endpoint reports not found and shared names.
+    """
     family = unique("Walker")
     add_in_pg(keyed_pg, "Mere", family)
     add_in_pg(keyed_pg, "Mere", family)

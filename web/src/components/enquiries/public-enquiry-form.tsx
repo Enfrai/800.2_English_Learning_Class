@@ -1,3 +1,9 @@
+/*
+ * Validate and submit public class enquiries with consent and accessible feedback.
+ * Author: Leonwu2026
+ * Date: 25 Oct 2026
+ */
+
 "use client";
 
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
@@ -23,7 +29,11 @@ export default function PublicEnquiryForm() {
   const [notice, setNotice] = useState("");
   const [success, setSuccess] = useState(false);
 
-  useEffect(() => {
+  useEffect(/*
+     * Synchronize the component with its current dependencies and manage effect
+     * resources.
+     */
+    () => {
     // React must commit disabled=false before a server-rejected field can receive focus.
     if (!busy && focusAfterEnable.current) {
       formRef.current?.querySelector<HTMLElement>(`[name="${focusAfterEnable.current}"]`)?.focus();
@@ -31,12 +41,19 @@ export default function PublicEnquiryForm() {
     }
   }, [busy, errors]);
 
+  /*
+   * Display validation feedback and focus the first invalid form field.
+   */
   function showErrors(found: Errors) {
     setErrors(found);
     const first = Object.keys(found)[0];
     if (first) formRef.current?.querySelector<HTMLElement>(`[name="${first}"]`)?.focus();
   }
 
+  /*
+   * Validate and submit the public enquiry form form, updating its success and error
+   * state.
+   */
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     // Close the same-tick double-submit gap before disabled controls render.
@@ -50,7 +67,10 @@ export default function PublicEnquiryForm() {
       const [local = "", domain = ""] = parts;
       if (parts.length !== 2 || contact.length > 255 || !/^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]{1,64}$/.test(local)
         || local.startsWith(".") || local.endsWith(".") || local.includes("..") || !domain.includes(".")
-        || !domain.split(".").every(label => /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/.test(label))) found.contact = EMAIL_ERROR;
+        || !domain.split(".").every(/*
+     * Check whether every collection entry satisfies this validation rule.
+     */
+    label => /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/.test(label))) found.contact = EMAIL_ERROR;
     } else {
       const digits = contact.replace(/[^0-9]/g, "");
       if (contact.length > 255 || !/^\+?[0-9 ()-]+$/.test(contact) || digits.length < 7 || digits.length > 15) found.contact = "Please enter a valid phone number";
@@ -67,7 +87,10 @@ export default function PublicEnquiryForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...values, name: values.name.trim(), contact }),
       });
-      const data: unknown = await response.json().catch(() => null);
+      const data: unknown = await response.json().catch(/*
+     * Handle an asynchronous failure using the workflow’s error state.
+     */
+    () => null);
       const detail = data && typeof data === "object" && "detail" in data ? data.detail : null;
       // Only render agreed validation messages, never arbitrary API internals.
       const field = detail === EMAIL_ERROR || detail === "Please enter a valid phone number" ? "contact"
@@ -89,9 +112,15 @@ export default function PublicEnquiryForm() {
     }
   }
 
+  /*
+   * Return the validation message displayed beside the enquiry form field.
+   */
   function error(field: Field) {
     return errors[field] && <p id={`${id}-${field}-error`} className="msg msg-error" role="alert">{errors[field]}</p>;
   }
+  /*
+   * Build the accessible error-description attributes for a form field.
+   */
   function accessibility(field: Field) {
     return { "aria-invalid": Boolean(errors[field]), "aria-describedby": errors[field] ? `${id}-${field}-error` : undefined };
   }
@@ -103,23 +132,35 @@ export default function PublicEnquiryForm() {
         <legend>Your enquiry</legend>
         <div className="field">
         <label htmlFor={`${id}-name`}>Name (required)</label>
-        <input id={`${id}-name`} name="name" type="text" autoComplete="name" required value={values.name} {...accessibility("name")} onChange={e => setValues({ ...values, name: e.target.value })} />
+        <input id={`${id}-name`} name="name" type="text" autoComplete="name" required value={values.name} {...accessibility("name")} onChange={/*
+     * Handle the change event for this control.
+     */
+    e => setValues({ ...values, name: e.target.value })} />
         {error("name")}
         </div>
         <div className="field">
         <label htmlFor={`${id}-type`}>Email/Phone</label>
-        <select id={`${id}-type`} value={values.contact_type} onChange={e => { setValues({ ...values, contact_type: e.target.value as "email" | "phone" }); setErrors({ ...errors, contact: undefined }); }}>
+        <select id={`${id}-type`} value={values.contact_type} onChange={/*
+     * Handle the change event for this control.
+     */
+    e => { setValues({ ...values, contact_type: e.target.value as "email" | "phone" }); setErrors({ ...errors, contact: undefined }); }}>
           <option value="email">Email</option><option value="phone">Phone</option>
         </select>
         </div>
         <div className="field">
         <label htmlFor={`${id}-contact`}>Contact (required)</label>
-        <input id={`${id}-contact`} name="contact" type={values.contact_type === "email" ? "email" : "tel"} autoComplete={values.contact_type === "email" ? "email" : "tel"} required value={values.contact} {...accessibility("contact")} onChange={e => setValues({ ...values, contact: e.target.value })} />
+        <input id={`${id}-contact`} name="contact" type={values.contact_type === "email" ? "email" : "tel"} autoComplete={values.contact_type === "email" ? "email" : "tel"} required value={values.contact} {...accessibility("contact")} onChange={/*
+     * Handle the change event for this control.
+     */
+    e => setValues({ ...values, contact: e.target.value })} />
         {error("contact")}
         </div>
         <div className="field">
         <label htmlFor={`${id}-message`}>Message (optional, maximum 500 characters)</label>
-        <textarea id={`${id}-message`} name="message" rows={4} value={values.message} {...accessibility("message")} onChange={e => {
+        <textarea id={`${id}-message`} name="message" rows={4} value={values.message} {...accessibility("message")} onChange={/*
+     * Handle the change event for this control.
+     */
+    e => {
           const message = e.target.value;
           setValues({ ...values, message });
           setErrors({ ...errors, message: Array.from(message).length > 500 ? MESSAGE_ERROR : undefined });
@@ -127,7 +168,10 @@ export default function PublicEnquiryForm() {
         {error("message")}
         </div>
         <label className="check" htmlFor={`${id}-consent`}>
-          <input id={`${id}-consent`} name="consent" type="checkbox" required checked={values.consent} {...accessibility("consent")} onChange={e => setValues({ ...values, consent: e.target.checked })} />
+          <input id={`${id}-consent`} name="consent" type="checkbox" required checked={values.consent} {...accessibility("consent")} onChange={/*
+     * Handle the change event for this control.
+     */
+    e => setValues({ ...values, consent: e.target.checked })} />
           I agree that the club may contact me about classes. (Required)
         </label>
         {error("consent")}

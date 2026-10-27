@@ -7,8 +7,15 @@ import { LoginRequiredError, RequestFailedError } from "./api";
 export { LoginRequiredError } from "./api";
 export type ReportFormat = "pdf" | "csv";
 export class ReportError extends Error {
+  /*
+   * Initialize the error instance and retain the supplied message and structured
+   * details.
+   */
   constructor(message: string, public field?: string, public status?: number) { super(message); }
 }
+/*
+ * Download an attendance report and validate its file metadata and response status.
+ */
 export async function downloadAttendance(start: string, end: string, format: ReportFormat): Promise<{ blob: Blob; filename: string }> {
   let response: Response;
   try {
@@ -19,7 +26,10 @@ export async function downloadAttendance(start: string, end: string, format: Rep
   } catch { throw new RequestFailedError(); }
   if (response.status === 401) throw new LoginRequiredError();
   if (!response.ok) {
-    const result = await response.json().catch(() => null);
+    const result = await response.json().catch(/*
+     * Handle an asynchronous failure using the workflow’s error state.
+     */
+    () => null);
     const detail = result?.detail;
     const message = response.status === 403 ? "You do not have permission"
       : response.status === 404 ? "No classes found for these dates"

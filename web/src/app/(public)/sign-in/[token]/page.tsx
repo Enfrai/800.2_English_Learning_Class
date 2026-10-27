@@ -14,6 +14,9 @@ export const metadata: Metadata = {
   referrer: "no-referrer",
 };
 
+/*
+ * Render the sign in page interface and its associated content.
+ */
 export default async function SignInPage({
   params,
 }: {
