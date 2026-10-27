@@ -15,6 +15,7 @@ Updated: Sandhya Tiwari, 26 Oct 2026 (US-006 lesson endpoints and the file step)
 
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
+import time
 from typing import Any
 from uuid import uuid4
 
@@ -24,6 +25,7 @@ from playwright.sync_api import APIRequestContext, APIResponse, Browser
 
 COORDINATOR_LOGIN = ("demo", "DemoPass123!")
 NOT_YET_REVIEWED = "Māori content – not yet reviewed"
+API_PAUSE_SECONDS = 0.06  # Keep browser-driven requests below Nginx's 20/s limit.
 
 
 @dataclass
@@ -35,6 +37,7 @@ class Person:
 
     def call(self, method: str, path: str, body: Any = None) -> APIResponse:
         # A browser sends Origin on every change; the proxy refuses it otherwise.
+        time.sleep(API_PAUSE_SECONDS)
         return self.request.fetch(
             path, method=method, data=body, headers={"Origin": BASE_URL}
         )
