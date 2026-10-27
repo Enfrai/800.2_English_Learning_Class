@@ -16,6 +16,9 @@ def unique(name: str) -> str:
 
 class LearnersPage:
     def __init__(self, page: Page) -> None:
+        """
+        Initialize LearnersPage and retain the supplied constructor state.
+        """
         self.page = page
         self.rows = page.locator("table.data tbody tr")
         self.add_button = page.get_by_role("button", name="Add learner")
@@ -33,21 +36,33 @@ class LearnersPage:
         self.contact = page.get_by_label("Phone or email")
 
     def open(self) -> None:
+        """
+        Prepare or exercise open in the learners page test scenario.
+        """
         self.page.goto("/learners")
         # The list has loaded when the table or the "no learners" note shows.
         expect(self.page.locator("table.data, .msg-info").first).to_be_visible()
 
     def row(self, full_name: str) -> Locator:
+        """
+        Locate the learner or lesson table row used by this page interaction.
+        """
         return self.rows.filter(
             has=self.page.get_by_role("cell", name=full_name, exact=True)
         )
 
     def field_error(self, field: str) -> Locator:
+        """
+        Locate the validation message associated with the requested learner field.
+        """
         return self.page.locator(f"#learner-{field}-error")
 
     def fill(
         self, first: str, family: str, language: str = "", contact: str = ""
     ) -> None:
+        """
+        Populate the learner form with the supplied fictional record fields.
+        """
         self.first_name.fill(first)
         self.family_name.fill(family)
         self.first_language.fill(language)

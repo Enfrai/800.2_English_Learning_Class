@@ -42,6 +42,9 @@ class LessonLinkIn(BaseModel):
 def find_session(
     db: Session, session_id: UUID, *, lock: bool = False
 ) -> dict[str, Any]:
+    """
+    Find a class session and optionally acquire its database row lock.
+    """
     statement = select(class_sessions).where(class_sessions.c.id == session_id)
     if lock:
         statement = statement.with_for_update()
@@ -56,15 +59,25 @@ def create_session_router(
     staff_dependency: Callable,
     today: Callable[[], date],
 ) -> APIRouter:
+    """
+    Build the session API router with its injected dependencies.
+    """
     router = APIRouter(tags=["US-014 class sessions"])
 
     def allowed(request: Any) -> None:
+        """
+        Require a Teacher or Coordinator for the class-session operation.
+        """
         if request.staff.role not in ("teacher", "coordinator"):
             raise HTTPException(403, "You do not have permission")
 
     def output(
         db: Session, row: dict[str, Any], titles: dict[UUID, str]
     ) -> dict[str, Any]:
+        """
+        Build the class response with its lesson title, attendance counts and deletion
+        permission.
+        """
         lesson_id = db.scalar(
             select(session_lesson_links.c.lesson_id).where(
                 session_lesson_links.c.session_id == row["id"]
@@ -95,6 +108,9 @@ def create_session_router(
         }
 
     def titles_for(db: Session, ids: list[UUID], authorization: str) -> dict[UUID, str]:
+        """
+        Resolve linked lesson titles through the authenticated Lesson Service client.
+        """
         linked = db.scalar(
             select(session_lesson_links.c.session_id)
             .where(
@@ -114,6 +130,10 @@ def create_session_router(
 
     @router.get("/sessions")
     def listing(request: Any = Depends(staff_dependency)) -> dict[str, Any]:
+        """
+        Handle GET /sessions for listing, applying the route’s validation and
+        authorization rules.
+        """
         allowed(request)
         with factory() as db:
             rows = (
@@ -132,6 +152,10 @@ def create_session_router(
             }
 
     def create_on(day: date, request: Any) -> dict[str, Any]:
+        """
+        Create a class on the requested nonfuture date or return the existing dated
+        class.
+        """
         allowed(request)
         if day > today():
             raise HTTPException(
@@ -171,12 +195,20 @@ def create_session_router(
 
     @router.post("/sessions/today")
     def start_today(request: Any = Depends(staff_dependency)) -> dict[str, Any]:
+        """
+        Handle POST /sessions/today for start today, applying the route’s validation and
+        authorization rules.
+        """
         return create_on(today(), request)
 
     @router.post("/sessions")
     def create(
         payload: SessionIn, request: Any = Depends(staff_dependency)
     ) -> dict[str, Any]:
+        """
+        Handle POST /sessions for create, applying the route’s validation and
+        authorization rules.
+        """
         allowed(request)
         if payload.session_date is None:
             raise HTTPException(
@@ -189,6 +221,10 @@ def create_session_router(
     def detail(
         session_id: UUID, request: Any = Depends(staff_dependency)
     ) -> dict[str, Any]:
+        """
+        Handle GET /sessions/{session_id} for detail, applying the route’s validation
+        and authorization rules.
+        """
         allowed(request)
         with factory() as db:
             row = find_session(db, session_id)
@@ -201,6 +237,10 @@ def create_session_router(
     def get_lesson_link(
         session_id: UUID, request: Any = Depends(staff_dependency)
     ) -> dict[str, Any]:
+        """
+        Handle GET /sessions/{session_id}/lesson for get lesson link, applying the
+        route’s validation and authorization rules.
+        """
         allowed(request)
         with factory() as db:
             find_session(db, session_id)
@@ -218,6 +258,10 @@ def create_session_router(
         payload: LessonLinkIn,
         request: Any = Depends(staff_dependency),
     ) -> dict[str, Any]:
+        """
+        Handle PUT /sessions/{session_id}/lesson for link lesson, applying the route’s
+        validation and authorization rules.
+        """
         allowed(request)
         with factory() as db:
             find_session(db, session_id)
@@ -250,6 +294,10 @@ def create_session_router(
 
     @router.delete("/sessions/{session_id}", status_code=204)
     def delete(session_id: UUID, request: Any = Depends(staff_dependency)) -> Response:
+        """
+        Handle DELETE /sessions/{session_id} for delete, applying the route’s validation
+        and authorization rules.
+        """
         allowed(request)
         try:
             with factory() as db, db.begin():

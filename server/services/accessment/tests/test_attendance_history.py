@@ -21,6 +21,9 @@ from sqlalchemy.orm import sessionmaker
 
 @pytest.fixture
 def api(tmp_path, monkeypatch):
+    """
+    Provide injected API client and isolated application fixture.
+    """
     engine = create_engine(f"sqlite:///{tmp_path / 'history.sqlite'}")
     class_sessions.create(engine)
     attendance_records.create(engine)
@@ -72,12 +75,18 @@ def api(tmp_path, monkeypatch):
     calls = []
 
     def request(method, path, authorization):
+        """
+        Send a REQUEST request through the test client with the supplied scenario data.
+        """
         calls.append((method, path, authorization))
         return 200, body.copy()
 
     monkeypatch.setattr(user_client, "_request", request)
 
     def staff(authorization: str | None = Header(default=None)):
+        """
+        Prepare or exercise staff in the test attendance history test scenario.
+        """
         if not authorization or authorization == "Bearer expired":
             raise HTTPException(401, "Login required")
         return SimpleNamespace(
@@ -106,6 +115,9 @@ def api(tmp_path, monkeypatch):
 
 
 def get(api, role="coordinator", **params):
+    """
+    Send a GET request through the test client with the supplied scenario data.
+    """
     return api.client.get(
         f"/learners/{api.learner}/attendance-history",
         params=params,
@@ -114,6 +126,9 @@ def get(api, role="coordinator", **params):
 
 
 def test_ac1_three_of_five_newest_first_and_minimal_data(api):
+    """
+    Verify that ac1 three of five newest first and minimal data.
+    """
     response = get(api, end_date="2026-10-24")
     body = response.json()
     assert response.status_code == 200
@@ -148,12 +163,18 @@ def test_ac1_three_of_five_newest_first_and_minimal_data(api):
     ],
 )
 def test_ac2_optional_inclusive_dates_and_matching_counts(api, params, present, total):
+    """
+    Verify that ac2 optional inclusive dates and matching counts.
+    """
     body = get(api, **params).json()
     assert (body["present_count"], body["total_count"]) == (present, total)
     assert body["has_records"] is True
 
 
 def test_ac3_no_records_is_empty_even_if_other_learners_attended(api):
+    """
+    Verify that ac3 no records is empty even if other learners attended.
+    """
     with api.factory.begin() as db:
         db.execute(
             attendance_records.delete().where(
@@ -167,6 +188,9 @@ def test_ac3_no_records_is_empty_even_if_other_learners_attended(api):
 
 
 def test_absent_only_history_is_not_unrecorded(api):
+    """
+    Verify that absent only history is not unrecorded.
+    """
     with api.factory.begin() as db:
         db.execute(
             attendance_records.update()
@@ -179,6 +203,9 @@ def test_absent_only_history_is_not_unrecorded(api):
 
 
 def test_ac4_teacher_reads_same_history_and_cannot_write(api):
+    """
+    Verify that ac4 teacher reads same history and cannot write.
+    """
     assert get(api, "teacher").json() == get(api).json()
     for method in ("post", "put", "patch", "delete"):
         assert (
@@ -192,11 +219,17 @@ def test_ac4_teacher_reads_same_history_and_cannot_write(api):
 
 @pytest.mark.parametrize("role", ["learner", "visitor", "admin", "unknown"])
 def test_other_roles_denied_before_learner_lookup(api, role):
+    """
+    Verify that other roles denied before learner lookup.
+    """
     assert get(api, role).status_code == 403
     assert not api.calls
 
 
 def test_anonymous_and_expired_denied(api):
+    """
+    Verify that anonymous and expired denied.
+    """
     assert (
         api.client.get(f"/learners/{api.learner}/attendance-history").status_code == 401
     )
@@ -215,11 +248,17 @@ def test_anonymous_and_expired_denied(api):
     ],
 )
 def test_invalid_dates_rejected_before_lookup(api, params):
+    """
+    Verify that invalid dates rejected before lookup.
+    """
     assert get(api, **params).status_code == 422
     assert not api.calls
 
 
 def test_invalid_identifier(api):
+    """
+    Verify that invalid identifier.
+    """
     assert (
         api.client.get(
             "/learners/bad/attendance-history",
@@ -231,6 +270,9 @@ def test_invalid_identifier(api):
 
 
 def test_today_waits_for_close_future_never_counts(api):
+    """
+    Verify that today waits for close future never counts.
+    """
     assert get(api).json()["total_count"] == 6
     with api.factory.begin() as db:
         db.execute(
@@ -244,6 +286,9 @@ def test_today_waits_for_close_future_never_counts(api):
 
 
 def test_correction_and_removal_refresh_counts(api):
+    """
+    Verify that correction and removal refresh counts.
+    """
     with api.factory.begin() as db:
         db.execute(
             attendance_records.update()
@@ -261,6 +306,9 @@ def test_correction_and_removal_refresh_counts(api):
 
 
 def test_explicit_records_before_creation_survive_but_unrelated_classes_do_not(api):
+    """
+    Verify that explicit records before creation survive but unrelated classes do not.
+    """
     api.body["created_at"] = "2026-10-25T00:00:00+13:00"
     body = get(api).json()
     assert body["total_count"] == 5
@@ -268,9 +316,15 @@ def test_explicit_records_before_creation_survive_but_unrelated_classes_do_not(a
 
 
 def test_single_select_without_database_mutation(api):
+    """
+    Verify that single select without database mutation.
+    """
     queries = []
 
     def capture(conn, cursor, statement, parameters, context, many):
+        """
+        Inspect or record capture events for the surrounding database or HTTP test.
+        """
         queries.append(statement)
 
     event.listen(api.engine, "before_cursor_execute", capture)
@@ -284,6 +338,9 @@ def test_single_select_without_database_mutation(api):
     "status,expected", [(401, 401), (404, 404), (403, 503), (500, 503), (200, 503)]
 )
 def test_safe_upstream_errors(api, monkeypatch, status, expected):
+    """
+    Verify that safe upstream errors.
+    """
     monkeypatch.setattr(
         user_client,
         "_request",
@@ -305,12 +362,21 @@ def test_safe_upstream_errors(api, monkeypatch, status, expected):
     ],
 )
 def test_invalid_learner_response(api, field, value):
+    """
+    Verify that invalid learner response.
+    """
     api.body[field] = value
     assert get(api).status_code == 503
 
 
 def test_offline_user_service(api, monkeypatch):
+    """
+    Verify that offline user service.
+    """
     def offline(*args):
+        """
+        Prepare or exercise offline in the test attendance history test scenario.
+        """
         raise user_client.UserServiceError("private endpoint")
 
     monkeypatch.setattr(user_client, "_request", offline)
@@ -320,11 +386,17 @@ def test_offline_user_service(api, monkeypatch):
 
 
 def test_inactive_learner_history_is_kept(api):
+    """
+    Verify that inactive learner history is kept.
+    """
     api.body["is_active"] = False
     assert get(api).status_code == 200
 
 
 def test_real_application_registers_history_and_no_store_for_denials(api, monkeypatch):
+    """
+    Verify that real application registers history and no store for denials.
+    """
     import importlib
 
     monkeypatch.setenv("DATABASE_URL", "sqlite://")

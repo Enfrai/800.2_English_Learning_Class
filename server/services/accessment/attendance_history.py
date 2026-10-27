@@ -22,6 +22,9 @@ class HistoryLearnerError(Exception):
 
 
 def history_learner(authorization: str, learner_id: UUID, timezone: ZoneInfo) -> dict:
+    """
+    Fetch and validate the learner identity and club-local registration date.
+    """
     status, body = user_client._request("GET", f"/learners/{learner_id}", authorization)
     if status == 401:
         raise HTTPException(401, "Login required")
@@ -55,6 +58,9 @@ def collect_history(
     end: date | None,
 ) -> dict:
     # Keep explicit historical records even if a learner was imported later.
+    """
+    Collect dated attendance since learner registration, with inclusive date filtering.
+    """
     with factory() as db:
         rows = (
             db.execute(
@@ -123,6 +129,9 @@ def create_history_router(
     today: Callable[[], date],
     timezone: ZoneInfo,
 ) -> APIRouter:
+    """
+    Build the history API router with its injected dependencies.
+    """
     router = APIRouter(tags=["US-016 learner attendance history"])
 
     @router.get("/learners/{learner_id}/attendance-history")
@@ -133,6 +142,10 @@ def create_history_router(
         end_date: date | None = None,
         request: Any = Depends(staff_dependency),
     ):
+        """
+        Handle GET /learners/{learner_id}/attendance-history for read history, applying
+        the route’s validation and authorization rules.
+        """
         response.headers["Cache-Control"] = "no-store"
         response.headers["X-Content-Type-Options"] = "nosniff"
         if request.staff.role not in {"teacher", "coordinator"}:

@@ -60,6 +60,9 @@ class NotCoordinatorError(MaoriReviewError):
     """Only a coordinator records a review (US-008 AC2, Test Plan UT-46)."""
 
     def __init__(self) -> None:
+        """
+        Initialize NotCoordinatorError and retain the supplied constructor state.
+        """
         super().__init__(NO_PERMISSION)
 
 
@@ -67,6 +70,9 @@ class NotFlaggedError(MaoriReviewError):
     """The lesson is not marked as containing Māori content."""
 
     def __init__(self) -> None:
+        """
+        Initialize NotFlaggedError and retain the supplied constructor state.
+        """
         super().__init__(NOT_FLAGGED)
 
 
@@ -74,11 +80,17 @@ class ReviewValidationError(MaoriReviewError):
     """The reviewer name or date breaks a rule. ``errors`` maps field to message."""
 
     def __init__(self, errors: dict[str, str]) -> None:
+        """
+        Initialize ReviewValidationError and retain the supplied constructor state.
+        """
         super().__init__("; ".join(errors.values()))
         self.errors = errors
 
 
 def _lock_lesson(db: Session, lesson_id: UUID) -> dict[str, Any]:
+    """
+    Lock and load a live lesson before a review-state change.
+    """
     row = (
         db.execute(
             select(lessons)
@@ -94,6 +106,9 @@ def _lock_lesson(db: Session, lesson_id: UUID) -> dict[str, Any]:
 
 
 def _update(db: Session, lesson_id: UUID, changes: dict[str, Any]) -> dict[str, Any]:
+    """
+    Update lesson review fields and return the refreshed row.
+    """
     row = db.execute(
         lessons.update()
         .where(lessons.c.id == lesson_id)
@@ -104,6 +119,9 @@ def _update(db: Session, lesson_id: UUID, changes: dict[str, Any]) -> dict[str, 
 
 
 def _log(db: Session, lesson_id: UUID, status: str, by: UUID, comment: str) -> None:
+    """
+    Append a lesson-review transition to the review log.
+    """
     db.execute(
         lesson_review_logs.insert().values(
             id=uuid4(),

@@ -39,6 +39,9 @@ AXE_URL = "https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js"
 
 
 def full_name(learner: dict[str, Any]) -> str:
+    """
+    Build the learner display name used to find an attendance row.
+    """
     return f"{learner['first_name']} {learner['family_name']}"
 
 
@@ -46,6 +49,9 @@ def full_name(learner: dict[str, Any]) -> str:
 
 
 def test_st01_teacher_runs_a_class(teacher_page: Page, add_learner: AddLearner) -> None:
+    """
+    Verify that st01 teacher runs a class.
+    """
     family = unique("Class")
     learners = [add_learner(name, family) for name in ["Ana", "Ben", "Cy", "Di", "Ed"]]
     teacher = teacher_page
@@ -97,6 +103,9 @@ def test_st01_teacher_runs_a_class(teacher_page: Page, add_learner: AddLearner) 
 def test_ac1_ticked_learner_shows_present_with_the_time(
     logged_in_page: Page, add_learner: AddLearner, class_session: ClassSession
 ) -> None:
+    """
+    Verify that ac1 ticked learner shows present with the time.
+    """
     learner = full_name(add_learner("Aroha", unique("Ngata")))
     attendance = AttendancePage(logged_in_page)
     attendance.open(class_session())
@@ -112,6 +121,9 @@ def test_ac1_ticked_learner_shows_present_with_the_time(
 def test_ac2_add_and_mark_present_adds_the_learner_in_one_step(
     logged_in_page: Page, class_session: ClassSession
 ) -> None:
+    """
+    Verify that ac2 add and mark present adds the learner in one step.
+    """
     attendance = AttendancePage(logged_in_page)
     attendance.open(class_session())
     family = unique("Walker")
@@ -129,6 +141,9 @@ def test_ac2_add_and_mark_present_adds_the_learner_in_one_step(
 def test_add_and_mark_present_uses_a_learner_already_on_the_list(
     logged_in_page: Page, add_learner: AddLearner, class_session: ClassSession
 ) -> None:
+    """
+    Verify that add and mark present uses a learner already on the list.
+    """
     family = unique("Silva")
     add_learner("Ana", family)
     attendance = AttendancePage(logged_in_page)
@@ -147,6 +162,9 @@ def test_add_and_mark_present_uses_a_learner_already_on_the_list(
 def test_add_and_mark_present_needs_both_names(
     logged_in_page: Page, class_session: ClassSession
 ) -> None:
+    """
+    Verify that add and mark present needs both names.
+    """
     attendance = AttendancePage(logged_in_page)
     attendance.open(class_session())
 
@@ -169,6 +187,9 @@ def test_ac3_learner_ticked_on_another_laptop_says_already_signed_in(
     class_session: ClassSession,
     session_id: str,
 ) -> None:
+    """
+    Verify that ac3 learner ticked on another laptop says already signed in.
+    """
     learner = add_learner("Sione", unique("Taufa"))
     lesson_session = class_session()
     attendance = AttendancePage(logged_in_page)
@@ -193,6 +214,9 @@ def test_ac3_learner_ticked_on_another_laptop_says_already_signed_in(
 def test_ac4_unticking_removes_the_present_record(
     logged_in_page: Page, add_learner: AddLearner, class_session: ClassSession
 ) -> None:
+    """
+    Verify that ac4 unticking removes the present record.
+    """
     learner = full_name(add_learner("Ben", unique("Mistake")))
     session_id = class_session()
     attendance = AttendancePage(logged_in_page)
@@ -210,6 +234,9 @@ def test_ac4_unticking_removes_the_present_record(
 def test_ac5_nt07_list_of_50_learners_shows_within_3_seconds(
     logged_in_page: Page, add_learner: AddLearner, class_session: ClassSession
 ) -> None:
+    """
+    Verify that ac5 nt07 list of 50 learners shows within 3 seconds.
+    """
     family = unique("Bulk")
     for number in range(50):
         add_learner(f"Learner{number:02d}", family)
@@ -228,6 +255,9 @@ def test_ac5_nt07_list_of_50_learners_shows_within_3_seconds(
 
 
 def test_unknown_session_says_not_found(logged_in_page: Page) -> None:
+    """
+    Verify that unknown session says not found.
+    """
     attendance = AttendancePage(logged_in_page)
 
     attendance.open("00000000-0000-0000-0000-000000000000")
@@ -238,6 +268,9 @@ def test_unknown_session_says_not_found(logged_in_page: Page) -> None:
 def test_logged_out_person_is_sent_to_the_login_page(
     browser: Browser, class_session: ClassSession
 ) -> None:
+    """
+    Verify that logged out person is sent to the login page.
+    """
     session_id = class_session()
     # class_session logs the demo coordinator in on the test's own page, so
     # the visitor gets a separate window with no login.
@@ -262,6 +295,9 @@ def test_logged_out_person_is_sent_to_the_login_page(
 def test_nt06_learner_can_be_ticked_and_unticked_with_the_keyboard(
     logged_in_page: Page, add_learner: AddLearner, class_session: ClassSession
 ) -> None:
+    """
+    Verify that nt06 learner can be ticked and unticked with the keyboard.
+    """
     learner = full_name(add_learner("Keyboard", unique("Only")))
     attendance = AttendancePage(logged_in_page)
     attendance.open(class_session())
@@ -280,6 +316,9 @@ def test_nt06_learner_can_be_ticked_and_unticked_with_the_keyboard(
 def test_nt06_attendance_page_has_no_accessibility_violations(
     logged_in_page: Page, add_learner: AddLearner, class_session: ClassSession
 ) -> None:
+    """
+    Verify that nt06 attendance page has no accessibility violations.
+    """
     learner = full_name(add_learner("Aroha", unique("Audit")))
     attendance = AttendancePage(logged_in_page)
     attendance.open(class_session())
@@ -306,6 +345,9 @@ def test_nt06_attendance_page_has_no_accessibility_violations(
 def test_nt01_printed_list_has_no_menu_bar_or_form(
     logged_in_page: Page, add_learner: AddLearner, class_session: ClassSession
 ) -> None:
+    """
+    Verify that nt01 printed list has no menu bar or form.
+    """
     learner = full_name(add_learner("Print", unique("Me")))
     attendance = AttendancePage(logged_in_page)
     attendance.open(class_session())
@@ -324,6 +366,9 @@ def test_nt01_printed_list_has_no_menu_bar_or_form(
 def test_nt10_macrons_are_shown_exactly_in_the_attendance_list(
     logged_in_page: Page, add_learner: AddLearner, class_session: ClassSession
 ) -> None:
+    """
+    Verify that nt10 macrons are shown exactly in the attendance list.
+    """
     family = unique("Māhina")
     add_learner("Tāne", family, "Te reo Māori")
     attendance = AttendancePage(logged_in_page)

@@ -44,6 +44,9 @@ NO_PERMISSION = "You do not have permission"
 
 
 def club_today() -> date:
+    """
+    Return the current date in the configured club timezone.
+    """
     return datetime.now(CLUB_TIMEZONE).date()
 
 
@@ -85,6 +88,9 @@ class ReviewOut(BaseModel):
 
 
 def review_out(lesson: dict[str, Any]) -> ReviewOut:
+    """
+    Project review metadata and learner visibility into the API response.
+    """
     return ReviewOut(
         lesson_id=lesson["id"],
         has_maori_content=lesson["has_maori_content"],
@@ -110,6 +116,9 @@ def review_http_error(exc: MaoriReviewError) -> HTTPException:
 
 
 def find_lesson(db: Session, lesson_id: UUID) -> dict[str, Any]:
+    """
+    Load a live lesson for reading or changing its review metadata.
+    """
     row = (
         db.execute(
             select(lessons).where(
@@ -132,6 +141,10 @@ def create_maori_review_router(
 
     @router.get("/lessons/{lesson_id}/review", response_model=ReviewOut)
     def read_review(lesson_id: UUID, staff: LoggedInStaff) -> ReviewOut:
+        """
+        Handle GET /lessons/{lesson_id}/review for read review, applying the route’s
+        validation and authorization rules.
+        """
         with session_factory() as db:
             return review_out(find_lesson(db, lesson_id))
 
@@ -140,6 +153,10 @@ def create_maori_review_router(
         lesson_id: UUID, payload: MaoriContentIn, staff: LoggedInStaff
     ) -> ReviewOut:
         # Same rule as editing a lesson (US-006): its author or a coordinator.
+        """
+        Handle PUT /lessons/{lesson_id}/maori-content for change maori content, applying
+        the route’s validation and authorization rules.
+        """
         try:
             with session_factory() as db, db.begin():
                 lesson = find_lesson(db, lesson_id)
@@ -154,6 +171,10 @@ def create_maori_review_router(
     def add_review(
         lesson_id: UUID, payload: ReviewIn, staff: LoggedInStaff
     ) -> ReviewOut:
+        """
+        Handle POST /lessons/{lesson_id}/review for add review, applying the route’s
+        validation and authorization rules.
+        """
         try:
             with session_factory() as db, db.begin():
                 saved = record_review(

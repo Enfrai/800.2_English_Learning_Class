@@ -34,6 +34,9 @@ class LearnerFieldError(Exception):
     """A learner field breaks a rule. The message comes from the User Service."""
 
     def __init__(self, field: str, message: str) -> None:
+        """
+        Initialize LearnerFieldError and retain the supplied constructor state.
+        """
         super().__init__(message)
         self.field = field
         self.message = message
@@ -62,6 +65,9 @@ def _request(
     *,
     internal: bool = False,
 ) -> tuple[int, Any]:
+    """
+    Send an authenticated internal service request and decode its status and JSON body.
+    """
     headers = {"Content-Type": "application/json"}
     if authorization is not None:
         headers["Authorization"] = authorization

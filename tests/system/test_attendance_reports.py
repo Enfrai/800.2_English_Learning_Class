@@ -17,6 +17,9 @@ from pypdf import PdfReader
 def test_coordinator_exports_three_classes_and_latest_correction(
     logged_in_page, add_learner
 ):
+    """
+    Verify that coordinator exports three classes and latest correction.
+    """
     page = logged_in_page
     suffix = uuid4().hex[:10]
     learner = add_learner("Māia", f"Report{suffix}")
@@ -93,6 +96,9 @@ def test_coordinator_exports_three_classes_and_latest_correction(
 
 
 def test_real_report_empty_range_and_reversed_dates(logged_in_page):
+    """
+    Verify that real report empty range and reversed dates.
+    """
     page = logged_in_page
     headers = {"Origin": BASE_URL}
     # US-014 rejects future classes, making this range predictably empty.
@@ -114,6 +120,9 @@ def test_real_report_empty_range_and_reversed_dates(logged_in_page):
 
 
 def test_real_teacher_and_anonymous_cannot_download(teacher_page, browser):
+    """
+    Verify that real teacher and anonymous cannot download.
+    """
     response = teacher_page.request.post(
         "/api/staff/access/reports/attendance",
         headers={"Origin": BASE_URL},

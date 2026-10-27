@@ -17,7 +17,13 @@ def test_local_import_access(
     context: AuthContext, role: str | None, status: int
 ) -> None:
     # Only emulate SQL function availability, never PostgreSQL locking behavior.
+    """
+    Verify that local import access.
+    """
     def configure(raw, record) -> None:
+        """
+        Prepare or exercise configure in the test learner import local test scenario.
+        """
         raw.create_function("gen_random_uuid", 0, lambda: uuid4().hex)
         raw.create_function("pg_advisory_xact_lock", 1, lambda key: None)
 
@@ -49,6 +55,9 @@ def test_local_import_access(
 def test_local_cookie_validation(
     context: AuthContext, origin: str | None, status: int
 ) -> None:
+    """
+    Verify that local cookie validation.
+    """
     with context["factory"].begin() as db:
         db.execute(context["users"].update().values(role="coordinator"))
     headers = {"Cookie": f"ako_session={context['token']}"}
@@ -69,6 +78,9 @@ def test_multipart_file_boundary(
     """Multipart overhead must not count toward the application's CSV byte cap."""
 
     def configure(raw, record) -> None:
+        """
+        Prepare or exercise configure in the test learner import local test scenario.
+        """
         raw.create_function("gen_random_uuid", 0, lambda: uuid4().hex)
         raw.create_function("pg_advisory_xact_lock", 1, lambda key: None)
 

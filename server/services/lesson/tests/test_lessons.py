@@ -29,12 +29,18 @@ PDF = b"%PDF-1.7\nTest lesson\n%%EOF"
 
 @pytest.fixture
 def api(tmp_path, monkeypatch):
+    """
+    Provide injected API client and isolated application fixture.
+    """
     engine = create_engine(f"sqlite:///{tmp_path / 'lessons.sqlite'}")
     Base.metadata.create_all(engine)
     factory = sessionmaker(engine)
     storage = tmp_path / "materials"
 
     def current(token):
+        """
+        Prepare or exercise current in the test lessons test scenario.
+        """
         if token == "Bearer unavailable":
             raise user_client.UserServiceError()
         people = {
@@ -56,10 +62,16 @@ def api(tmp_path, monkeypatch):
 
 
 def headers(who="author"):
+    """
+    Prepare or exercise headers in the test lessons test scenario.
+    """
     return {"Authorization": f"Bearer {who}"}
 
 
 def payload(**changes):
+    """
+    Prepare or exercise payload in the test lessons test scenario.
+    """
     return {
         "title": "Te reo Māori transport",
         "lesson_date": "2026-10-25",
@@ -70,6 +82,9 @@ def payload(**changes):
 
 
 def create(api, who="author", **changes):
+    """
+    Prepare or exercise create in the test lessons test scenario.
+    """
     response = api[0].post("/lessons", json=payload(**changes), headers=headers(who))
     assert response.status_code == 201, response.text
     return response.json()
@@ -78,6 +93,9 @@ def create(api, who="author", **changes):
 def upload(
     api, lesson_id, name="Te reo Māori.pdf", content=PDF, who="author", share=None
 ):
+    """
+    Prepare or exercise upload in the test lessons test scenario.
+    """
     return api[0].post(
         f"/lessons/{lesson_id}/materials",
         headers=headers(who),
@@ -87,6 +105,9 @@ def upload(
 
 
 def test_create_list_detail_tags_and_macrons(api):
+    """
+    Verify that create list detail tags and macrons.
+    """
     row = create(api)
     assert row["created_by"] == str(AUTHOR.id)
     assert row["tags"] == ["health", "transport"]
@@ -118,6 +139,9 @@ def test_create_list_detail_tags_and_macrons(api):
     ],
 )
 def test_required_fields_do_not_create_partial_lesson(api, changes, field, message):
+    """
+    Verify that required fields do not create partial lesson.
+    """
     response = api[0].post("/lessons", json=payload(**changes), headers=headers())
     assert response.status_code == 422
     assert response.json()["detail"]["errors"][field] == message
@@ -125,6 +149,9 @@ def test_required_fields_do_not_create_partial_lesson(api, changes, field, messa
 
 
 def test_trim_deduplicate_tags_and_title_boundary(api):
+    """
+    Verify that trim deduplicate tags and title boundary.
+    """
     row = create(
         api, title=" " + "x" * 255 + " ", tags=[" health ", "health", "Tāmaki"]
     )
@@ -136,6 +163,9 @@ def test_trim_deduplicate_tags_and_title_boundary(api):
 
 @pytest.mark.parametrize("who,code", [("expired", 401), ("unavailable", 503)])
 def test_auth_failures_are_not_treated_as_staff(api, who, code):
+    """
+    Verify that auth failures are not treated as staff.
+    """
     assert api[0].get("/lessons", headers=headers(who)).status_code == code
     assert (
         api[0].post("/lessons", json=payload(), headers=headers(who)).status_code
@@ -144,6 +174,9 @@ def test_auth_failures_are_not_treated_as_staff(api, who, code):
 
 
 def test_missing_auth_and_forged_author_are_rejected(api):
+    """
+    Verify that missing auth and forged author are rejected.
+    """
     assert api[0].get("/lessons").status_code == 401
     response = api[0].post(
         "/lessons", json=payload(created_by=str(OTHER.id)), headers=headers()
@@ -152,6 +185,9 @@ def test_missing_auth_and_forged_author_are_rejected(api):
 
 
 def test_title_edit_preserves_date_and_materials(api):
+    """
+    Verify that title edit preserves date and materials.
+    """
     row = create(api)
     material = upload(api, row["id"]).json()
     response = api[0].put(
@@ -165,6 +201,9 @@ def test_title_edit_preserves_date_and_materials(api):
 
 
 def test_invalid_update_preserves_previous_data(api):
+    """
+    Verify that invalid update preserves previous data.
+    """
     row = create(api)
     assert (
         api[0]
@@ -180,6 +219,9 @@ def test_invalid_update_preserves_previous_data(api):
 
 @pytest.mark.parametrize("operation", ["edit", "delete", "upload", "remove", "share"])
 def test_other_teacher_cannot_modify_lesson_or_files(api, operation):
+    """
+    Verify that other teacher cannot modify lesson or files.
+    """
     row = create(api)
     material = upload(api, row["id"]).json()
     client = api[0]
@@ -213,6 +255,9 @@ def test_other_teacher_cannot_modify_lesson_or_files(api, operation):
 
 
 def test_coordinator_can_manage_another_teachers_lesson(api):
+    """
+    Verify that coordinator can manage another teachers lesson.
+    """
     row = create(api)
     assert (
         api[0]
@@ -240,6 +285,9 @@ def test_coordinator_can_manage_another_teachers_lesson(api):
 
 
 def test_original_filename_download_and_default_sharing(api):
+    """
+    Verify that original filename download and default sharing.
+    """
     row = create(api)
     response = upload(api, row["id"])
     assert response.status_code == 201
@@ -254,6 +302,9 @@ def test_original_filename_download_and_default_sharing(api):
 
 
 def test_sharing_can_be_selected_at_upload_and_changed(api):
+    """
+    Verify that sharing can be selected at upload and changed.
+    """
     row = create(api)
     material = upload(api, row["id"], share=True).json()
     assert material["share_with_learners"]
@@ -266,6 +317,9 @@ def test_sharing_can_be_selected_at_upload_and_changed(api):
 
 
 def docx():
+    """
+    Prepare or exercise docx in the test lessons test scenario.
+    """
     output = io.BytesIO()
     with zipfile.ZipFile(output, "w") as archive:
         archive.writestr("[Content_Types].xml", "<Types/>")
@@ -284,6 +338,9 @@ def docx():
     ],
 )
 def test_allowed_types_and_uppercase_extensions(api, name, content):
+    """
+    Verify that allowed types and uppercase extensions.
+    """
     row = create(api)
     assert upload(api, row["id"], name, content).status_code == 201
 
@@ -304,6 +361,9 @@ def test_allowed_types_and_uppercase_extensions(api, name, content):
     ],
 )
 def test_invalid_files_leave_lesson_unchanged(api, name, content):
+    """
+    Verify that invalid files leave lesson unchanged.
+    """
     row = create(api)
     assert upload(api, row["id"], name, content).status_code == 422
     saved = api[0].get(f"/lessons/{row['id']}", headers=headers()).json()
@@ -312,6 +372,9 @@ def test_invalid_files_leave_lesson_unchanged(api, name, content):
 
 
 def test_size_limit_is_inclusive_and_oversize_does_not_store_file(api):
+    """
+    Verify that size limit is inclusive and oversize does not store file.
+    """
     row = create(api)
     data = PDF + b" " * (MAX_FILE_SIZE - len(PDF))
     assert upload(api, row["id"], content=data).status_code == 201
@@ -320,6 +383,9 @@ def test_size_limit_is_inclusive_and_oversize_does_not_store_file(api):
 
 
 def test_same_names_use_distinct_storage_and_path_traversal_is_not_exposed(api):
+    """
+    Verify that same names use distinct storage and path traversal is not exposed.
+    """
     row = create(api)
     a = upload(api, row["id"], "../same.pdf").json()
     b = upload(api, row["id"], "same.pdf", PDF + b"other").json()
@@ -341,6 +407,9 @@ def test_same_names_use_distinct_storage_and_path_traversal_is_not_exposed(api):
 
 
 def test_delete_blocks_old_download_links_and_excludes_lesson(api):
+    """
+    Verify that delete blocks old download links and excludes lesson.
+    """
     row = create(api)
     material = upload(api, row["id"]).json()
     assert api[0].delete(f"/lessons/{row['id']}", headers=headers()).status_code == 204
@@ -362,6 +431,9 @@ def test_delete_blocks_old_download_links_and_excludes_lesson(api):
 
 
 def test_remove_only_one_material(api):
+    """
+    Verify that remove only one material.
+    """
     row = create(api)
     a, b = upload(api, row["id"]).json(), upload(api, row["id"], "second.pdf").json()
     assert api[0].delete(f"/materials/{a['id']}", headers=headers()).status_code == 204
@@ -377,6 +449,9 @@ def test_remove_only_one_material(api):
 
 @pytest.mark.parametrize("operation", ["upload", "remove"])
 def test_material_changes_reset_maori_review_and_keep_audit_log(api, operation):
+    """
+    Verify that material changes reset maori review and keep audit log.
+    """
     row = create(api)
     material = upload(api, row["id"]).json()
     api[0].put(
@@ -403,6 +478,9 @@ def test_material_changes_reset_maori_review_and_keep_audit_log(api, operation):
 
 def test_lesson_list_and_page_carry_the_review_status(api):
     # US-008: the form's tick box and the pill colour come from these fields.
+    """
+    Verify that lesson list and page carry the review status.
+    """
     row = create(api)
     assert (row["has_maori_content"], row["review_status"]) == (False, "not_required")
     api[0].put(
@@ -423,6 +501,9 @@ def test_lesson_list_and_page_carry_the_review_status(api):
 
 
 def test_metadata_edit_and_sharing_do_not_reset_review(api):
+    """
+    Verify that metadata edit and sharing do not reset review.
+    """
     row = create(api)
     material = upload(api, row["id"]).json()
     api[0].put(
@@ -452,10 +533,17 @@ def test_metadata_edit_and_sharing_do_not_reset_review(api):
 
 
 def test_failed_database_write_removes_orphan_file(api, monkeypatch):
+    """
+    Verify that failed database write removes orphan file.
+    """
     row = create(api)
     import lesson_api
 
     def fail(*args):
+        """
+        Simulate an unavailable dependency or failing operation for the surrounding
+        test.
+        """
         raise RuntimeError("simulated database failure")
 
     monkeypatch.setattr(lesson_api, "reset_review_after_material_change", fail)
@@ -468,6 +556,9 @@ def test_failed_database_write_removes_orphan_file(api, monkeypatch):
 
 
 def test_missing_storage_file_returns_not_found(api):
+    """
+    Verify that missing storage file returns not found.
+    """
     row = create(api)
     material = upload(api, row["id"]).json()
     next(api[2].iterdir()).unlink()
@@ -480,6 +571,9 @@ def test_missing_storage_file_returns_not_found(api):
 
 
 def test_schema_upgrade_preserves_existing_records_and_is_repeatable(tmp_path):
+    """
+    Verify that schema upgrade preserves existing records and is repeatable.
+    """
     engine = create_engine(f"sqlite:///{tmp_path / 'old.sqlite'}")
     Base.metadata.create_all(engine)
     with engine.begin() as db:
@@ -516,6 +610,9 @@ def test_schema_upgrade_preserves_existing_records_and_is_repeatable(tmp_path):
 
 
 def test_control_characters_in_original_filename_are_rejected():
+    """
+    Verify that control characters in original filename are rejected.
+    """
     from fastapi import HTTPException, UploadFile
     from lesson_api import read_file
 
@@ -525,11 +622,18 @@ def test_control_characters_in_original_filename_are_rejected():
 
 
 def test_purge_failure_does_not_restore_a_deleted_download(api, monkeypatch):
+    """
+    Verify that purge failure does not restore a deleted download.
+    """
     row = create(api)
     material = upload(api, row["id"]).json()
     original_unlink = Path.unlink
 
     def fail(path, *args, **kwargs):
+        """
+        Simulate an unavailable dependency or failing operation for the surrounding
+        test.
+        """
         if path.parent == api[2]:
             raise PermissionError("Storage temporarily unavailable")
         return original_unlink(path, *args, **kwargs)
@@ -548,6 +652,9 @@ def test_purge_failure_does_not_restore_a_deleted_download(api, monkeypatch):
 
 
 def test_legacy_review_columns_are_added_without_database_reset(tmp_path):
+    """
+    Verify that legacy review columns are added without database reset.
+    """
     engine = create_engine(f"sqlite:///{tmp_path / 'legacy-review.sqlite'}")
     Base.metadata.create_all(engine)
     with engine.begin() as db:
@@ -561,6 +668,9 @@ def test_legacy_review_columns_are_added_without_database_reset(tmp_path):
 
 
 def test_sorting_is_newest_lesson_date_first(api):
+    """
+    Verify that sorting is newest lesson date first.
+    """
     create(api, lesson_date="2026-10-01", title="Older")
     create(api, lesson_date="2026-10-25", title="Newer")
     assert [
@@ -569,6 +679,9 @@ def test_sorting_is_newest_lesson_date_first(api):
 
 
 def test_unknown_resources_and_invalid_dates_are_rejected(api):
+    """
+    Verify that unknown resources and invalid dates are rejected.
+    """
     unknown = str(uuid4())
     assert api[0].get(f"/lessons/{unknown}", headers=headers()).status_code == 404
     assert api[0].delete(f"/materials/{unknown}", headers=headers()).status_code == 404

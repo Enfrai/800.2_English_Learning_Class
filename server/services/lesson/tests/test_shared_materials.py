@@ -18,6 +18,9 @@ from sqlalchemy.orm import sessionmaker
 
 @pytest.fixture
 def shared_api(tmp_path, monkeypatch):
+    """
+    Provide lesson API fixture configured for shared-material endpoints.
+    """
     monkeypatch.setenv("INTERNAL_API_KEY", "test-key")
     engine = create_engine(f"sqlite:///{tmp_path / 'lesson.sqlite'}")
     Base.metadata.create_all(engine)
@@ -59,6 +62,9 @@ def shared_api(tmp_path, monkeypatch):
 
 
 def test_only_shared_files_listed_with_no_storage_keys(shared_api):
+    """
+    Verify that only shared files listed with no storage keys.
+    """
     client, _, _, lid, mid, _ = shared_api
     reply = client.get(f"/internal/lessons/{lid}/shared-materials")
     assert reply.status_code == 200
@@ -72,6 +78,9 @@ def test_only_shared_files_listed_with_no_storage_keys(shared_api):
 
 @pytest.mark.parametrize("key", ["", "wrong"])
 def test_internal_api_is_not_public(shared_api, key):
+    """
+    Verify that internal api is not public.
+    """
     client, _, _, lid, mid, _ = shared_api
     for path in [
         f"/internal/lessons/{lid}/shared-materials",
@@ -81,6 +90,9 @@ def test_internal_api_is_not_public(shared_api, key):
 
 
 def test_missing_server_key_fails_closed(shared_api, monkeypatch):
+    """
+    Verify that missing server key fails closed.
+    """
     client, _, _, lid, _, _ = shared_api
     monkeypatch.delenv("INTERNAL_API_KEY")
     assert client.get(f"/internal/lessons/{lid}/shared-materials").status_code == 403
@@ -92,6 +104,9 @@ def test_missing_server_key_fails_closed(shared_api, monkeypatch):
 def test_maori_review_applies_to_listing_and_direct_download(
     shared_api, review, visible
 ):
+    """
+    Verify that maori review applies to listing and direct download.
+    """
     client, factory, _, lid, mid, _ = shared_api
     with factory.begin() as db:
         db.execute(
@@ -108,6 +123,9 @@ def test_maori_review_applies_to_listing_and_direct_download(
 
 
 def test_original_name_content_and_headers(shared_api):
+    """
+    Verify that original name content and headers.
+    """
     client, _, _, lid, mid, _ = shared_api
     reply = client.get(f"/internal/lessons/{lid}/shared-materials/{mid}")
     assert reply.content == b"%PDF-content"
@@ -117,6 +135,9 @@ def test_original_name_content_and_headers(shared_api):
 
 
 def test_private_unknown_and_wrong_lesson_downloads_denied(shared_api):
+    """
+    Verify that private unknown and wrong lesson downloads denied.
+    """
     client, _, _, lid, mid, private = shared_api
     for lesson, file in [(lid, private), (lid, uuid4()), (uuid4(), mid)]:
         assert (
@@ -129,6 +150,9 @@ def test_private_unknown_and_wrong_lesson_downloads_denied(shared_api):
 
 @pytest.mark.parametrize("target", ["file", "lesson"])
 def test_deleted_materials_and_lessons_block_old_links(shared_api, target):
+    """
+    Verify that deleted materials and lessons block old links.
+    """
     client, factory, _, lid, mid, _ = shared_api
     with factory.begin() as db:
         table = lesson_materials if target == "file" else lessons
@@ -149,6 +173,9 @@ def test_deleted_materials_and_lessons_block_old_links(shared_api, target):
 
 
 def test_unshare_revokes_existing_link(shared_api):
+    """
+    Verify that unshare revokes existing link.
+    """
     client, factory, _, lid, mid, _ = shared_api
     with factory.begin() as db:
         db.execute(
@@ -167,6 +194,9 @@ def test_unshare_revokes_existing_link(shared_api):
 
 @pytest.mark.parametrize("storage", ["../outside", "missing"])
 def test_storage_path_and_missing_file_safe(shared_api, storage):
+    """
+    Verify that storage path and missing file safe.
+    """
     client, factory, folder, lid, mid, _ = shared_api
     (folder.parent / "outside").write_bytes(b"secret")
     with factory.begin() as db:
@@ -181,6 +211,9 @@ def test_storage_path_and_missing_file_safe(shared_api, storage):
 
 
 def test_two_shared_files_each_download_with_their_original_name(shared_api):
+    """
+    Verify that two shared files each download with their original name.
+    """
     client, factory, folder, lid, mid, _ = shared_api
     second = uuid4()
     (folder / second.hex).write_bytes(b"image-content")

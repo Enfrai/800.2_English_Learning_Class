@@ -11,6 +11,9 @@ PHONE_SIZE = {"width": 360, "height": 740}  # US-012 AC6, NFR-06
 
 class SignInPage:
     def __init__(self, page: Page) -> None:
+        """
+        Initialize SignInPage and retain the supplied constructor state.
+        """
         self.page = page
         self.date = page.locator(".sub")
         self.first_name = page.get_by_label("First name")
@@ -22,6 +25,9 @@ class SignInPage:
         self.closed = page.locator(".msg-warning")
 
     def open(self, token: str) -> None:
+        """
+        Prepare or exercise open in the sign in page test scenario.
+        """
         self.page.goto(f"/sign-in/{token}")
         # Loaded when the form or the closed message shows.
         expect(
@@ -29,9 +35,15 @@ class SignInPage:
         ).to_be_visible()
 
     def sign_in(self, first: str, family: str) -> None:
+        """
+        Prepare or exercise sign in in the sign in page test scenario.
+        """
         self.first_name.fill(first)
         self.family_name.fill(family)
         self.button.click()
 
     def device_id(self) -> str | None:
+        """
+        Read the browser device identifier used by classroom sign-in.
+        """
         return self.page.evaluate("localStorage.getItem('ako.signin-device')")

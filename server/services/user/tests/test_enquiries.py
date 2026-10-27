@@ -31,6 +31,9 @@ API = tuple[TestClient, Engine]
 
 @pytest.fixture
 def isolated_api(tmp_path: Path) -> Iterator[API]:
+    """
+    Provide aPI fixture with isolated persistence and dependency overrides.
+    """
     engine = create_engine(f"sqlite:///{tmp_path / 'enquiries.sqlite'}")
     public_enquiries.create(engine)
     app = FastAPI()
@@ -44,6 +47,9 @@ def isolated_api(tmp_path: Path) -> Iterator[API]:
 
 
 def count_rows(engine: Engine) -> int:
+    """
+    Count persisted rows in the isolated enquiry database.
+    """
     with engine.connect() as db:
         return db.execute(
             select(func.count()).select_from(public_enquiries)
@@ -64,6 +70,9 @@ def count_rows(engine: Engine) -> int:
     ],
 )
 def test_valid(isolated_api: API, changes: dict) -> None:
+    """
+    Verify that valid.
+    """
     client, engine = isolated_api
     payload = VALID | changes
     response = client.post("/enquiries", json=payload)
@@ -110,6 +119,9 @@ def test_valid(isolated_api: API, changes: dict) -> None:
     ],
 )
 def test_invalid(isolated_api: API, changes: dict, detail: str | None) -> None:
+    """
+    Verify that invalid.
+    """
     client, engine = isolated_api
     response = client.post("/enquiries", json=VALID | changes)
     assert response.status_code == 422
@@ -120,6 +132,9 @@ def test_invalid(isolated_api: API, changes: dict, detail: str | None) -> None:
 
 @pytest.mark.parametrize("field", ["name", "contact_type", "contact", "consent"])
 def test_required(isolated_api: API, field: str) -> None:
+    """
+    Verify that required.
+    """
     client, engine = isolated_api
     payload = VALID.copy()
     del payload[field]
@@ -128,9 +143,15 @@ def test_required(isolated_api: API, field: str) -> None:
 
 
 def test_rollback(isolated_api: API) -> None:
+    """
+    Verify that rollback.
+    """
     client, engine = isolated_api
 
     def fail_commit(connection: Connection) -> None:
+        """
+        Simulate a failed database commit to check transaction error handling.
+        """
         raise RuntimeError("Simulated commit failure")
 
     # Fail after INSERT to check rollback, not just rejection before a write.

@@ -30,6 +30,9 @@ TODAY = date(2026, 10, 23)
 
 @pytest.fixture(scope="session")
 def engine() -> Iterator[Engine]:
+    """
+    Provide the engine context and release its resources after use.
+    """
     url = os.environ.get("TEST_DATABASE_URL")
     if not url:
         pytest.fail(
@@ -87,6 +90,9 @@ def new_session(db: Session, teacher_id: UUID) -> Callable[..., UUID]:
     """Create a class session (US-014 owns the real workflow)."""
 
     def create(session_date: date = TODAY) -> UUID:
+        """
+        Prepare or exercise create in the conftest test scenario.
+        """
         return db.execute(
             class_sessions.insert()
             .values(id=uuid4(), session_date=session_date, created_by=teacher_id)

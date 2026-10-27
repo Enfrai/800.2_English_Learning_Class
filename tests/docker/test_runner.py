@@ -16,6 +16,9 @@ import pytest
 
 
 def load_runner():
+    """
+    Import the Docker test runner without starting its command-line entry point.
+    """
     spec = importlib.util.spec_from_file_location(
         "docker_test_runner", Path(__file__).with_name("run.py")
     )
@@ -25,6 +28,9 @@ def load_runner():
 
 
 def test_child_failure_is_logged_with_its_real_exit_code(tmp_path, monkeypatch):
+    """
+    Verify that child failure is logged with its real exit code.
+    """
     runner = load_runner()
     monkeypatch.setattr(runner, "REPORTS", tmp_path)
     monkeypatch.setattr(sys, "argv", ["run.py", "web"])
@@ -39,6 +45,9 @@ def test_child_failure_is_logged_with_its_real_exit_code(tmp_path, monkeypatch):
 
 
 def test_setup_failure_replaces_old_success_summary(tmp_path, monkeypatch):
+    """
+    Verify that setup failure replaces old success summary.
+    """
     runner = load_runner()
     monkeypatch.setattr(runner, "REPORTS", tmp_path)
     monkeypatch.setattr(sys, "argv", ["run.py", "web"])
@@ -54,6 +63,9 @@ def test_setup_failure_replaces_old_success_summary(tmp_path, monkeypatch):
 def test_host_runner_continues_after_failure_and_only_cleans_its_project(
     tmp_path, keep
 ):
+    """
+    Verify that host runner continues after failure and only cleans its project.
+    """
     root = Path(__file__).resolve().parents[2]
     target = tmp_path / "repo/tests"
     target.mkdir(parents=True)

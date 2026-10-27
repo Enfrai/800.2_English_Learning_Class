@@ -11,6 +11,9 @@ from playwright.sync_api import expect
 
 
 def test_class_information_is_public_without_a_session(page):
+    """
+    Verify that class information is public without a session.
+    """
     response = page.goto("/class-information")
     assert response.status == 200
     expect(page.get_by_role("heading", name="English classes", exact=True)).to_be_visible()
@@ -23,6 +26,9 @@ def test_class_information_is_public_without_a_session(page):
 
 
 def test_public_page_fits_a_phone_and_keeps_body_text_readable(page):
+    """
+    Verify that public page fits a phone and keeps body text readable.
+    """
     page.set_viewport_size({"width": 360, "height": 800})
     page.goto("/class-information")
     expect(page.get_by_label("Username", exact=True)).to_have_count(0)
@@ -33,6 +39,9 @@ def test_public_page_fits_a_phone_and_keeps_body_text_readable(page):
 
 
 def test_public_copy_uses_short_sentences_without_learner_photos(page):
+    """
+    Verify that public copy uses short sentences without learner photos.
+    """
     page.goto("/class-information")
     expect(page.get_by_label("Name (required)", exact=True)).to_have_count(0)
     expect(page.get_by_label("Username", exact=True)).to_have_count(0)
@@ -43,6 +52,9 @@ def test_public_copy_uses_short_sentences_without_learner_photos(page):
 
 
 def test_unknown_public_address_has_http_404_and_home_link(page):
+    """
+    Verify that unknown public address has http 404 and home link.
+    """
     response = page.goto("/missing-public-information")
     assert response.status == 404
     expect(page.get_by_role("heading", name="Page not found", exact=True)).to_be_visible()
@@ -51,6 +63,9 @@ def test_unknown_public_address_has_http_404_and_home_link(page):
 
 
 def test_public_navigation_opens_separate_contents(page):
+    """
+    Verify that public navigation opens separate contents.
+    """
     page.goto("/")
     expect(page.get_by_label("Username", exact=True)).to_be_visible()
     nav = page.get_by_role("navigation", name="Public menu")

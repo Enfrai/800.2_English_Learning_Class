@@ -37,15 +37,24 @@ class Person:
 
     def call(self, method: str, path: str, body: Any = None) -> APIResponse:
         # A browser sends Origin on every change; the proxy refuses it otherwise.
+        """
+        Prepare or exercise call in the test review flow test scenario.
+        """
         time.sleep(API_PAUSE_SECONDS)
         return self.request.fetch(
             path, method=method, data=body, headers={"Origin": BASE_URL}
         )
 
     def review(self, lesson_id: str) -> APIResponse:
+        """
+        Provide fixture helper recording a lesson review.
+        """
         return self.call("GET", f"/api/staff/lesson/lessons/{lesson_id}/review")
 
     def tick(self, lesson_id: str, value: bool = True) -> APIResponse:
+        """
+        Prepare or exercise tick in the test review flow test scenario.
+        """
         return self.call(
             "PUT",
             f"/api/staff/lesson/lessons/{lesson_id}/maori-content",
@@ -53,6 +62,9 @@ class Person:
         )
 
     def record_review(self, lesson_id: str, name: str, day: str) -> APIResponse:
+        """
+        Prepare or exercise record review in the test review flow test scenario.
+        """
         return self.call(
             "POST",
             f"/api/staff/lesson/lessons/{lesson_id}/review",
@@ -62,9 +74,16 @@ class Person:
 
 @pytest.fixture
 def log_in(browser: Browser) -> Iterator[Callable[[str, str], Person]]:
+    """
+    Provide helper fixture supplying authenticated staff requests.
+    """
     contexts = []
 
     def login(username: str, password: str) -> Person:
+        """
+        Validate staff credentials, replace previous sessions and issue the session
+        cookie.
+        """
         context = browser.new_context(base_url=BASE_URL)
         contexts.append(context)
         response = context.request.post(
@@ -83,6 +102,9 @@ def log_in(browser: Browser) -> Iterator[Callable[[str, str], Person]]:
 
 @pytest.fixture
 def coordinator(log_in: Callable[[str, str], Person]) -> Person:
+    """
+    Provide coordinator account, identity or session supplied by the test fixture.
+    """
     return log_in(*COORDINATOR_LOGIN)
 
 
@@ -93,6 +115,9 @@ def new_teacher(
     """Create a teacher account through US-002 and log them in."""
 
     def create() -> Person:
+        """
+        Prepare or exercise create in the test review flow test scenario.
+        """
         username = f"teacher_{uuid4().hex[:10]}"
         password = f"Temp-{uuid4().hex[:8]}"
         response = coordinator.call(
@@ -112,6 +137,9 @@ def new_teacher(
 
 @pytest.fixture
 def teacher(new_teacher: Callable[[], Person]) -> Person:
+    """
+    Provide teacher account or credentials supplied by the fixture.
+    """
     return new_teacher()
 
 
@@ -123,6 +151,9 @@ def new_lesson(coordinator: Person) -> Callable[[Person], str]:
     """
 
     def create(author: Person) -> str:
+        """
+        Prepare or exercise create in the test review flow test scenario.
+        """
         response = author.call(
             "POST",
             "/api/staff/lesson/lessons",
@@ -144,6 +175,9 @@ def new_lesson(coordinator: Person) -> Callable[[Person], str]:
 def test_st09_teacher_flags_and_coordinator_reviews(
     teacher: Person, coordinator: Person, new_lesson: Callable[[Person], str]
 ) -> None:
+    """
+    Verify that st09 teacher flags and coordinator reviews.
+    """
     lesson_id = new_lesson(teacher)
     assert teacher.review(lesson_id).json()["label"] is None
 
@@ -164,6 +198,9 @@ def test_st09_teacher_flags_and_coordinator_reviews(
 def test_st09_adding_a_file_returns_the_label_to_not_yet_reviewed(
     teacher: Person, coordinator: Person, new_lesson: Callable[[Person], str]
 ) -> None:
+    """
+    Verify that st09 adding a file returns the label to not yet reviewed.
+    """
     lesson_id = new_lesson(teacher)
     assert teacher.tick(lesson_id).status == 200
     assert coordinator.record_review(lesson_id, "Aroha", "2026-10-08").status == 200
@@ -188,6 +225,9 @@ def test_st09_adding_a_file_returns_the_label_to_not_yet_reviewed(
 def test_bad_review_is_refused_with_every_message_and_label_unchanged(
     teacher: Person, coordinator: Person, new_lesson: Callable[[Person], str]
 ) -> None:
+    """
+    Verify that bad review is refused with every message and label unchanged.
+    """
     lesson_id = new_lesson(teacher)
     teacher.tick(lesson_id)
 
@@ -204,6 +244,9 @@ def test_bad_review_is_refused_with_every_message_and_label_unchanged(
 def test_teacher_cannot_record_a_review(
     teacher: Person, new_lesson: Callable[[Person], str]
 ) -> None:
+    """
+    Verify that teacher cannot record a review.
+    """
     lesson_id = new_lesson(teacher)
     teacher.tick(lesson_id)
 
@@ -219,6 +262,9 @@ def test_teacher_cannot_flag_another_teachers_lesson(
     new_teacher: Callable[[], Person],
     new_lesson: Callable[[Person], str],
 ) -> None:
+    """
+    Verify that teacher cannot flag another teachers lesson.
+    """
     lesson_id = new_lesson(teacher)
     other = new_teacher()
 
@@ -231,6 +277,9 @@ def test_teacher_cannot_flag_another_teachers_lesson(
 def test_unticking_removes_the_label_and_the_review(
     teacher: Person, coordinator: Person, new_lesson: Callable[[Person], str]
 ) -> None:
+    """
+    Verify that unticking removes the label and the review.
+    """
     lesson_id = new_lesson(teacher)
     teacher.tick(lesson_id)
     coordinator.record_review(lesson_id, "Aroha", "2026-10-08")
@@ -247,6 +296,9 @@ def test_unticking_removes_the_label_and_the_review(
 def test_change_without_origin_is_refused(
     teacher: Person, new_lesson: Callable[[Person], str]
 ) -> None:
+    """
+    Verify that change without origin is refused.
+    """
     lesson_id = new_lesson(teacher)
 
     response = teacher.request.put(
@@ -261,6 +313,9 @@ def test_change_without_origin_is_refused(
 def test_logged_out_person_cannot_read_or_change_reviews(
     browser: Browser, teacher: Person, new_lesson: Callable[[Person], str]
 ) -> None:
+    """
+    Verify that logged out person cannot read or change reviews.
+    """
     lesson_id = new_lesson(teacher)
     context = browser.new_context(base_url=BASE_URL)
     try:
@@ -284,6 +339,9 @@ def test_logged_out_person_cannot_read_or_change_reviews(
 def test_nt10_reviewer_name_with_macrons_is_kept_exactly(
     teacher: Person, coordinator: Person, new_lesson: Callable[[Person], str]
 ) -> None:
+    """
+    Verify that nt10 reviewer name with macrons is kept exactly.
+    """
     lesson_id = new_lesson(teacher)
     teacher.tick(lesson_id)
 

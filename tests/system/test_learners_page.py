@@ -27,6 +27,9 @@ AXE_URL = "https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js"
 
 
 def test_logged_out_person_is_sent_to_the_login_page(page: Page) -> None:
+    """
+    Verify that logged out person is sent to the login page.
+    """
     page.goto("/learners")
 
     # US-001: the server redirects before any learner data is sent.
@@ -38,6 +41,9 @@ def test_logged_out_person_is_sent_to_the_login_page(page: Page) -> None:
 def test_learners_page_works_in_a_new_tab_after_logging_in(
     page: Page, log_in_through_page: Callable[[], None]
 ) -> None:
+    """
+    Verify that learners page works in a new tab after logging in.
+    """
     log_in_through_page()
     new_tab = page.context.new_page()
 
@@ -51,6 +57,9 @@ def test_learners_page_works_in_a_new_tab_after_logging_in(
 def test_log_out_ends_access_to_the_learners(
     page: Page, log_in_through_page: Callable[[], None]
 ) -> None:
+    """
+    Verify that log out ends access to the learners.
+    """
     log_in_through_page()
     LearnersPage(page).open()
 
@@ -68,6 +77,9 @@ def test_log_out_ends_access_to_the_learners(
 def test_st11_added_learner_is_listed_within_2_seconds(
     learners_page: LearnersPage,
 ) -> None:
+    """
+    Verify that st11 added learner is listed within 2 seconds.
+    """
     family = unique("Ngata")
     learners_page.add_button.click()
     expect(learners_page.first_name).to_be_focused()
@@ -86,6 +98,9 @@ def test_st11_added_learner_is_listed_within_2_seconds(
 def test_st11_editing_first_language_keeps_the_other_fields(
     learners_page: LearnersPage,
 ) -> None:
+    """
+    Verify that st11 editing first language keeps the other fields.
+    """
     family = unique("Ngata")
     learners_page.add("Aroha", family, "Te reo Māori", "021 555 0101")
     row = learners_page.row(f"Aroha {family}")
@@ -106,6 +121,9 @@ def test_st11_editing_first_language_keeps_the_other_fields(
 def test_st11_same_name_shows_warning_and_cancel_adds_nothing(
     learners_page: LearnersPage,
 ) -> None:
+    """
+    Verify that st11 same name shows warning and cancel adds nothing.
+    """
     family = unique("Ngata")
     learners_page.add("Aroha", family)
 
@@ -126,6 +144,9 @@ def test_st11_same_name_shows_warning_and_cancel_adds_nothing(
 
 
 def test_st11_add_anyway_gives_two_records(learners_page: LearnersPage) -> None:
+    """
+    Verify that st11 add anyway gives two records.
+    """
     family = unique("Ngata")
     learners_page.add("Aroha", family)
 
@@ -146,6 +167,9 @@ def test_st11_add_anyway_gives_two_records(learners_page: LearnersPage) -> None:
 def test_empty_names_show_messages_under_the_fields_and_save_nothing(
     learners_page: LearnersPage,
 ) -> None:
+    """
+    Verify that empty names show messages under the fields and save nothing.
+    """
     rows_before = learners_page.rows.count()
     learners_page.add_button.click()
     learners_page.fill("", "", "English")
@@ -166,6 +190,9 @@ def test_empty_names_show_messages_under_the_fields_and_save_nothing(
 def test_name_of_101_characters_is_refused_and_100_is_accepted(
     learners_page: LearnersPage,
 ) -> None:
+    """
+    Verify that name of 101 characters is refused and 100 is accepted.
+    """
     family = unique("Walker")
     learners_page.add_button.click()
     learners_page.fill("a" * 101, family)
@@ -189,6 +216,9 @@ def test_name_of_101_characters_is_refused_and_100_is_accepted(
 def test_nt05_form_asks_only_for_what_the_club_needs(
     learners_page: LearnersPage,
 ) -> None:
+    """
+    Verify that nt05 form asks only for what the club needs.
+    """
     learners_page.add_button.click()
 
     labels = learners_page.page.locator("form label").all_inner_texts()
@@ -207,6 +237,9 @@ def test_nt05_form_asks_only_for_what_the_club_needs(
 def test_nt06_text_is_18px_and_controls_are_at_least_44px(
     learners_page: LearnersPage,
 ) -> None:
+    """
+    Verify that nt06 text is 18px and controls are at least 44px.
+    """
     learners_page.add("Aroha", unique("Ngata"))
     learners_page.add_button.click()
     page = learners_page.page
@@ -226,6 +259,9 @@ def test_nt06_text_is_18px_and_controls_are_at_least_44px(
 def test_nt06_learner_can_be_added_with_the_keyboard_only(
     learners_page: LearnersPage,
 ) -> None:
+    """
+    Verify that nt06 learner can be added with the keyboard only.
+    """
     page = learners_page.page
     family = unique("Keyboard")
     for _ in range(20):
@@ -248,6 +284,9 @@ def test_nt06_learner_can_be_added_with_the_keyboard_only(
 def test_nt06_page_with_open_form_has_no_accessibility_violations(
     learners_page: LearnersPage,
 ) -> None:
+    """
+    Verify that nt06 page with open form has no accessibility violations.
+    """
     learners_page.add("Aroha", unique("Ngata"))
     learners_page.add_button.click()
     page = learners_page.page
@@ -272,6 +311,9 @@ def test_nt06_page_with_open_form_has_no_accessibility_violations(
 def test_nt07_list_of_50_learners_shows_within_3_seconds(
     learners_page: LearnersPage, session_id: str
 ) -> None:
+    """
+    Verify that nt07 list of 50 learners shows within 3 seconds.
+    """
     page = learners_page.page
     family = unique("Bulk")
     for number in range(50):
@@ -302,6 +344,9 @@ def test_nt07_list_of_50_learners_shows_within_3_seconds(
 def test_nt08_sql_like_text_is_saved_as_plain_text(
     learners_page: LearnersPage,
 ) -> None:
+    """
+    Verify that nt08 sql like text is saved as plain text.
+    """
     family = unique("x'); DROP TABLE learners;--")
 
     learners_page.add("Robert", family)
@@ -314,6 +359,9 @@ def test_nt08_sql_like_text_is_saved_as_plain_text(
 
 
 def test_nt10_macrons_are_shown_exactly_as_typed(learners_page: LearnersPage) -> None:
+    """
+    Verify that nt10 macrons are shown exactly as typed.
+    """
     family = unique("Māhina")
 
     learners_page.add("Tāne", family, "Te reo Māori")

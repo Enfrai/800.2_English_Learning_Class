@@ -20,6 +20,9 @@ from sqlalchemy.orm import Session
 
 
 def internal_key(x_internal_key: str | None = Header(default=None)) -> None:
+    """
+    Require the configured shared key for an internal material endpoint.
+    """
     expected = os.getenv("INTERNAL_API_KEY", "")
     if (
         not expected
@@ -32,10 +35,16 @@ def internal_key(x_internal_key: str | None = Header(default=None)) -> None:
 def create_shared_router(
     factory: Callable[[], Session], storage: Path | None = None
 ) -> APIRouter:
+    """
+    Build the shared API router with its injected dependencies.
+    """
     router = APIRouter(dependencies=[Depends(internal_key)])
     folder = storage or Path(os.getenv("MATERIALS_DIR", "/var/lib/ako/materials"))
 
     def lesson(db: Session, lesson_id: UUID) -> Mapping[str, Any]:
+        """
+        Load a nondeleted lesson for an internal shared-material request.
+        """
         row = (
             db.execute(
                 select(lessons).where(
@@ -50,10 +59,17 @@ def create_shared_router(
         return row
 
     def visible(row: Mapping[str, Any]) -> bool:
+        """
+        Return whether Māori review state permits learner access to the lesson.
+        """
         return not row["has_maori_content"] or row["review_status"] == "reviewed"
 
     @router.get("/internal/lessons/{lesson_id}/shared-materials")
     def listing(lesson_id: UUID) -> dict[str, Any]:
+        """
+        Handle GET /internal/lessons/{lesson_id}/shared-materials for listing, applying
+        the route’s validation and authorization rules.
+        """
         with factory() as db:
             row = lesson(db, lesson_id)
             if not visible(row):
@@ -82,6 +98,10 @@ def create_shared_router(
 
     @router.get("/internal/lessons/{lesson_id}/shared-materials/{material_id}")
     def download(lesson_id: UUID, material_id: UUID) -> FileResponse:
+        """
+        Handle GET /internal/lessons/{lesson_id}/shared-materials/{material_id} for
+        download, applying the route’s validation and authorization rules.
+        """
         with factory() as db:
             if not visible(lesson(db, lesson_id)):
                 raise HTTPException(404, "Material not found")

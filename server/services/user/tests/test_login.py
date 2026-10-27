@@ -20,6 +20,9 @@ LoginContext = tuple[ModuleType, TestClient, MagicMock, dict[str, Any], datetime
 
 @pytest.fixture
 def api(monkeypatch: pytest.MonkeyPatch) -> Iterator[LoginContext]:
+    """
+    Provide injected API client and isolated application fixture.
+    """
     service = Path(__file__).resolve().parents[1]
     monkeypatch.syspath_prepend(str(service))
     monkeypatch.setenv(
@@ -34,6 +37,9 @@ def api(monkeypatch: pytest.MonkeyPatch) -> Iterator[LoginContext]:
     class Clock:
         @staticmethod
         def now(tz: tzinfo | None) -> datetime:
+            """
+            Return the current timezone-aware UTC instant.
+            """
             return now
 
     monkeypatch.setattr(module, "datetime", Clock)
@@ -60,6 +66,9 @@ def api(monkeypatch: pytest.MonkeyPatch) -> Iterator[LoginContext]:
 
 
 def login(client: TestClient, password: str = "WrongPass!") -> httpx.Response:
+    """
+    Validate staff credentials, replace previous sessions and issue the session cookie.
+    """
     return client.post("/login", json={"username": "teacher", "password": password})
 
 
@@ -67,6 +76,9 @@ def login(client: TestClient, password: str = "WrongPass!") -> httpx.Response:
 def test_wrong_password_exact_message_and_committed_counter(
     api: LoginContext, prior: int
 ) -> None:
+    """
+    Verify that wrong password exact message and committed counter.
+    """
     _, client, db, row, _ = api
     row["failed_login_attempts"] = prior
     response = login(client)
@@ -80,6 +92,9 @@ def test_wrong_password_exact_message_and_committed_counter(
 
 
 def test_fifth_failure_locks_and_informs_immediately(api: LoginContext) -> None:
+    """
+    Verify that fifth failure locks and informs immediately.
+    """
     _, client, db, row, now = api
     row["failed_login_attempts"] = 4
     response = login(client)
@@ -100,6 +115,9 @@ def test_fifth_failure_locks_and_informs_immediately(api: LoginContext) -> None:
 def test_locked_account_rejects_without_extending_lock(
     api: LoginContext, password: str
 ) -> None:
+    """
+    Verify that locked account rejects without extending lock.
+    """
     _, client, db, row, now = api
     row["locked_until"] = now + timedelta(seconds=60, microseconds=1)
     response = login(client, password)
@@ -114,6 +132,9 @@ def test_locked_account_rejects_without_extending_lock(
 def test_unknown_and_inactive_users_get_generic_error(
     api: LoginContext, kind: str
 ) -> None:
+    """
+    Verify that unknown and inactive users get generic error.
+    """
     _, client, db, row, _ = api
     if kind == "unknown":
         db.execute.return_value.mappings.return_value.first.return_value = None
@@ -130,6 +151,9 @@ def test_unknown_and_inactive_users_get_generic_error(
 def test_success_contract_and_session_hash(
     api: LoginContext, role: str, lock_expired: bool
 ) -> None:
+    """
+    Verify that success contract and session hash.
+    """
     _, client, db, row, now = api
     row["role"] = role
     row["failed_login_attempts"] = 3
@@ -161,6 +185,9 @@ def test_success_contract_and_session_hash(
 
 
 def test_password_hash_compatibility(api: LoginContext) -> None:
+    """
+    Verify that password hash compatibility.
+    """
     module, _, _, row, _ = api
     assert module.verify_password("CorrectPass!", row["password_hash"])
     assert not module.verify_password("WrongPass!", row["password_hash"])

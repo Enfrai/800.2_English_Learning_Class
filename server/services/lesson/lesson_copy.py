@@ -68,11 +68,18 @@ def copy_file(folder: Path, material: dict[str, Any], created: list[Path]) -> st
 def create_copy_router(
     factory: Callable[[], Session], storage: Path | None = None
 ) -> APIRouter:
+    """
+    Build the copy API router with its injected dependencies.
+    """
     router = APIRouter(tags=["US-007 lesson copies"])
     folder = storage or Path(os.getenv("MATERIALS_DIR", "/var/lib/ako/materials"))
 
     @router.get("/lessons/{lesson_id}/copy")
     def draft(lesson_id: UUID, staff: LoggedInStaff) -> dict[str, Any]:
+        """
+        Handle GET /lessons/{lesson_id}/copy for draft, applying the route’s validation
+        and authorization rules.
+        """
         with factory() as db:
             source = find_lesson(db, lesson_id)
             result = lesson_out(db, source, staff)
@@ -93,6 +100,10 @@ def create_copy_router(
     def save_copy(
         lesson_id: UUID, payload: CopyIn, staff: LoggedInStaff
     ) -> dict[str, Any]:
+        """
+        Handle POST /lessons/{lesson_id}/copy for save copy, applying the route’s
+        validation and authorization rules.
+        """
         title, names = validate_lesson(payload)
         created: list[Path] = []
         try:

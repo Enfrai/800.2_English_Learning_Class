@@ -31,6 +31,9 @@ TODAY = date(2026, 10, 25)
 
 @pytest.fixture(scope="session")
 def engine() -> Iterator[Engine]:
+    """
+    Provide the engine context and release its resources after use.
+    """
     url = os.environ.get("TEST_DATABASE_URL")
     if not url:
         pytest.fail(
@@ -88,6 +91,9 @@ def new_lesson(db: Session) -> Callable[..., UUID]:
     """Create a lesson (US-006 owns the real workflow) and return its id."""
 
     def create(**values: Any) -> UUID:
+        """
+        Prepare or exercise create in the conftest test scenario.
+        """
         return db.execute(
             lessons.insert()
             .values(
@@ -108,6 +114,9 @@ def lesson_row(db: Session) -> Callable[[UUID], dict[str, Any]]:
     """Read a lesson as stored."""
 
     def read(lesson_id: UUID) -> dict[str, Any]:
+        """
+        Prepare or exercise read in the conftest test scenario.
+        """
         query = select(lessons).where(lessons.c.id == lesson_id)
         return dict(db.execute(query).mappings().one())
 
@@ -119,6 +128,9 @@ def review_log(db: Session) -> Callable[[UUID], list[dict[str, Any]]]:
     """Read a lesson's review history (order not guaranteed in one transaction)."""
 
     def read(lesson_id: UUID) -> list[dict[str, Any]]:
+        """
+        Prepare or exercise read in the conftest test scenario.
+        """
         query = (
             select(lesson_review_logs)
             .where(lesson_review_logs.c.lesson_id == lesson_id)

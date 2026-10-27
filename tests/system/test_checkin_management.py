@@ -13,6 +13,9 @@ from playwright.sync_api import expect
 def test_qr_open_public_signin_live_attendance_and_close(
     logged_in_page, add_learner, browser
 ):
+    """
+    Verify that qr open public signin live attendance and close.
+    """
     staff = logged_in_page
     learner = add_learner("Māia", f"QR{uuid4().hex[:10]}")
     headers = {"Origin": BASE_URL}
@@ -61,6 +64,9 @@ def test_qr_open_public_signin_live_attendance_and_close(
 
 
 def test_anonymous_cannot_open_close_or_read_qr_windows(page):
+    """
+    Verify that anonymous cannot open close or read qr windows.
+    """
     sid = uuid4()
     for method in ("GET", "POST", "DELETE"):
         response = page.request.fetch(

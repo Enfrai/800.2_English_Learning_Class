@@ -35,10 +35,16 @@ COORDINATOR = uuid4()
 
 @pytest.fixture
 def last_week(new_session: NewSession, today: date) -> UUID:
+    """
+    Provide past club date or session used for historical attendance scenarios.
+    """
     return new_session(today - timedelta(days=7))
 
 
 def tick_in_class(db: Session, session_id: UUID, learner_id: UUID, day: date) -> None:
+    """
+    Prepare or exercise tick in class in the test corrections test scenario.
+    """
     mark_present(
         db, session_id=session_id, learner_id=learner_id, recorded_by=uuid4(), today=day
     )
@@ -53,6 +59,9 @@ def correct(
     role: str = "coordinator",
     reason: str | None = None,
 ) -> dict[str, Any] | None:
+    """
+    Prepare or exercise correct in the test corrections test scenario.
+    """
     return correct_attendance(
         db,
         session_id=session_id,
@@ -66,11 +75,17 @@ def correct(
 
 
 def log(db: Session) -> list[dict[str, Any]]:
+    """
+    Prepare or exercise log in the test corrections test scenario.
+    """
     query = select(attendance_audits).order_by(attendance_audits.c.created_at)
     return [dict(row) for row in db.execute(query).mappings()]
 
 
 def record_count(db: Session) -> int:
+    """
+    Count attendance or audit records in the isolated scenario database.
+    """
     return db.execute(select(func.count()).select_from(attendance_records)).scalar_one()
 
 
@@ -80,6 +95,9 @@ def record_count(db: Session) -> int:
 def test_marking_a_missing_learner_present_creates_a_record_and_logs_it(
     db: Session, last_week: UUID, today: date
 ) -> None:
+    """
+    Verify that marking a missing learner present creates a record and logs it.
+    """
     learner_id = uuid4()
 
     record = correct(db, last_week, learner_id, True, today)
@@ -99,6 +117,9 @@ def test_marking_a_missing_learner_present_creates_a_record_and_logs_it(
 def test_correcting_an_absent_record_to_present_logs_it(
     db: Session, last_week: UUID, today: date
 ) -> None:
+    """
+    Verify that correcting an absent record to present logs it.
+    """
     learner_id = uuid4()
     tick_in_class(db, last_week, learner_id, today - timedelta(days=7))
     correct(db, last_week, learner_id, False, today)
@@ -118,6 +139,9 @@ def test_correcting_an_absent_record_to_present_logs_it(
 def test_unticking_a_mistake_sets_absent_and_the_count_falls(
     db: Session, last_week: UUID, today: date
 ) -> None:
+    """
+    Verify that unticking a mistake sets absent and the count falls.
+    """
     mistake, other = uuid4(), uuid4()
     for learner_id in (mistake, other):
         tick_in_class(db, last_week, learner_id, today - timedelta(days=7))
@@ -136,6 +160,9 @@ def test_unticking_a_mistake_sets_absent_and_the_count_falls(
 def test_reason_is_kept_trimmed_and_optional(
     db: Session, last_week: UUID, today: date
 ) -> None:
+    """
+    Verify that reason is kept trimmed and optional.
+    """
     correct(db, last_week, uuid4(), True, today, reason="  came late  ")
     correct(db, last_week, uuid4(), True, today, reason="   ")
 
@@ -143,6 +170,9 @@ def test_reason_is_kept_trimmed_and_optional(
 
 
 def test_no_change_writes_no_log(db: Session, last_week: UUID, today: date) -> None:
+    """
+    Verify that no change writes no log.
+    """
     learner_id = uuid4()
     tick_in_class(db, last_week, learner_id, today - timedelta(days=7))
 
@@ -160,6 +190,9 @@ def test_no_change_writes_no_log(db: Session, last_week: UUID, today: date) -> N
 def test_teacher_cannot_correct_and_nothing_changes(
     db: Session, last_week: UUID, today: date
 ) -> None:
+    """
+    Verify that teacher cannot correct and nothing changes.
+    """
     with pytest.raises(NotCoordinatorError) as error:
         correct(db, last_week, uuid4(), True, today, role="teacher")
 
@@ -172,6 +205,9 @@ def test_teacher_cannot_correct_and_nothing_changes(
 def test_todays_or_a_future_class_is_not_corrected(
     db: Session, new_session: NewSession, today: date, days_ahead: int
 ) -> None:
+    """
+    Verify that todays or a future class is not corrected.
+    """
     session_id = new_session(today + timedelta(days=days_ahead))
 
     with pytest.raises(SessionNotPastError):
@@ -179,6 +215,9 @@ def test_todays_or_a_future_class_is_not_corrected(
 
 
 def test_unknown_class_is_reported(db: Session, today: date) -> None:
+    """
+    Verify that unknown class is reported.
+    """
     with pytest.raises(SessionNotFoundError):
         correct(db, uuid4(), uuid4(), True, today)
     with pytest.raises(SessionNotFoundError):
@@ -191,6 +230,9 @@ def test_unknown_class_is_reported(db: Session, today: date) -> None:
 def test_history_lists_every_change_in_time_order(
     db: Session, last_week: UUID, today: date
 ) -> None:
+    """
+    Verify that history lists every change in time order.
+    """
     first, second = uuid4(), uuid4()
     tick_in_class(db, last_week, second, today - timedelta(days=7))
     correct(db, last_week, first, True, today)
@@ -209,6 +251,9 @@ def test_history_lists_every_change_in_time_order(
 def test_class_with_no_corrections_has_an_empty_history(
     db: Session, last_week: UUID, today: date
 ) -> None:
+    """
+    Verify that class with no corrections has an empty history.
+    """
     tick_in_class(db, last_week, uuid4(), today - timedelta(days=7))
 
     assert change_history(db, last_week) == []
@@ -218,6 +263,9 @@ def test_class_with_no_corrections_has_an_empty_history(
 def test_history_and_corrected_list_belong_to_one_class(
     db: Session, new_session: NewSession, today: date
 ) -> None:
+    """
+    Verify that history and corrected list belong to one class.
+    """
     class_a = new_session(today - timedelta(days=7))
     class_b = new_session(today - timedelta(days=14))
     learner_a, learner_b = uuid4(), uuid4()
@@ -231,6 +279,9 @@ def test_history_and_corrected_list_belong_to_one_class(
 def test_corrected_list_includes_learners_corrected_to_not_present(
     db: Session, last_week: UUID, today: date
 ) -> None:
+    """
+    Verify that corrected list includes learners corrected to not present.
+    """
     present, unticked = uuid4(), uuid4()
     tick_in_class(db, last_week, unticked, today - timedelta(days=7))
     correct(db, last_week, present, True, today)
@@ -246,6 +297,9 @@ def test_corrected_list_includes_learners_corrected_to_not_present(
 def test_log_entries_cannot_be_edited_deleted_or_emptied(
     db: Session, last_week: UUID, today: date, change: str
 ) -> None:
+    """
+    Verify that log entries cannot be edited deleted or emptied.
+    """
     correct(db, last_week, uuid4(), True, today)
     statement = {
         "update": attendance_audits.update().values(
@@ -265,6 +319,9 @@ def test_log_entries_cannot_be_edited_deleted_or_emptied(
 def test_corrected_record_cannot_be_deleted_while_it_is_logged(
     db: Session, last_week: UUID, today: date
 ) -> None:
+    """
+    Verify that corrected record cannot be deleted while it is logged.
+    """
     record = correct(db, last_week, uuid4(), True, today)
     assert record is not None
 

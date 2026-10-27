@@ -33,6 +33,9 @@ class PastSessionError(AttendanceError):
     """The session is before today. Changes go through a correction (US-015)."""
 
     def __init__(self) -> None:
+        """
+        Initialize PastSessionError and retain the supplied constructor state.
+        """
         super().__init__(PAST_ATTENDANCE_LOCKED)
 
 
@@ -40,6 +43,9 @@ class AlreadySignedInError(AttendanceError):
     """The learner is already marked present. No second record is made."""
 
     def __init__(self, record: dict[str, Any]) -> None:
+        """
+        Initialize AlreadySignedInError and retain the supplied constructor state.
+        """
         super().__init__(ALREADY_SIGNED_IN)
         self.record = record
 

@@ -10,6 +10,9 @@ import user_client
 
 
 def report_names(authorization: str, recorded_ids: set[UUID]) -> dict[UUID, str]:
+    """
+    Fetch and validate the minimal learner-name roster for an attendance report.
+    """
     status, body = user_client._request(
         "POST",
         "/reports/attendance/learners",

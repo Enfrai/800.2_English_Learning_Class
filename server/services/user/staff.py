@@ -33,6 +33,9 @@ class TeacherCreate(BaseModel):
     @field_validator("display_name", "username")
     @classmethod
     def not_blank(cls, value: str) -> str:
+        """
+        Reject an empty or whitespace-only staff-account field.
+        """
         if not value.strip():
             raise ValueError("Must not be blank")
         return value
@@ -46,6 +49,9 @@ class TeacherRename(BaseModel):
     @field_validator("display_name")
     @classmethod
     def not_blank(cls, value: str) -> str:
+        """
+        Reject an empty or whitespace-only staff-account field.
+        """
         if not value.strip():
             raise ValueError("Must not be blank")
         return value
@@ -82,6 +88,10 @@ def create_staff_router(hash_password: Callable[[str, bytes], str]) -> APIRouter
         actor: Annotated[AuthenticatedUser, Depends(require_coordinator)],
         db: Annotated[Session, Depends(get_staff_db)],
     ) -> list[StaffAccount]:
+        """
+        Handle GET  for staff list, applying the route’s validation and authorization
+        rules.
+        """
         return [StaffAccount.model_validate(row) for row in list_staff(db)]
 
     @router.post("", response_model=StaffAccount, status_code=201)
@@ -91,6 +101,10 @@ def create_staff_router(hash_password: Callable[[str, bytes], str]) -> APIRouter
         token: Annotated[str, Depends(get_session_token)],
         db: Annotated[Session, Depends(get_staff_db)],
     ) -> StaffAccount:
+        """
+        Handle POST  for staff create, applying the route’s validation and authorization
+        rules.
+        """
         password = payload.temporary_password.get_secret_value()
         if len(password) < MIN_PASSWORD_LENGTH:
             raise HTTPException(
@@ -121,6 +135,10 @@ def create_staff_router(hash_password: Callable[[str, bytes], str]) -> APIRouter
         token: Annotated[str, Depends(get_session_token)],
         db: Annotated[Session, Depends(get_staff_db)],
     ) -> StaffAccount:
+        """
+        Handle PATCH /{user_id} for staff rename, applying the route’s validation and
+        authorization rules.
+        """
         with db.begin():
             lock_staff_operation(db, actor, token, user_id)
             result = StaffAccount.model_validate(
@@ -136,6 +154,10 @@ def create_staff_router(hash_password: Callable[[str, bytes], str]) -> APIRouter
         db: Annotated[Session, Depends(get_staff_db)],
         payload: Annotated[EmptyAction | None, Body()] = None,
     ) -> StaffAccount:
+        """
+        Handle POST /{user_id}/deactivate for staff deactivate, applying the route’s
+        validation and authorization rules.
+        """
         with db.begin():
             lock_staff_operation(
                 db, actor, token, user_id, coordinator_target_allowed=True

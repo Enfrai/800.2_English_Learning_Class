@@ -37,6 +37,9 @@ class NotCoordinatorError(CorrectionError):
     """Only a coordinator corrects past attendance (US-015 AC3)."""
 
     def __init__(self) -> None:
+        """
+        Initialize NotCoordinatorError and retain the supplied constructor state.
+        """
         super().__init__(NO_PERMISSION)
 
 
@@ -44,10 +47,16 @@ class SessionNotPastError(CorrectionError):
     """The class is today or later; it is changed on its list (US-004)."""
 
     def __init__(self) -> None:
+        """
+        Initialize SessionNotPastError and retain the supplied constructor state.
+        """
         super().__init__(SESSION_NOT_PAST)
 
 
 def _session_date(db: Session, session_id: UUID) -> date:
+    """
+    Lock the class session and return its date for correction validation.
+    """
     session_date = db.execute(
         select(class_sessions.c.session_date)
         .where(class_sessions.c.id == session_id)

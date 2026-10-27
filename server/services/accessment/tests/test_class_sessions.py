@@ -59,6 +59,9 @@ class ClassApi:
     titles: dict[UUID, str]
 
     def start(self, day: date | None = None, who: str = "teacher") -> Response:
+        """
+        Prepare or exercise start in the test class sessions test scenario.
+        """
         if day is None:
             return self.client.post("/sessions/today", headers={"Authorization": who})
         return self.client.post(
@@ -68,11 +71,17 @@ class ClassApi:
         )
 
     def detail(self, session_id: str) -> Response:
+        """
+        Prepare or exercise detail in the test class sessions test scenario.
+        """
         return self.client.get(
             f"/sessions/{session_id}", headers={"Authorization": "teacher"}
         )
 
     def link(self, session_id: str, lesson_id: UUID | None = LESSON_ID) -> Response:
+        """
+        Prepare or exercise link in the test class sessions test scenario.
+        """
         return self.client.put(
             f"/sessions/{session_id}/lesson",
             headers={"Authorization": "teacher"},
@@ -80,11 +89,17 @@ class ClassApi:
         )
 
     def delete(self, session_id: str) -> Response:
+        """
+        Send a DELETE request through the test client with the supplied scenario data.
+        """
         return self.client.delete(
             f"/sessions/{session_id}", headers={"Authorization": "teacher"}
         )
 
     def attendance(self, session_id: str, status: str = "present") -> UUID:
+        """
+        Prepare or exercise attendance in the test class sessions test scenario.
+        """
         with self.factory.begin() as db:
             return db.execute(
                 attendance_records.insert()
@@ -100,12 +115,18 @@ class ClassApi:
 
 @pytest.fixture
 def api(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[ClassApi]:
+    """
+    Provide injected API client and isolated application fixture.
+    """
     engine = create_engine(
         f"sqlite:///{tmp_path / 'access.sqlite'}", connect_args={"timeout": 10}
     )
 
     @event.listens_for(engine, "connect")
     def sqlite_rules(connection, _):
+        """
+        Prepare or exercise sqlite rules in the test class sessions test scenario.
+        """
         connection.execute("PRAGMA foreign_keys=ON")
 
     metadata = schema_metadata()
@@ -114,6 +135,9 @@ def api(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[ClassApi]:
     titles = {LESSON_ID: "Te reo Māori transport"}
 
     def staff(authorization: str | None = Header(default=None)) -> Any:
+        """
+        Prepare or exercise staff in the test class sessions test scenario.
+        """
         if authorization is None:
             raise HTTPException(401, "Login required")
         return SimpleNamespace(
@@ -122,6 +146,9 @@ def api(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[ClassApi]:
         )
 
     def one_lesson(identifier: UUID, authorization: str) -> str:
+        """
+        Prepare or exercise one lesson in the test class sessions test scenario.
+        """
         assert authorization in ("teacher", "coordinator")
         if identifier not in titles:
             raise lesson_client.LessonUnavailableError()
@@ -139,6 +166,9 @@ def api(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[ClassApi]:
 
 
 def test_start_today_creates_and_opens_in_under_two_seconds(api: ClassApi) -> None:
+    """
+    Verify that start today creates and opens in under two seconds.
+    """
     from time import monotonic
 
     start = monotonic()
@@ -154,6 +184,9 @@ def test_start_today_creates_and_opens_in_under_two_seconds(api: ClassApi) -> No
 
 @pytest.mark.parametrize("role", ["teacher", "coordinator"])
 def test_both_staff_roles_manage_shared_classes(api: ClassApi, role: str) -> None:
+    """
+    Verify that both staff roles manage shared classes.
+    """
     session = api.start(who=role).json()
     linked = api.client.put(
         f"/sessions/{session['id']}/lesson",
@@ -172,6 +205,9 @@ def test_both_staff_roles_manage_shared_classes(api: ClassApi, role: str) -> Non
 def test_repeat_click_opens_existing_id_without_changing_owner_or_lesson(
     api: ClassApi,
 ) -> None:
+    """
+    Verify that repeat click opens existing id without changing owner or lesson.
+    """
     first = api.start().json()
     api.link(first["id"])
     again = api.start(who="coordinator").json()
@@ -183,6 +219,9 @@ def test_repeat_click_opens_existing_id_without_changing_owner_or_lesson(
 
 
 def test_simultaneous_starts_keep_one_date_and_one_id(api: ClassApi) -> None:
+    """
+    Verify that simultaneous starts keep one date and one id.
+    """
     with ThreadPoolExecutor(max_workers=6) as workers:
         results = list(workers.map(lambda _: api.start().json(), range(6)))
     assert len({reply["id"] for reply in results}) == 1
@@ -190,6 +229,9 @@ def test_simultaneous_starts_keep_one_date_and_one_id(api: ClassApi) -> None:
 
 
 def test_database_itself_rejects_duplicate_dates(api: ClassApi) -> None:
+    """
+    Verify that database itself rejects duplicate dates.
+    """
     api.start()
     with pytest.raises(IntegrityError), api.factory.begin() as db:
         db.execute(
@@ -200,6 +242,9 @@ def test_database_itself_rejects_duplicate_dates(api: ClassApi) -> None:
 def test_list_is_newest_first_and_shows_dates_and_current_lesson_titles(
     api: ClassApi,
 ) -> None:
+    """
+    Verify that list is newest first and shows dates and current lesson titles.
+    """
     for offset in [2, 0, 1]:
         session = api.start(TODAY - timedelta(days=offset)).json()
         assert api.link(session["id"]).status_code == 200
@@ -220,6 +265,9 @@ def test_list_is_newest_first_and_shows_dates_and_current_lesson_titles(
 
 
 def test_link_replace_and_unlink_do_not_modify_lesson_content(api: ClassApi) -> None:
+    """
+    Verify that link replace and unlink do not modify lesson content.
+    """
     sid = api.start().json()["id"]
     before = api.titles.copy()
     response = api.link(sid)
@@ -237,6 +285,9 @@ def test_link_replace_and_unlink_do_not_modify_lesson_content(api: ClassApi) -> 
 def test_missing_or_deleted_lesson_preserves_class_and_attendance(
     api: ClassApi,
 ) -> None:
+    """
+    Verify that missing or deleted lesson preserves class and attendance.
+    """
     sid = api.start().json()["id"]
     assert api.link(sid).status_code == 200
     api.attendance(sid)
@@ -252,6 +303,9 @@ def test_missing_or_deleted_lesson_preserves_class_and_attendance(
 def test_any_attendance_blocks_deletion_with_exact_message(
     api: ClassApi, status: str
 ) -> None:
+    """
+    Verify that any attendance blocks deletion with exact message.
+    """
     sid = api.start().json()["id"]
     api.attendance(sid, status)
     response = api.delete(sid)
@@ -265,6 +319,9 @@ def test_any_attendance_blocks_deletion_with_exact_message(
 def test_empty_class_and_related_qr_links_can_be_deleted_but_lesson_stays(
     api: ClassApi,
 ) -> None:
+    """
+    Verify that empty class and related qr links can be deleted but lesson stays.
+    """
     sid = api.start().json()["id"]
     api.link(sid)
     with api.factory.begin() as db:
@@ -288,6 +345,9 @@ def test_empty_class_and_related_qr_links_can_be_deleted_but_lesson_stays(
 
 
 def test_future_invalid_and_missing_dates_save_nothing(api: ClassApi) -> None:
+    """
+    Verify that future invalid and missing dates save nothing.
+    """
     response = api.start(TODAY + timedelta(days=1))
     assert response.status_code == 422
     assert response.json()["detail"]["message"] == "Date cannot be in the future"
@@ -311,6 +371,9 @@ def test_future_invalid_and_missing_dates_save_nothing(api: ClassApi) -> None:
 def test_anonymous_and_nonstaff_are_denied_before_data_lookup(
     api: ClassApi, who: str | None
 ) -> None:
+    """
+    Verify that anonymous and nonstaff are denied before data lookup.
+    """
     expected = 401 if who is None else 403
     headers = {} if who is None else {"Authorization": who}
     for method, path, body in [
@@ -328,6 +391,9 @@ def test_anonymous_and_nonstaff_are_denied_before_data_lookup(
 
 
 def test_missing_session_and_malformed_ids_are_clear(api: ClassApi) -> None:
+    """
+    Verify that missing session and malformed ids are clear.
+    """
     for method, suffix, body in [
         ("GET", "", None),
         ("DELETE", "", None),
@@ -349,10 +415,17 @@ def test_missing_session_and_malformed_ids_are_clear(api: ClassApi) -> None:
 def test_lesson_service_failure_does_not_erase_existing_link(
     api: ClassApi, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """
+    Verify that lesson service failure does not erase existing link.
+    """
     sid = api.start().json()["id"]
     api.link(sid)
 
     def unavailable(*args):
+        """
+        Simulate an unavailable dependency or failing operation for the surrounding
+        test.
+        """
         raise lesson_client.LessonServiceError()
 
     monkeypatch.setattr(lesson_client, "lesson_title", unavailable)
@@ -372,6 +445,9 @@ def test_lesson_service_failure_does_not_erase_existing_link(
 def test_schema_upgrade_preserves_existing_rows_and_is_repeatable(
     tmp_path: Path,
 ) -> None:
+    """
+    Verify that schema upgrade preserves existing rows and is repeatable.
+    """
     engine = create_engine(f"sqlite:///{tmp_path / 'legacy.sqlite'}")
     metadata = schema_metadata()
     table = metadata.tables["class_sessions"]
@@ -399,6 +475,9 @@ def test_schema_upgrade_preserves_existing_rows_and_is_repeatable(
 
 
 def test_legacy_duplicate_dates_fail_without_deleting_data(tmp_path: Path) -> None:
+    """
+    Verify that legacy duplicate dates fail without deleting data.
+    """
     engine = create_engine(f"sqlite:///{tmp_path / 'duplicates.sqlite'}")
     metadata = schema_metadata()
     table = metadata.tables["class_sessions"]
@@ -419,18 +498,28 @@ def test_legacy_duplicate_dates_fail_without_deleting_data(tmp_path: Path) -> No
 
 
 def test_attendance_and_deletion_use_the_same_class_row_lock() -> None:
+    """
+    Verify that attendance and deletion use the same class row lock.
+    """
     from attendance import check_session_is_running
     from corrections import _session_date
     from sqlalchemy.dialects import postgresql
 
     class Result:
         def scalar_one_or_none(self):
+            """
+            Prepare or exercise scalar one or none in the test class sessions test
+            scenario.
+            """
             return TODAY
 
     class Database:
         statement = None
 
         def execute(self, statement):
+            """
+            Inspect or record execute events for the surrounding database or HTTP test.
+            """
             self.statement = statement
             return Result()
 
@@ -446,12 +535,18 @@ def test_attendance_and_deletion_use_the_same_class_row_lock() -> None:
 def test_app_uses_auckland_date_at_utc_boundary(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """
+    Verify that app uses auckland date at utc boundary.
+    """
     monkeypatch.setenv("DATABASE_URL", "sqlite://")
     module = importlib.import_module("app")
 
     class Clock:
         @staticmethod
         def now(tz):
+            """
+            Return the current timezone-aware UTC instant.
+            """
             return datetime(2026, 10, 25, 12, 30, tzinfo=UTC).astimezone(tz)
 
     monkeypatch.setattr(module, "datetime", Clock)
@@ -461,6 +556,9 @@ def test_app_uses_auckland_date_at_utc_boundary(
 def test_actual_app_links_creation_attendance_and_deletion(
     api: ClassApi, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """
+    Verify that actual app links creation attendance and deletion.
+    """
     import user_client
 
     monkeypatch.setenv("DATABASE_URL", "sqlite://")
@@ -521,6 +619,9 @@ def test_actual_app_links_creation_attendance_and_deletion(
 def test_actual_app_has_one_lesson_handler_and_materials_use_its_link(
     api: ClassApi, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """
+    Verify that actual app has one lesson handler and materials use its link.
+    """
     import learner_materials
     import user_client
     from fastapi import Response
@@ -536,6 +637,9 @@ def test_actual_app_has_one_lesson_handler_and_materials_use_its_link(
     )
 
     def routes(router):
+        """
+        Provide the routes context and release its resources after use.
+        """
         for route in router.routes:
             nested = getattr(route, "original_router", None)
             if nested is not None:
@@ -552,6 +656,9 @@ def test_actual_app_has_one_lesson_handler_and_materials_use_its_link(
         ]
         assert len(handlers) == 1
     def validated_title(identifier, authorization):
+        """
+        Prepare or exercise validated title in the test class sessions test scenario.
+        """
         assert authorization == "Bearer teacher"
         return api.titles[identifier]
 
@@ -577,6 +684,9 @@ def test_actual_app_has_one_lesson_handler_and_materials_use_its_link(
     paths = []
 
     def shared_files(path):
+        """
+        Prepare or exercise shared files in the test class sessions test scenario.
+        """
         paths.append(path)
         return b'{"materials":[],"message":"No materials for today"}', {}
 
@@ -603,6 +713,9 @@ def test_actual_app_has_one_lesson_handler_and_materials_use_its_link(
 
 
 def test_empty_class_deletion_cleans_remaining_material_grants(api: ClassApi) -> None:
+    """
+    Verify that empty class deletion cleans remaining material grants.
+    """
     import learner_materials
     from fastapi import Response
 

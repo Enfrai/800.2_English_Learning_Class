@@ -30,6 +30,9 @@ class LearnerValidationError(LearnerError):
     """An input value is missing or breaks a rule."""
 
     def __init__(self, field: str, message: str) -> None:
+        """
+        Initialize LearnerValidationError and retain the supplied constructor state.
+        """
         super().__init__(message)
         self.field = field
         self.message = message
@@ -51,11 +54,17 @@ class DuplicateLearnerError(LearnerError):
     """
 
     def __init__(self, duplicates: list[dict[str, Any]]) -> None:
+        """
+        Initialize DuplicateLearnerError and retain the supplied constructor state.
+        """
         super().__init__("A learner with this name already exists")
         self.duplicates = duplicates
 
 
 def _clean_name(value: str | None, field: str, label: str) -> str:
+    """
+    Trim and validate a required learner name field.
+    """
     cleaned = (value or "").strip()
     if not cleaned:
         raise LearnerValidationError(field, f"{label} is required")
@@ -67,6 +76,9 @@ def _clean_name(value: str | None, field: str, label: str) -> str:
 def _clean_optional(
     value: str | None, field: str, label: str, max_length: int
 ) -> str | None:
+    """
+    Normalize and validate an optional learner contact or language field.
+    """
     cleaned = (value or "").strip()
     if not cleaned:
         return None
