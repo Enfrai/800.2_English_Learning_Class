@@ -1,4 +1,4 @@
-"""Serve staff sessions, learner records and coordinator-only report rosters.
+"""Serve staff sessions, learners, report rosters and public feedback mail.
 
 Author: Shuohui Liu
 Date: 19 Oct 2026
@@ -15,6 +15,14 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
 from uuid import UUID
 
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
+from sqlalchemy import create_engine, delete, select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session, sessionmaker
+from starlette.middleware.base import RequestResponseEndpoint
+
 from auth import (
     AuthenticatedUser,
     get_current_user,
@@ -24,8 +32,7 @@ from auth import (
     unauthenticated,
 )
 from enquiries import create_enquiries_router, create_enquiry_listing_router
-from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
-from fastapi.responses import JSONResponse
+from feedback import create_feedback_router
 from learner_import import router as learner_import_router
 from learners import (
     AmbiguousLearnerNameError,
@@ -40,7 +47,6 @@ from learners import (
     update_learner,
 )
 from models import Base, user_sessions, users
-from pydantic import BaseModel, Field
 from report_roster import create_report_roster_router
 from security import (
     SessionSecurity,
@@ -48,11 +54,7 @@ from security import (
     protect_login,
     set_session_cookie,
 )
-from sqlalchemy import create_engine, delete, select
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session, sessionmaker
 from staff import create_staff_router
-from starlette.middleware.base import RequestResponseEndpoint
 
 engine = create_engine(os.environ["DATABASE_URL"], pool_pre_ping=True)
 SessionLocal = sessionmaker(engine)
@@ -118,6 +120,7 @@ app.include_router(create_staff_router(password_hash))
 app.include_router(learner_import_router)
 app.include_router(create_enquiries_router())
 app.include_router(create_enquiry_listing_router())
+app.include_router(create_feedback_router())
 
 
 @app.middleware("http")
@@ -130,6 +133,7 @@ async def authentication_cache_control(
         or request.url.path == "/learners/import"
         or request.url.path.startswith("/reports/")
         or request.url.path == "/enquiries"
+        or request.url.path == "/feedback"
         or request.url.path == "/staff"
         or request.url.path.startswith("/staff/")
     ):

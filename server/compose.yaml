@@ -1,4 +1,4 @@
-# Define services, shared QR settings and configurable local network access.
+# Define services, shared QR settings, feedback mail and local network access.
 #
 # Author: Shuohui Liu
 # Date: 19 Oct 2026
@@ -54,6 +54,13 @@ services:
       DEMO_PASSWORD: ${DEMO_PASSWORD:-DemoPass123!}
       INSTANCE_NAME: user1
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-local_internal_key}
+      FEEDBACK_RECIPIENTS: ${FEEDBACK_RECIPIENTS:-270926691@yoobeestudent.ac.nz}
+      FEEDBACK_SMTP_HOST: ${FEEDBACK_SMTP_HOST:-}
+      FEEDBACK_SMTP_PORT: ${FEEDBACK_SMTP_PORT:-587}
+      FEEDBACK_SMTP_SECURITY: ${FEEDBACK_SMTP_SECURITY:-starttls}
+      FEEDBACK_SMTP_USERNAME: ${FEEDBACK_SMTP_USERNAME:-}
+      FEEDBACK_SMTP_PASSWORD: ${FEEDBACK_SMTP_PASSWORD:-}
+      FEEDBACK_SMTP_FROM: ${FEEDBACK_SMTP_FROM:-}
     depends_on:
       postgres-user: {condition: service_healthy}
     healthcheck:
@@ -70,6 +77,13 @@ services:
       DEMO_PASSWORD: ${DEMO_PASSWORD:-DemoPass123!}
       INSTANCE_NAME: user2
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-local_internal_key}
+      FEEDBACK_RECIPIENTS: ${FEEDBACK_RECIPIENTS:-270926691@yoobeestudent.ac.nz}
+      FEEDBACK_SMTP_HOST: ${FEEDBACK_SMTP_HOST:-}
+      FEEDBACK_SMTP_PORT: ${FEEDBACK_SMTP_PORT:-587}
+      FEEDBACK_SMTP_SECURITY: ${FEEDBACK_SMTP_SECURITY:-starttls}
+      FEEDBACK_SMTP_USERNAME: ${FEEDBACK_SMTP_USERNAME:-}
+      FEEDBACK_SMTP_PASSWORD: ${FEEDBACK_SMTP_PASSWORD:-}
+      FEEDBACK_SMTP_FROM: ${FEEDBACK_SMTP_FROM:-}
 
   access1: &access
     <<: *api

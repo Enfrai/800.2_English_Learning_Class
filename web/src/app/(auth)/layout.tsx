@@ -1,8 +1,9 @@
-/* Define the root layout and metadata for the login test application.
+/* Define the authentication root layout and global feedback entry.
  * Author: Shuohui Liu
  * Date: 19 Oct 2026
  */
 
+import FeedbackEntry from "@/components/feedback/feedback-entry";
 import type { Metadata } from "next";
 import "@/styles/ako/tokens.css";
 import "@/styles/ako/components.css";
@@ -18,7 +19,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>{children}<FeedbackEntry /></body>
     </html>
   );
 }

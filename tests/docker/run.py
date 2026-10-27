@@ -1,4 +1,4 @@
-"""Run isolated backend and web suites including learner attendance history.
+"""Run isolated backend and web suites including feedback and learner history.
 
 Author: Shuohui Liu
 Date: 19 Oct 2026
@@ -115,6 +115,8 @@ def backend() -> list[dict]:
 def web() -> list[dict]:
     """Keep mocked UI tests separate from the real-system browser suite."""
     commands = {
+        "feedback-unit": ["npm", "run", "test:feedback-unit"],
+        "feedback-ui": ["npm", "run", "test:feedback-ui"],
         "api": [
             "node",
             "--test",

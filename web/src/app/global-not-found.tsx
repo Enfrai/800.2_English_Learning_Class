@@ -1,3 +1,9 @@
+/* Show a friendly missing-page screen and global feedback entry.
+ * Author: Shuohui Liu
+ * Date: 24 Oct 2026
+ */
+
+import FeedbackEntry from "@/components/feedback/feedback-entry";
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { PUBLIC_COPY as copy } from "@/lib/club-information";
@@ -12,5 +18,5 @@ export default function GlobalNotFound() {
     <main className="page"><h1>{copy.notFound}</h1><p>{copy.notFoundNote}</p>
       <Link className="btn" href="/">{copy.returnHome}</Link>
     </main>
-  </body></html>;
+  <FeedbackEntry /></body></html>;
 }

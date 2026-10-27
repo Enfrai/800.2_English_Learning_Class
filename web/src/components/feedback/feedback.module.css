@@ -1,0 +1,30 @@
+/* Style the global feedback control and form with shared Ako tokens.
+ * Author: Shuohui Liu
+ * Date: 24 Oct 2026
+ */
+
+.entry {
+  position: fixed;
+  right: calc(16px + env(safe-area-inset-right, 0px));
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--navy);
+  color: #fff;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px #0003;
+}
+.entry:hover { background: var(--ink); }
+.entry:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+.spacer { height: calc(88px + env(safe-area-inset-bottom, 0px)); }
+.form { max-width: 720px; }
+.form input, .form textarea { width: 100%; box-sizing: border-box; }
+.form textarea { min-height: 180px; resize: vertical; }
+@media print {
+  .entry, .spacer { display: none; }
+}

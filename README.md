@@ -257,6 +257,82 @@ For a complete real-phone check, follow the [step-by-step walkthrough](docs/manu
 and [additional validation cases](docs/manual/Ako_User_Manual.md#78-additional-validation-cases-and-results).
 Use a new test learner who has not already been marked Present.
 
+## Feedback and email configuration
+
+For this feature before it is merged, use the `feature/v1.0/feedback` branch.
+
+Every frontend page has a **Send feedback** icon in the bottom-right corner,
+including public learner pages and the not-found page. It opens `/feedback`.
+No login is required. Enter a title, reply email and description, then choose
+**Submit feedback**. The page keeps entered text on failure and clears it only
+after the SMTP relay accepts the message.
+
+Configure mail in **`server/.env`**, alongside `DEMO_USERNAME` and `DEMO_PASSWORD`:
+
+```dotenv
+FEEDBACK_RECIPIENTS=270926691@yoobeestudent.ac.nz
+FEEDBACK_SMTP_HOST=smtp.your-provider.example
+FEEDBACK_SMTP_PORT=587
+FEEDBACK_SMTP_SECURITY=starttls
+FEEDBACK_SMTP_USERNAME=your-smtp-account@example.com
+FEEDBACK_SMTP_PASSWORD=your-provider-app-password
+FEEDBACK_SMTP_FROM=your-smtp-account@example.com
+```
+
+Replace the SMTP examples with settings from your mail provider. The recipient
+is not the SMTP login. To notify several recipients, use a semicolon-separated
+value, for example `FEEDBACK_RECIPIENTS=one@example.com;two@example.com`.
+The default recipient is `270926691@yoobeestudent.ac.nz`.
+Empty/invalid recipient settings do not send mail. Up to 20 recipients are supported.
+
+Both User Service replicas receive these settings. After changing them, run from
+`server/`:
+
+```sh
+docker compose up -d --build user1 user2
+docker compose restart nginx
+```
+
+Use `starttls` for TLS upgrade (typically port 587), or `ssl` for implicit TLS
+(typically port 465; set the port explicitly). TLS certificates are verified.
+For a trusted local capture relay only, `none` disables TLS; leave both username
+and password empty and set a valid `FEEDBACK_SMTP_FROM`. Do not use plaintext
+authentication across an untrusted network. No SMTP package is needed beyond
+Python's standard library.
+
+The sender is the configured From address, falling back to the SMTP username.
+The visitor's address is Reply-To; visitors cannot choose recipients or sender.
+The server requires a matching request Origin, limits field sizes, and the
+gateway throttles feedback requests separately. It does not store feedback in
+the application databases. SMTP settings and recipient details never reach the
+browser.
+
+Without a configured SMTP host and sender, submission returns a temporary
+unavailability message. SMTP failures return a delivery error, never a false
+success. There is no automatic retry: a lost response or partial recipient
+acceptance can leave delivery uncertain, so repeated manual submissions may
+duplicate mail. A successful response confirms relay acceptance, not final
+inbox delivery; check the destination mailbox/spam folder.
+
+Focused tests, from the User Service directory and then the web directory:
+
+```sh
+python -m pytest tests/test_feedback.py -v
+```
+
+```sh
+npm run test:feedback-unit
+npm run build
+npm run test:feedback-ui
+```
+
+The browser runner uses an isolated Next.js server and mocked email API. Set
+`BROWSER_CHANNEL=chromium` after installing Playwright Chromium if local Chrome
+is unavailable. Backend tests use mocks plus a loopback SMTP capture server;
+they never send mail to the real configured recipient.
+Docker web selections are `TEST_SUITE=feedback-unit` and
+`TEST_SUITE=feedback-ui`; backend User tests include feedback automatically.
+
 ## Local development tools
 
 Docker is the supported full-system route above. A host-only Next.js process

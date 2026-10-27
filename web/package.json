@@ -25,7 +25,9 @@
     "test:public-a11y": "node tests/run-public-ui.mjs --a11y",
     "test:history-unit": "node --test tests/attendance-history-api.test.mjs",
     "test:history-ui": "node tests/run-history-ui.mjs",
-    "test:history-session": "node --test tests/history-session.test.mjs"
+    "test:history-session": "node --test tests/history-session.test.mjs",
+    "test:feedback-unit": "node --test tests/feedback-api.test.mjs",
+    "test:feedback-ui": "node tests/run-feedback-ui.mjs"
   },
   "dependencies": {
     "@lit/react": "1.0.8",

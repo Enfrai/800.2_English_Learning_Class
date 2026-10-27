@@ -73,7 +73,7 @@ docker compose -f compose.test.yaml -p ako-tests run --build --rm -e TEST_SUITE=
 ```
 
 Backend selections: `user`, `accessment`, `lesson`.
-Web selections: `api`, `staff-ui`, `public-enquiry`,
+Web selections: `api`, `staff-ui`, `feedback-unit`, `feedback-ui`, `public-enquiry`,
 `coordinator-enquiries`, `csv-ui`, `lessons-unit`, `lessons-ui`,
 `materials-unit`, `materials-ui`, `sessions-unit`, `sessions-ui`, `reports-unit`, `reports-ui`, `checkin-unit`, `checkin-ui`, `public-unit`, `public-ui`, `public-a11y`.
 
@@ -170,3 +170,10 @@ with `test-web`. The default web group includes all three. Backend includes
 history aggregation and permission tests. The system group includes real
 learner history and correction refresh checks. See
 [history test instructions](../../docs/system_test/attendance_history_system_tests.md).
+
+
+Feedback tests are included in the default web group. Select `feedback-unit`
+for validation/request tests or `feedback-ui` for global entry, form, mobile and
+accessibility checks. Backend User tests verify SMTP configuration, delivery,
+same-origin protection and failure handling with mocks and a loopback capture
+relay. No test sends feedback to an external recipient.

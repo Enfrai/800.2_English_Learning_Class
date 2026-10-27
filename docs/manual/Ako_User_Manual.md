@@ -1,6 +1,6 @@
 # Ako User Manual
 
-Version 1.1 | 27 October 2026 | English
+Version 1.2 | 27 October 2026 | English
 
 Ako supports one English conversation club. This manual explains how visitors,
 learners, teachers and coordinators use its pages. Follow the role and menu path
@@ -23,6 +23,7 @@ A Word copy is available as [Ako User Manual](Ako_User_Manual.docx).
 9. [A complete class workflow](#9-a-complete-class-workflow)
 10. [Troubleshooting and current limitations](#10-troubleshooting-and-current-limitations)
 11. [Feature coverage](#11-feature-coverage)
+12. [Send feedback](#12-send-feedback)
 
 ## 1 Getting started and permissions
 
@@ -837,3 +838,31 @@ The workflow references are the repository's MSE800 User Stories and Ako
 Requirements Specification in docs/system_analysis, together with the implemented
 page controls and service rules. Installation, testing and maintainer procedures
 are kept in the project README so this manual can focus on user tasks.
+
+
+## 12 Send feedback
+
+**Role:** Anyone, including visitors and learners without an account.
+**Entry:** The speech-bubble **Send feedback** icon at the bottom-right of every page.
+
+1. Click or tap the feedback icon. The Feedback page opens.
+2. Enter a Title describing the problem or suggestion, up to 200 characters.
+3. Enter your valid Email address so staff can reply.
+4. Enter a Description, up to 5,000 characters.
+5. Choose Submit feedback once and wait for the result.
+6. Check for Thank you. Your feedback has been submitted.
+
+All fields are required. Do not include passwords or private learner information.
+The form keeps your text after validation or delivery errors and clears it after
+a confirmed submission. The submit button is disabled while the request is pending.
+You can reach the icon with the keyboard and press Enter. It is hidden when printing.
+
+If feedback is temporarily unavailable, ask the maintainer to check email settings.
+For too many requests, wait before trying again. A delivery error does not always
+mean no recipient received the message; avoid repeatedly submitting the same text.
+
+The receiving addresses are configured by the maintainer in server/.env and may
+include several addresses separated by semicolons. Visitors cannot change that list.
+Successful submission means the mail server accepted the message; final inbox
+delivery and staff reply times depend on the receiving mail service and staff.
+There is no feedback history page or automatic email sent to the visitor.
