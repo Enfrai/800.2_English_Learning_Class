@@ -6,6 +6,8 @@ Diagrams describe the implemented application, not every possible requirement. G
 
 ## Scope and source map
 
+Source paths in this document are relative to [server/services/user](../../../server/services/user).
+
 The User Service owns staff authentication, teacher account administration, learner records, CSV import and public enquiries. Public club information is frontend content. Learners have no login accounts. Enquiries do not automatically create learners.
 
 | Area | Source |

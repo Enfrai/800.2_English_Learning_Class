@@ -6,6 +6,8 @@ Diagrams describe the implemented application, not every possible requirement. G
 
 ## Scope and source map
 
+Source paths in this document are relative to [server/services/lesson](../../../server/services/lesson).
+
 This service owns the lesson library, tags, uploaded files, copying and Māori content review metadata. It authenticates staff through User Service. Accessment Service supplies learner authorization and calls the internal shared-material routes.
 
 | Area | Source |

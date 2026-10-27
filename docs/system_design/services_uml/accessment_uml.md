@@ -6,6 +6,8 @@ Diagrams describe the implemented application, not every possible requirement. G
 
 ## Scope and source map
 
+Source paths in this document are relative to [server/services/accessment](../../../server/services/accessment).
+
 The directory retains the name `accessment`; its public gateway prefix is `/api/access`. It owns dated class sessions, attendance, QR windows, historical corrections, attendance history, reports and learner material grants. Staff identity and learner records come from User Service. Lessons and material bytes come from Lesson Service.
 
 | Area | Source |

@@ -18,6 +18,28 @@ without an account.
 - [Browser system tests](tests/system/README.md)
 - [Manual acceptance test scripts](docs/system_test/)
 
+## UML design documents
+
+The following documents describe the implemented microservices and frontend.
+Each includes a **Use Case Diagram** for actors and supported operations,
+**Activity Diagrams** for workflows, decisions and error outcomes, and
+**Class Diagrams** for the relevant classes, data contracts and dependencies.
+Source maps connect the diagrams to the implementation.
+
+| Document | What it explains |
+| --- | --- |
+| [User Service UML](docs/system_design/services_uml/user_uml.md) | Staff authentication and session lifecycle, teacher administration, learners, CSV import, public enquiries and local persistence |
+| [Accessment Service UML](docs/system_design/services_uml/accessment_uml.md) | Class sessions, lesson associations, manual and QR attendance, past corrections, history, exports and learner material grants |
+| [Lesson Service UML](docs/system_design/services_uml/lesson_uml.md) | Lesson search and editing, copying, uploaded materials, sharing rules, Māori content review and local persistence |
+| [Web application UML](docs/system_design/web_uml/web_uml.md) | Public and staff navigation, role and session handling, frontend API adapters, classroom sign-in, materials and React component/data relationships |
+
+Open these Markdown files on GitHub to view the rendered Mermaid diagrams.
+Use-case views use actor nodes and oval operations within a service boundary.
+Class views label tables, modules, TypeScript types and React function components
+explicitly so they are not confused with implemented object-oriented classes.
+The documents record their source baseline and current implementation limitations;
+update the affected diagrams when behavior or structure changes.
+
 ## Features and roles
 
 | Area | Features | Who uses it |
@@ -53,6 +75,8 @@ one PostgreSQL database per service. Uploaded lesson files use a shared volume.
 | `tests/` and `compose.test.yaml` | Isolated automated test stack and runners |
 | `docs/` | Requirements, project, design and test documents |
 | `docs/manual/` | English user manual in Markdown and Word |
+| `docs/system_design/services_uml/` | UML diagrams for User, Accessment and Lesson services |
+| `docs/system_design/web_uml/` | UML diagrams for the web application |
 
 The directory name `accessment` is retained to match the implementation.
 

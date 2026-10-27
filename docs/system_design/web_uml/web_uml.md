@@ -6,6 +6,8 @@ Diagrams describe the implemented application, not every possible requirement. G
 
 ## Scope and source map
 
+Source paths in this document are relative to [web](../../../web).
+
 The Next.js application presents public information, enquiries, staff login, staff administration, the lesson library, class sessions, attendance, QR management, learner material access and reports. It uses React function components and TypeScript data types. It does not own the backend databases.
 
 | Area | Source |
