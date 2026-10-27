@@ -19,6 +19,9 @@ PRESENT_AT_START: dict[str, int] = {}
 
 class AttendancePage:
     def __init__(self, page: Page) -> None:
+        """
+        Initialize AttendancePage and retain the supplied constructor state.
+        """
         self.page = page
         self.session_id = ""
         # The class list is the first table; the change history is the second.
@@ -40,6 +43,9 @@ class AttendancePage:
         )
 
     def open(self, session_id: str) -> None:
+        """
+        Prepare or exercise open in the attendance page test scenario.
+        """
         self.page.goto(f"/sessions/{session_id}/attendance")
         self.arrive(session_id)
 
@@ -57,9 +63,15 @@ class AttendancePage:
         PRESENT_AT_START[self.session_id] = int(shown.group(1))
 
     def checkbox(self, full_name: str) -> Locator:
+        """
+        Locate the attendance checkbox for the specified learner.
+        """
         return self.page.get_by_role("checkbox", name=full_name, exact=True)
 
     def row(self, full_name: str) -> Locator:
+        """
+        Locate the learner or lesson table row used by this page interaction.
+        """
         return self.rows.filter(has=self.checkbox(full_name))
 
     def row_named(self, full_name: str) -> Locator:
@@ -74,6 +86,9 @@ class AttendancePage:
         expect(self.count).to_have_text(re.compile(rf"^Present {total} of \d+$"))
 
     def add_and_mark(self, first: str, family: str) -> None:
+        """
+        Prepare or exercise add and mark in the attendance page test scenario.
+        """
         self.first_name.fill(first)
         self.family_name.fill(family)
         self.add_and_mark_button.click()

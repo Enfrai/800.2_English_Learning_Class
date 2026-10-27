@@ -6,6 +6,9 @@ from test_postgres import PgContext
 
 
 def test_me_contract_and_passive_read(pg: PgContext) -> None:
+    """
+    Verify that me contract and passive read.
+    """
     token = pg.login().json()["sessionid"]
     before = pg.session_rows()
     response = pg.clients[1].get("/me", headers={"Authorization": f"Bearer {token}"})
@@ -21,6 +24,9 @@ def test_me_contract_and_passive_read(pg: PgContext) -> None:
 
 @pytest.mark.parametrize("cookie", [False, True])
 def test_learner_round_trip_preserves_dev_contract(pg: PgContext, cookie: bool) -> None:
+    """
+    Verify that learner round trip preserves dev contract.
+    """
     token = pg.login().json()["sessionid"]
     client = pg.clients[1]
     headers = {"Origin": "http://testserver"}
@@ -47,6 +53,9 @@ def test_learner_round_trip_preserves_dev_contract(pg: PgContext, cookie: bool) 
 
 
 def test_learner_cookie_write_requires_origin(pg: PgContext) -> None:
+    """
+    Verify that learner cookie write requires origin.
+    """
     pg.login()
     response = pg.clients[0].post(
         "/learners", json={"first_name": "Blocked", "family_name": "Test"}
@@ -55,6 +64,9 @@ def test_learner_cookie_write_requires_origin(pg: PgContext) -> None:
 
 
 def test_revoked_session_denied_by_me_and_learners(pg: PgContext) -> None:
+    """
+    Verify that revoked session denied by me and learners.
+    """
     token = pg.login().json()["sessionid"]
     assert (
         pg.clients[0]

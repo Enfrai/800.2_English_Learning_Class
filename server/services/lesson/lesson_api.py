@@ -51,6 +51,9 @@ class SharingIn(BaseModel):
 
 
 def validate_lesson(payload: LessonIn) -> tuple[str, list[str]]:
+    """
+    Validate the lesson title, date and tags and normalize the tag names.
+    """
     errors = {}
     title = payload.title.strip()
     if not title:
@@ -70,6 +73,10 @@ def validate_lesson(payload: LessonIn) -> tuple[str, list[str]]:
 
 
 def find_lesson(db: Session, lesson_id: UUID, staff=None, edit=False):
+    """
+    Load a live lesson, optionally locking it and requiring author or Coordinator edit
+    access.
+    """
     query = select(lessons).where(
         lessons.c.id == lesson_id, lessons.c.deleted_at.is_(None)
     )
@@ -84,6 +91,9 @@ def find_lesson(db: Session, lesson_id: UUID, staff=None, edit=False):
 
 
 def save_tags(db: Session, lesson_id: UUID, names: list[str]):
+    """
+    Replace the lesson’s tag associations using normalized reusable tag records.
+    """
     db.execute(lesson_tags.delete().where(lesson_tags.c.lesson_id == lesson_id))
     for name in names:
         insert = pg_insert if db.bind.dialect.name == "postgresql" else sqlite_insert
@@ -97,6 +107,9 @@ def save_tags(db: Session, lesson_id: UUID, names: list[str]):
 
 
 def material_out(row):
+    """
+    Project stored material metadata into the public staff API response.
+    """
     return {
         key: row[key]
         for key in (
@@ -112,6 +125,9 @@ def material_out(row):
 
 
 def lesson_out(db: Session, lesson, staff):
+    """
+    Build the lesson response with tags, materials and staff edit permissions.
+    """
     names = (
         db.execute(
             select(tags.c.name)
@@ -150,6 +166,9 @@ def lesson_out(db: Session, lesson, staff):
 
 
 def read_file(upload: UploadFile) -> tuple[str, str, bytes]:
+    """
+    Read a bounded upload and validate its filename, type and content signature.
+    """
     name = (upload.filename or "").replace("\\", "/").split("/")[-1]
     suffix = Path(name).suffix.lower()
     if (
@@ -192,10 +211,17 @@ def read_file(upload: UploadFile) -> tuple[str, str, bytes]:
 def create_lesson_router(
     session_factory: Callable[[], Session], storage: Path | None = None
 ):
+    """
+    Build the lesson API router with its injected dependencies.
+    """
     router = APIRouter(tags=["US-006 lesson library"])
     folder = storage or Path(os.getenv("MATERIALS_DIR", "/var/lib/ako/materials"))
 
     def purge(key):
+        """
+        Remove a stored lesson file when its key stays inside the configured storage
+        folder.
+        """
         path = folder / key
         if path.parent.resolve() != folder.resolve():
             return
@@ -208,6 +234,10 @@ def create_lesson_router(
 
     @router.get("/tags")
     def list_tags(staff: LoggedInStaff):
+        """
+        Handle GET /tags for list tags, applying the route’s validation and
+        authorization rules.
+        """
         with session_factory() as db:
             return [
                 dict(row)
@@ -222,6 +252,10 @@ def create_lesson_router(
         q: str = Query(default="", max_length=255),
         tag: str = Query(default="", max_length=100),
     ) -> list[dict]:
+        """
+        Handle GET /lessons for list lessons, applying the route’s validation and
+        authorization rules.
+        """
         conditions = [lessons.c.deleted_at.is_(None)]
         keyword, topic = q.strip(), tag.strip()
         if keyword:
@@ -261,6 +295,10 @@ def create_lesson_router(
 
     @router.post("/lessons", status_code=201)
     def create_lesson(payload: LessonIn, staff: LoggedInStaff):
+        """
+        Handle POST /lessons for create lesson, applying the route’s validation and
+        authorization rules.
+        """
         title, names = validate_lesson(payload)
         with session_factory() as db, db.begin():
             row = (
@@ -282,11 +320,19 @@ def create_lesson_router(
 
     @router.get("/lessons/{lesson_id}")
     def get_lesson(lesson_id: UUID, staff: LoggedInStaff):
+        """
+        Handle GET /lessons/{lesson_id} for get lesson, applying the route’s validation
+        and authorization rules.
+        """
         with session_factory() as db:
             return lesson_out(db, find_lesson(db, lesson_id), staff)
 
     @router.put("/lessons/{lesson_id}")
     def update_lesson(lesson_id: UUID, payload: LessonIn, staff: LoggedInStaff):
+        """
+        Handle PUT /lessons/{lesson_id} for update lesson, applying the route’s
+        validation and authorization rules.
+        """
         title, names = validate_lesson(payload)
         with session_factory() as db, db.begin():
             find_lesson(db, lesson_id, staff, edit=True)
@@ -310,6 +356,10 @@ def create_lesson_router(
 
     @router.delete("/lessons/{lesson_id}", status_code=204)
     def delete_lesson(lesson_id: UUID, staff: LoggedInStaff):
+        """
+        Handle DELETE /lessons/{lesson_id} for delete lesson, applying the route’s
+        validation and authorization rules.
+        """
         with session_factory() as db, db.begin():
             find_lesson(db, lesson_id, staff, edit=True)
             keys = db.scalars(
@@ -343,6 +393,10 @@ def create_lesson_router(
         file: UploadFile = File(...),
         share_with_learners: bool = Form(False),
     ):
+        """
+        Handle POST /lessons/{lesson_id}/materials for upload material, applying the
+        route’s validation and authorization rules.
+        """
         path = None
         try:
             with session_factory() as db, db.begin():
@@ -381,6 +435,9 @@ def create_lesson_router(
             file.file.close()
 
     def find_material(db, material_id):
+        """
+        Load live material metadata or reject a missing material.
+        """
         row = (
             db.execute(
                 select(lesson_materials).where(
@@ -397,6 +454,10 @@ def create_lesson_router(
 
     @router.get("/materials/{material_id}/download")
     def download_material(material_id: UUID, staff: LoggedInStaff):
+        """
+        Handle GET /materials/{material_id}/download for download material, applying the
+        route’s validation and authorization rules.
+        """
         with session_factory() as db:
             material = find_material(db, material_id)
             find_lesson(db, material["lesson_id"])
@@ -409,6 +470,9 @@ def create_lesson_router(
                 raise HTTPException(404, detail="Material file is unavailable") from exc
 
         def content():
+            """
+            Stream stored file chunks and close the source when streaming ends.
+            """
             try:
                 while chunk := source.read(64 * 1024):
                     yield chunk
@@ -429,6 +493,10 @@ def create_lesson_router(
 
     @router.patch("/materials/{material_id}")
     def change_sharing(material_id: UUID, payload: SharingIn, staff: LoggedInStaff):
+        """
+        Handle PATCH /materials/{material_id} for change sharing, applying the route’s
+        validation and authorization rules.
+        """
         with session_factory() as db, db.begin():
             material = find_material(db, material_id)
             find_lesson(db, material["lesson_id"], staff, edit=True)
@@ -451,6 +519,10 @@ def create_lesson_router(
 
     @router.delete("/materials/{material_id}", status_code=204)
     def delete_material(material_id: UUID, staff: LoggedInStaff):
+        """
+        Handle DELETE /materials/{material_id} for delete material, applying the route’s
+        validation and authorization rules.
+        """
         with session_factory() as db, db.begin():
             material = find_material(db, material_id)
             find_lesson(db, material["lesson_id"], staff, edit=True)

@@ -21,6 +21,9 @@ class LessonServiceError(Exception):
 
 
 def request_lessons(path: str, authorization: str) -> Any:
+    """
+    Call the Lesson Service and decode a successful JSON response.
+    """
     base = os.getenv("LESSON_API_URL", "http://nginx/api/lesson").rstrip("/")
     request = Request(base + path, headers={"Authorization": authorization})
     try:
@@ -35,6 +38,9 @@ def request_lessons(path: str, authorization: str) -> Any:
 
 
 def lesson_title(lesson_id: UUID, authorization: str) -> str:
+    """
+    Look up the title of a live lesson through the authenticated Lesson API.
+    """
     body = request_lessons(f"/lessons/{lesson_id}", authorization)
     try:
         if UUID(body["id"]) != lesson_id or not isinstance(body["title"], str):
@@ -45,6 +51,9 @@ def lesson_title(lesson_id: UUID, authorization: str) -> str:
 
 
 def lesson_titles(authorization: str) -> dict[UUID, str]:
+    """
+    Return an identifier-to-title map for the available lessons.
+    """
     try:
         rows = request_lessons("/lessons", authorization)
     except LessonUnavailableError as exc:

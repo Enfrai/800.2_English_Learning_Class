@@ -22,10 +22,16 @@ DAY = date(2026, 10, 24)
 
 
 def test_two_replicas_start_one_class(engine: Engine) -> None:
+    """
+    Verify that two replicas start one class.
+    """
     factory = sessionmaker(engine)
     owner = uuid4()
 
     def staff():
+        """
+        Prepare or exercise staff in the test class sessions postgres test scenario.
+        """
         return SimpleNamespace(
             staff=SimpleNamespace(id=owner, role="teacher"), authorization="test-only"
         )
@@ -66,6 +72,9 @@ def test_two_replicas_start_one_class(engine: Engine) -> None:
 
 
 def test_attendance_commit_prevents_a_waiting_deletion(engine: Engine) -> None:
+    """
+    Verify that attendance commit prevents a waiting deletion.
+    """
     factory = sessionmaker(engine)
     owner, learner = uuid4(), uuid4()
     with factory.begin() as db:
@@ -77,6 +86,9 @@ def test_attendance_commit_prevents_a_waiting_deletion(engine: Engine) -> None:
     written, deleting, release = Event(), Event(), Event()
 
     def staff():
+        """
+        Prepare or exercise staff in the test class sessions postgres test scenario.
+        """
         return SimpleNamespace(
             staff=SimpleNamespace(id=owner, role="teacher"), authorization="test-only"
         )
@@ -86,12 +98,19 @@ def test_attendance_commit_prevents_a_waiting_deletion(engine: Engine) -> None:
     client = TestClient(app)
 
     def before_statement(connection, cursor, statement, parameters, context, many):
+        """
+        Observe database execution before the statement to coordinate the concurrency
+        scenario.
+        """
         if "SELECT class_sessions.id," in statement and "FOR UPDATE" in statement:
             deleting.set()
 
     event.listen(engine, "before_cursor_execute", before_statement)
 
     def record():
+        """
+        Inspect or record record events for the surrounding database or HTTP test.
+        """
         with factory.begin() as db:
             mark_present(
                 db, session_id=sid, learner_id=learner, recorded_by=owner, today=DAY

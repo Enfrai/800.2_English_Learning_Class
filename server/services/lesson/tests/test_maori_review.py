@@ -52,6 +52,9 @@ def review(
         day: date | None = REVIEW_DAY,
         role: str = "coordinator",
     ) -> dict[str, Any]:
+        """
+        Inspect or record record events for the surrounding database or HTTP test.
+        """
         return record_review(
             db,
             lesson_id,
@@ -67,6 +70,9 @@ def review(
 
 @pytest.fixture
 def flagged_lesson(db: Session, new_lesson: NewLesson) -> UUID:
+    """
+    Provide lesson fixture containing Māori content awaiting or holding a review.
+    """
     lesson_id = new_lesson()
     set_maori_content(db, lesson_id, True)
     return lesson_id
@@ -78,6 +84,9 @@ def flagged_lesson(db: Session, new_lesson: NewLesson) -> UUID:
 def test_ticking_maori_content_marks_the_lesson_not_yet_reviewed(
     db: Session, new_lesson: NewLesson, lesson_row: LessonRow
 ) -> None:
+    """
+    Verify that ticking maori content marks the lesson not yet reviewed.
+    """
     lesson_id = new_lesson()
 
     saved = set_maori_content(db, lesson_id, True)
@@ -91,12 +100,18 @@ def test_ticking_maori_content_marks_the_lesson_not_yet_reviewed(
 def test_lesson_without_maori_content_has_no_label(
     new_lesson: NewLesson, lesson_row: LessonRow
 ) -> None:
+    """
+    Verify that lesson without maori content has no label.
+    """
     assert review_label(lesson_row(new_lesson())) is None
 
 
 def test_ticking_again_keeps_the_review(
     db: Session, flagged_lesson: UUID, review: Callable[..., dict[str, Any]]
 ) -> None:
+    """
+    Verify that ticking again keeps the review.
+    """
     reviewed = review(flagged_lesson)
 
     saved = set_maori_content(db, flagged_lesson, True)
@@ -107,6 +122,9 @@ def test_ticking_again_keeps_the_review(
 def test_unticking_clears_the_flag_and_the_review(
     db: Session, flagged_lesson: UUID, review: Callable[..., dict[str, Any]]
 ) -> None:
+    """
+    Verify that unticking clears the flag and the review.
+    """
     review(flagged_lesson)
 
     saved = set_maori_content(db, flagged_lesson, False)
@@ -123,6 +141,9 @@ def test_unticking_clears_the_flag_and_the_review(
 def test_unticking_a_lesson_without_maori_content_changes_nothing(
     db: Session, new_lesson: NewLesson, lesson_row: LessonRow
 ) -> None:
+    """
+    Verify that unticking a lesson without maori content changes nothing.
+    """
     lesson_id = new_lesson()
     before = lesson_row(lesson_id)
 
@@ -132,6 +153,9 @@ def test_unticking_a_lesson_without_maori_content_changes_nothing(
 def test_unknown_or_deleted_lesson_is_reported(
     db: Session, new_lesson: NewLesson
 ) -> None:
+    """
+    Verify that unknown or deleted lesson is reported.
+    """
     deleted = new_lesson(deleted_at=datetime.now(UTC))
 
     with pytest.raises(LessonNotFoundError):
@@ -149,6 +173,9 @@ def test_coordinator_review_changes_the_label_to_reviewed_by_name_and_date(
     coordinator_id: UUID,
     review_log: ReviewLog,
 ) -> None:
+    """
+    Verify that coordinator review changes the label to reviewed by name and date.
+    """
     saved = review(flagged_lesson, name="  Aroha  ")
 
     assert saved["review_status"] == "reviewed"
@@ -166,12 +193,18 @@ def test_coordinator_review_changes_the_label_to_reviewed_by_name_and_date(
 def test_review_dated_today_is_accepted(
     flagged_lesson: UUID, review: Callable[..., dict[str, Any]], today: date
 ) -> None:
+    """
+    Verify that review dated today is accepted.
+    """
     assert review(flagged_lesson, day=today)["review_date"] == today
 
 
 def test_reviewer_name_of_150_characters_is_accepted(
     flagged_lesson: UUID, review: Callable[..., dict[str, Any]]
 ) -> None:
+    """
+    Verify that reviewer name of 150 characters is accepted.
+    """
     assert review(flagged_lesson, name="a" * 150)["reviewer_name"] == "a" * 150
 
 
@@ -211,6 +244,9 @@ def test_bad_review_is_refused_with_a_message_and_the_label_stays(
     days_from_today: int | None,
     errors: dict[str, str],
 ) -> None:
+    """
+    Verify that bad review is refused with a message and the label stays.
+    """
     before = lesson_row(flagged_lesson)
     day = None if days_from_today is None else today + timedelta(days=days_from_today)
 
@@ -228,6 +264,9 @@ def test_teacher_cannot_record_a_review(
     review: Callable[..., dict[str, Any]],
     lesson_row: LessonRow,
 ) -> None:
+    """
+    Verify that teacher cannot record a review.
+    """
     with pytest.raises(NotCoordinatorError) as error:
         review(flagged_lesson, role="teacher")
 
@@ -238,6 +277,9 @@ def test_teacher_cannot_record_a_review(
 def test_lesson_without_maori_content_cannot_be_reviewed(
     new_lesson: NewLesson, review: Callable[..., dict[str, Any]]
 ) -> None:
+    """
+    Verify that lesson without maori content cannot be reviewed.
+    """
     with pytest.raises(NotFlaggedError):
         review(new_lesson())
 
@@ -251,6 +293,9 @@ def test_changing_materials_returns_a_reviewed_lesson_to_not_yet_reviewed(
     review: Callable[..., dict[str, Any]],
     review_log: ReviewLog,
 ) -> None:
+    """
+    Verify that changing materials returns a reviewed lesson to not yet reviewed.
+    """
     review(flagged_lesson)
     teacher_id = uuid4()
 
@@ -277,6 +322,9 @@ def test_changing_materials_of_an_unreviewed_lesson_changes_nothing(
     review_log: ReviewLog,
     flagged: bool,
 ) -> None:
+    """
+    Verify that changing materials of an unreviewed lesson changes nothing.
+    """
     lesson_id = new_lesson()
     if flagged:
         set_maori_content(db, lesson_id, True)
@@ -294,6 +342,9 @@ def test_changing_materials_of_an_unreviewed_lesson_changes_nothing(
 def test_reviewer_name_with_macrons_is_kept_exactly(
     flagged_lesson: UUID, review: Callable[..., dict[str, Any]]
 ) -> None:
+    """
+    Verify that reviewer name with macrons is kept exactly.
+    """
     saved = review(flagged_lesson, name="Kiri Tāmaki-Ōtene")
 
     assert saved["reviewer_name"] == "Kiri Tāmaki-Ōtene"
@@ -306,6 +357,9 @@ def test_reviewer_name_with_macrons_is_kept_exactly(
 def test_only_unreviewed_maori_content_is_hidden_from_learners(
     db: Session, new_lesson: NewLesson, lesson_row: LessonRow
 ) -> None:
+    """
+    Verify that only unreviewed maori content is hidden from learners.
+    """
     lesson_ids = {
         "no Māori content": new_lesson(),
         "not yet reviewed": new_lesson(has_maori_content=True, review_status="pending"),
@@ -331,6 +385,9 @@ def test_reviewed_lesson_without_a_reviewer_name_is_labelled_reviewed(
     new_lesson: NewLesson, lesson_row: LessonRow
 ) -> None:
     # Reviews recorded before US-008 added reviewer_name and review_date.
+    """
+    Verify that reviewed lesson without a reviewer name is labelled reviewed.
+    """
     lesson_id = new_lesson(has_maori_content=True, review_status="reviewed")
 
     assert review_label(lesson_row(lesson_id)) == "Reviewed"

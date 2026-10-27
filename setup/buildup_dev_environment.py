@@ -24,6 +24,9 @@ PACKAGES = [
 
 
 def run(*args, check=True, capture=False):
+    """
+    Execute a subprocess with the requested exit-code and output-capture policy.
+    """
     print("+", " ".join(map(str, args)), flush=True)
     return subprocess.run(
         list(map(str, args)), check=check, text=True, capture_output=capture
@@ -31,10 +34,16 @@ def run(*args, check=True, capture=False):
 
 
 def sudo(*args):
+    """
+    Run the command with elevated privileges when the current user is not root.
+    """
     return run(*(([]) if os.geteuid() == 0 else ["sudo"]), *args)
 
 
 def os_release():
+    """
+    Read operating-system identification fields from /etc/os-release.
+    """
     data = {}
     for line in Path("/etc/os-release").read_text().splitlines():
         if "=" in line:
@@ -44,6 +53,9 @@ def os_release():
 
 
 def download(url, target):
+    """
+    Download the requested resource into the target file.
+    """
     print("Downloading from", url)
     req = urllib.request.Request(url, headers={"User-Agent": "docker-bootstrap/1.0"})
     with urllib.request.urlopen(req, timeout=60) as response, open(target, "wb") as out:
@@ -51,6 +63,9 @@ def download(url, target):
 
 
 def installed():
+    """
+    Check whether Docker CLI or Docker Desktop is already installed.
+    """
     if shutil.which("docker"):
         result = run("docker", "--version", check=False, capture=True)
         if result.returncode == 0:
@@ -71,6 +86,9 @@ def installed():
 
 
 def mac_install():
+    """
+    Install Docker Desktop on a supported macOS architecture.
+    """
     version = platform.mac_ver()[0]
     arch = platform.machine()
     print("macOS", version, arch)
@@ -94,6 +112,9 @@ def mac_install():
 
 
 def windows_install():
+    """
+    Install Docker Desktop on Windows using winget or the vendor installer.
+    """
     if platform.machine().lower() not in ("amd64", "x86_64", "arm64"):
         raise RuntimeError("Unsupported Windows architecture")
     print("Windows:", platform.version(), platform.machine())
@@ -122,6 +143,9 @@ def windows_install():
 
 
 def check_and_install_docker():
+    """
+    Check for Docker and install it only when the configured confirmation allows it.
+    """
     parser = argparse.ArgumentParser(description="Install Docker if missing")
     parser.add_argument(
         "--yes", action="store_true", help="Proceed without confirmation"
@@ -155,6 +179,9 @@ def check_and_install_docker():
 
 
 def main():
+    """
+    Parse command-line options and run the module’s documented command-line workflow.
+    """
     check_and_install_docker()
 
 
@@ -184,6 +211,9 @@ REQUIREMENTS = (
 
 
 def run(*args, check=True, capture=False):
+    """
+    Execute a subprocess with the requested exit-code and output-capture policy.
+    """
     print("+", " ".join(map(str, args)), flush=True)
     return subprocess.run(
         list(map(str, args)), check=check, text=True, capture_output=capture
@@ -191,10 +221,16 @@ def run(*args, check=True, capture=False):
 
 
 def confirm(question, assume_yes=False):
+    """
+    Read affirmative user consent unless the caller already approved the operation.
+    """
     return assume_yes or input(f"{question} [y/N] ").strip().lower() in ("y", "yes")
 
 
 def download(url, target):
+    """
+    Download the requested resource into the target file.
+    """
     print("Downloading from", url)
     req = urllib.request.Request(url, headers={"User-Agent": "dev-bootstrap/1.0"})
     with urllib.request.urlopen(req, timeout=60) as response, open(target, "wb") as out:
@@ -202,6 +238,9 @@ def download(url, target):
 
 
 def docker_installed():
+    """
+    Check whether Docker CLI or Docker Desktop is already installed.
+    """
     if shutil.which("docker"):
         result = run("docker", "--version", check=False, capture=True)
         if result.returncode == 0:
@@ -222,6 +261,9 @@ def docker_installed():
 
 
 def mac_install_docker():
+    """
+    Install Docker Desktop on macOS using Homebrew or the disk-image installer.
+    """
     arch = platform.machine()
     if arch not in ("arm64", "x86_64"):
         raise RuntimeError("Unsupported Mac architecture")
@@ -243,6 +285,9 @@ def mac_install_docker():
 
 
 def windows_install_docker():
+    """
+    Install Docker Desktop on Windows using winget or the vendor installer.
+    """
     if platform.machine().lower() not in ("amd64", "x86_64", "arm64"):
         raise RuntimeError("Unsupported Windows architecture")
     if shutil.which("winget"):
@@ -268,6 +313,9 @@ def windows_install_docker():
 
 
 def check_and_install_docker(assume_yes):
+    """
+    Check for Docker and install it only when the configured confirmation allows it.
+    """
     if docker_installed():
         return
     if not confirm("Docker is missing. Install it?", assume_yes):
@@ -313,6 +361,9 @@ def python312_command():
 
 
 def install_python312():
+    """
+    Install Python 3.12 using the supported operating-system package manager.
+    """
     if sys.platform == "darwin":
         if not shutil.which("brew"):
             raise RuntimeError(
@@ -344,6 +395,9 @@ def install_python312():
 
 
 def check_and_install_python312(assume_yes):
+    """
+    Find Python 3.12 and optionally install it after confirmation.
+    """
     command = python312_command()
     if command:
         print("Python 3.12 found:", " ".join(command))
@@ -363,6 +417,10 @@ def check_and_install_python312(assume_yes):
 
 
 def setup_python_environment(python_command, project_root):
+    """
+    Create or reuse the project Python 3.12 environment and install service
+    dependencies.
+    """
     missing = [str(p) for p in REQUIREMENTS if not (project_root / p).is_file()]
     if missing:
         raise RuntimeError(
@@ -412,6 +470,9 @@ def setup_python_environment(python_command, project_root):
 
 
 def main():
+    """
+    Parse command-line options and run the module’s documented command-line workflow.
+    """
     parser = argparse.ArgumentParser(
         description="Check/install Docker and Python 3.12; create a venv and install service requirements."
     )

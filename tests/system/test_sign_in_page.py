@@ -43,6 +43,9 @@ def phone(browser: Browser) -> Iterator[Phone]:
     contexts = []
 
     def create() -> SignInPage:
+        """
+        Prepare or exercise create in the test sign in page test scenario.
+        """
         context = browser.new_context(base_url=BASE_URL, viewport=PHONE_SIZE)
         contexts.append(context)
         return SignInPage(context.new_page())
@@ -53,6 +56,9 @@ def phone(browser: Browser) -> Iterator[Phone]:
 
 
 def present_on_teachers_list(teacher: Page, session_id: str, learner: str) -> None:
+    """
+    Check whether the learner is displayed as present on the teacher attendance page.
+    """
     attendance = AttendancePage(teacher)
     attendance.open(session_id)
     expect(attendance.checkbox(learner)).to_be_checked()
@@ -105,6 +111,9 @@ def test_st14_qr_check_in_from_opening_to_closing(
     class_session: ClassSession,
     check_in: CheckIn,
 ) -> None:
+    """
+    Verify that st14 qr check in from opening to closing.
+    """
     family = unique("Ngata")
     add_learner("Aroha", family)
     session_id = class_session()
@@ -159,6 +168,9 @@ def test_st14_qr_check_in_from_opening_to_closing(
 def test_ac1_page_shows_the_class_date_with_no_login_or_staff_menu(
     phone: Phone, class_session: ClassSession, check_in: CheckIn
 ) -> None:
+    """
+    Verify that ac1 page shows the class date with no login or staff menu.
+    """
     learner = phone()
 
     learner.open(check_in.open(class_session()))
@@ -175,6 +187,9 @@ def test_ac2_name_typed_without_macrons_signs_in(
     class_session: ClassSession,
     check_in: CheckIn,
 ) -> None:
+    """
+    Verify that ac2 name typed without macrons signs in.
+    """
     family = unique("Māhina")
     add_learner("Tāne", family)
     learner = phone()
@@ -192,6 +207,9 @@ def test_ac2_name_typed_without_macrons_signs_in(
 def test_ac3_unknown_name_asks_for_the_teacher(
     phone: Phone, class_session: ClassSession, check_in: CheckIn
 ) -> None:
+    """
+    Verify that ac3 unknown name asks for the teacher.
+    """
     learner = phone()
     learner.open(check_in.open(class_session()))
 
@@ -207,6 +225,9 @@ def test_name_shared_by_two_learners_asks_for_the_teacher(
     class_session: ClassSession,
     check_in: CheckIn,
 ) -> None:
+    """
+    Verify that name shared by two learners asks for the teacher.
+    """
     family = unique("Walker")
     add_learner("Mere", family)
     add_learner("Mere", family)
@@ -224,6 +245,9 @@ def test_ac4_second_sign_in_says_already_signed_in(
     class_session: ClassSession,
     check_in: CheckIn,
 ) -> None:
+    """
+    Verify that ac4 second sign in says already signed in.
+    """
     family = unique("Silva")
     add_learner("Ana", family)
     token = check_in.open(class_session())
@@ -242,6 +266,9 @@ def test_ac4_second_sign_in_says_already_signed_in(
 def test_ac5_closed_or_unknown_code_shows_the_closed_message(
     phone: Phone, class_session: ClassSession, check_in: CheckIn, closed: bool
 ) -> None:
+    """
+    Verify that ac5 closed or unknown code shows the closed message.
+    """
     session_id = class_session()
     token = check_in.open(session_id)
     if closed:
@@ -257,6 +284,9 @@ def test_ac5_closed_or_unknown_code_shows_the_closed_message(
 def test_empty_names_are_refused_on_the_phone_and_not_counted(
     phone: Phone, class_session: ClassSession, check_in: CheckIn
 ) -> None:
+    """
+    Verify that empty names are refused on the phone and not counted.
+    """
     learner = phone()
     learner.open(check_in.open(class_session()))
 
@@ -277,6 +307,9 @@ def test_empty_names_are_refused_on_the_phone_and_not_counted(
 def test_ac6_nt06_page_fits_a_360px_phone_with_large_text_and_buttons(
     phone: Phone, class_session: ClassSession, check_in: CheckIn
 ) -> None:
+    """
+    Verify that ac6 nt06 page fits a 360px phone with large text and buttons.
+    """
     learner = phone()
     learner.open(check_in.open(class_session()))
 
@@ -299,6 +332,9 @@ def test_ac6_nt06_page_fits_a_360px_phone_with_large_text_and_buttons(
 def test_nt06_sign_in_page_has_no_accessibility_violations(
     phone: Phone, class_session: ClassSession, check_in: CheckIn
 ) -> None:
+    """
+    Verify that nt06 sign in page has no accessibility violations.
+    """
     learner = phone()
     learner.open(check_in.open(class_session()))
 
@@ -319,6 +355,9 @@ def test_nt06_sign_in_page_has_no_accessibility_violations(
 def test_sign_in_address_is_not_indexed_or_sent_to_other_sites(
     phone: Phone, class_session: ClassSession, check_in: CheckIn
 ) -> None:
+    """
+    Verify that sign in address is not indexed or sent to other sites.
+    """
     learner = phone()
     learner.open(check_in.open(class_session()))
 
@@ -341,6 +380,9 @@ def test_nt11_one_phone_is_blocked_but_a_classmate_on_the_same_wifi_is_not(
     class_session: ClassSession,
     check_in: CheckIn,
 ) -> None:
+    """
+    Verify that nt11 one phone is blocked but a classmate on the same wifi is not.
+    """
     family = unique("Silva")
     add_learner("Ana", family)
     token = check_in.open(class_session())

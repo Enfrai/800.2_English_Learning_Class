@@ -36,24 +36,36 @@ class UserServiceStandIn:
     lookups: int = 0
 
     def current_staff(self, authorization: str) -> user_client.Staff:
+        """
+        Prepare or exercise current staff in the test corrections api test scenario.
+        """
         who = authorization.removeprefix("Bearer ")
         if who not in ("coordinator", "teacher"):
             raise user_client.LoginRequiredError("Login required")
         return COORDINATOR if who == "coordinator" else TEACHER
 
     def learner_exists(self, authorization: str, learner_id: UUID) -> bool:
+        """
+        Prepare or exercise learner exists in the test corrections api test scenario.
+        """
         self.lookups += 1
         if self.down:
             raise user_client.UserServiceError("down")
         return learner_id in self.learners
 
     def staff_names(self, authorization: str) -> dict[UUID, str]:
+        """
+        Prepare or exercise staff names in the test corrections api test scenario.
+        """
         self.lookups += 1
         if self.down:
             raise user_client.UserServiceError("down")
         return {COORDINATOR.id: COORDINATOR.display_name}
 
     def learner_names(self, authorization: str, ids: set[UUID]) -> dict[UUID, str]:
+        """
+        Prepare or exercise learner names in the test corrections api test scenario.
+        """
         self.lookups += 1
         return {i: self.learners[i] for i in ids if i in self.learners}
 
@@ -65,6 +77,9 @@ class Api:
     users: UserServiceStandIn
 
     def new_class(self, days_ago: int = 7) -> UUID:
+        """
+        Prepare or exercise new class in the test corrections api test scenario.
+        """
         return self.session.execute(
             class_sessions.insert()
             .values(
@@ -76,6 +91,9 @@ class Api:
         ).scalar_one()
 
     def new_learner(self, name: str, ticked_in: UUID | None = None) -> UUID:
+        """
+        Prepare or exercise new learner in the test corrections api test scenario.
+        """
         learner_id = uuid4()
         self.users.learners[learner_id] = name
         if ticked_in:
@@ -98,6 +116,9 @@ class Api:
         who: str,
         reason: str | None = None,
     ) -> Any:
+        """
+        Prepare or exercise correct in the test corrections api test scenario.
+        """
         return self.client.post(
             f"/sessions/{session_id}/corrections",
             json={"learner_id": str(learner_id), "present": present, "reason": reason},
@@ -105,12 +126,18 @@ class Api:
         )
 
     def get(self, path: str, who: str) -> Any:
+        """
+        Send a GET request through the test client with the supplied scenario data.
+        """
         return self.client.get(path, headers={"Authorization": f"Bearer {who}"})
 
 
 @pytest.fixture
 def api(engine: Engine, monkeypatch: pytest.MonkeyPatch) -> Iterator[Api]:
     # Importing app creates an engine but does not connect.
+    """
+    Provide injected API client and isolated application fixture.
+    """
     monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://unused@localhost/unused")
     app_module: ModuleType = importlib.import_module("app")
     users = UserServiceStandIn()
@@ -135,6 +162,9 @@ def api(engine: Engine, monkeypatch: pytest.MonkeyPatch) -> Iterator[Api]:
 
 
 def test_teacher_is_refused_before_any_lookup(api: Api) -> None:
+    """
+    Verify that teacher is refused before any lookup.
+    """
     class_id = api.new_class()
     learner = api.new_learner("Sione Taufa")
 
@@ -151,6 +181,9 @@ def test_teacher_is_refused_before_any_lookup(api: Api) -> None:
 
 
 def test_coordinator_marks_a_missing_learner_present(api: Api) -> None:
+    """
+    Verify that coordinator marks a missing learner present.
+    """
     class_id = api.new_class()
     api.new_learner("Aroha Ngata", ticked_in=class_id)
     missing = api.new_learner("Sione Taufa")
@@ -163,6 +196,9 @@ def test_coordinator_marks_a_missing_learner_present(api: Api) -> None:
 
 
 def test_coordinator_unticks_a_mistake_and_the_count_falls(api: Api) -> None:
+    """
+    Verify that coordinator unticks a mistake and the count falls.
+    """
     class_id = api.new_class()
     mistake = api.new_learner("Mere Walker", ticked_in=class_id)
     api.new_learner("Aroha Ngata", ticked_in=class_id)
@@ -175,6 +211,9 @@ def test_coordinator_unticks_a_mistake_and_the_count_falls(api: Api) -> None:
 
 
 def test_todays_class_is_changed_on_its_list_not_corrected(api: Api) -> None:
+    """
+    Verify that todays class is changed on its list not corrected.
+    """
     class_id = api.new_class(days_ago=0)
     learner = api.new_learner("Aroha Ngata")
 
@@ -188,6 +227,9 @@ def test_todays_class_is_changed_on_its_list_not_corrected(api: Api) -> None:
 
 @pytest.mark.parametrize("missing", ["learner", "class"])
 def test_unknown_learner_or_class_is_not_found(api: Api, missing: str) -> None:
+    """
+    Verify that unknown learner or class is not found.
+    """
     class_id = api.new_class() if missing == "learner" else uuid4()
     learner = uuid4() if missing == "learner" else api.new_learner("Ana Silva")
 
@@ -197,6 +239,9 @@ def test_unknown_learner_or_class_is_not_found(api: Api, missing: str) -> None:
 
 
 def test_user_service_down_is_reported(api: Api) -> None:
+    """
+    Verify that user service down is reported.
+    """
     api.users.down = True
 
     response = api.correct(api.new_class(), uuid4(), True, "coordinator")
@@ -208,6 +253,9 @@ def test_user_service_down_is_reported(api: Api) -> None:
 
 
 def test_history_shows_who_what_and_when_with_names(api: Api) -> None:
+    """
+    Verify that history shows who what and when with names.
+    """
     class_id = api.new_class()
     mistake = api.new_learner("Mere Walker", ticked_in=class_id)
     missing = api.new_learner("Sione Taufa")
@@ -230,6 +278,9 @@ def test_history_shows_who_what_and_when_with_names(api: Api) -> None:
 
 
 def test_class_without_corrections_has_an_empty_history(api: Api) -> None:
+    """
+    Verify that class without corrections has an empty history.
+    """
     class_id = api.new_class()
 
     response = api.get(f"/sessions/{class_id}/corrections", "coordinator")
@@ -239,6 +290,9 @@ def test_class_without_corrections_has_an_empty_history(api: Api) -> None:
 
 
 def test_attendance_list_names_every_corrected_learner(api: Api) -> None:
+    """
+    Verify that attendance list names every corrected learner.
+    """
     class_id = api.new_class()
     mistake = api.new_learner("Mere Walker", ticked_in=class_id)
     untouched = api.new_learner("Aroha Ngata", ticked_in=class_id)

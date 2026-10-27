@@ -26,10 +26,16 @@ from sqlalchemy.orm import Session
 
 
 def utc(value: datetime) -> datetime:
+    """
+    Normalize the input datetime to timezone-aware UTC.
+    """
     return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
 
 
 def origin() -> str:
+    """
+    Validate and return the configured browser-reachable check-in origin.
+    """
     value = os.getenv("CHECKIN_PUBLIC_ORIGIN", "http://localhost:8080").rstrip("/")
     try:
         parsed = urlsplit(value)
@@ -58,6 +64,9 @@ def origin() -> str:
 
 
 def token_for(window_id: UUID, session_id: UUID) -> str:
+    """
+    Derive the recoverable QR token from the window, session and shared secret.
+    """
     secret = os.getenv("CHECKIN_TOKEN_SECRET") or os.getenv("INTERNAL_API_KEY", "")
     if not secret:
         raise HTTPException(503, "The check-in token secret is not configured")
@@ -73,6 +82,9 @@ def token_for(window_id: UUID, session_id: UUID) -> str:
 
 
 def qr_svg(url: str) -> str:
+    """
+    Encode the check-in URL as a printable SVG QR code.
+    """
     code = qrcode.QRCode(
         error_correction=qrcode.constants.ERROR_CORRECT_M, box_size=10, border=4
     )
@@ -89,13 +101,22 @@ def create_checkin_router(
     today: Callable[[], date],
     clock: Callable[[], datetime],
 ) -> APIRouter:
+    """
+    Build the checkin API router with its injected dependencies.
+    """
     router = APIRouter(tags=["US-011 QR check-in"])
 
     def staff_only(request):
+        """
+        Require a Teacher or Coordinator for classroom check-in management.
+        """
         if request.staff.role not in ("teacher", "coordinator"):
             raise HTTPException(403, "You do not have permission")
 
     def session(db, sid, lock=False):
+        """
+        Load the requested class and optionally lock it before a window change.
+        """
         statement = select(class_sessions).where(class_sessions.c.id == sid)
         if lock:
             statement = statement.with_for_update()
@@ -105,6 +126,9 @@ def create_checkin_router(
         return row
 
     def latest(db, sid):
+        """
+        Load the most recent check-in window for the class session.
+        """
         return (
             db.execute(
                 select(checkin_windows)
@@ -121,6 +145,9 @@ def create_checkin_router(
         )
 
     def output(row, window, now):
+        """
+        Build the check-in state, expiry and available QR display data.
+        """
         can_open = row["session_date"] == today() and row["status"] != "closed"
         state, url, svg = "not-open", None, None
         if window:
@@ -150,6 +177,10 @@ def create_checkin_router(
 
     @router.get("/sessions/{session_id}/check-in")
     def status(session_id: UUID, request: Any = Depends(staff_dependency)):
+        """
+        Handle GET /sessions/{session_id}/check-in for status, applying the route’s
+        validation and authorization rules.
+        """
         staff_only(request)
         with factory() as db:
             row = session(db, session_id)
@@ -157,6 +188,10 @@ def create_checkin_router(
 
     @router.post("/sessions/{session_id}/check-in")
     def open_checkin(session_id: UUID, request: Any = Depends(staff_dependency)):
+        """
+        Handle POST /sessions/{session_id}/check-in for open checkin, applying the
+        route’s validation and authorization rules.
+        """
         staff_only(request)
         with factory() as db, db.begin():
             row = session(db, session_id, lock=True)
@@ -211,6 +246,10 @@ def create_checkin_router(
 
     @router.delete("/sessions/{session_id}/check-in")
     def close_checkin(session_id: UUID, request: Any = Depends(staff_dependency)):
+        """
+        Handle DELETE /sessions/{session_id}/check-in for close checkin, applying the
+        route’s validation and authorization rules.
+        """
         staff_only(request)
         with factory() as db, db.begin():
             row = session(db, session_id, lock=True)

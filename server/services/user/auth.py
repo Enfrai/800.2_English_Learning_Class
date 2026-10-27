@@ -72,6 +72,9 @@ def authenticate_session(token: str, db: Session) -> AuthenticatedUser:
 
 
 def unauthenticated() -> HTTPException:
+    """
+    Construct the standard unauthenticated-session HTTP exception.
+    """
     return HTTPException(
         status_code=401,
         detail="Not authenticated",
@@ -84,6 +87,9 @@ def get_session_token(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
 ) -> str:
     # An explicit malformed Authorization header never falls back to a cookie.
+    """
+    Extract one unambiguous session credential and enforce mutation origin checks.
+    """
     authorization = request.headers.getlist("authorization")
     if authorization and (len(authorization) != 1 or credentials is None):
         raise unauthenticated()
@@ -117,12 +123,18 @@ def get_current_user(
     token: Annotated[str, Depends(get_session_token)],
     db: Annotated[Session, Depends(get_db)],
 ) -> AuthenticatedUser:
+    """
+    Resolve a live staff identity from the presented token and database session.
+    """
     return authenticate_session(token, db)
 
 
 def require_coordinator(
     user: Annotated[AuthenticatedUser, Depends(get_current_user)],
 ) -> AuthenticatedUser:
+    """
+    Reject staff identities that do not have the Coordinator role.
+    """
     if user.role != "coordinator":
         raise HTTPException(status_code=403, detail="You do not have permission")
     return user
@@ -131,6 +143,9 @@ def require_coordinator(
 def require_teacher(
     user: Annotated[AuthenticatedUser, Depends(get_current_user)],
 ) -> AuthenticatedUser:
+    """
+    Reject staff identities that do not have the Teacher role.
+    """
     if user.role != "teacher":
         raise HTTPException(status_code=403, detail="You do not have permission")
     return user

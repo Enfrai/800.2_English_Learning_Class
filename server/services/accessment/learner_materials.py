@@ -27,16 +27,25 @@ LIFETIME = 24 * 60 * 60
 
 
 def now() -> datetime:
+    """
+    Return the current timezone-aware UTC instant.
+    """
     return datetime.now(UTC)
 
 
 def digest(token: str) -> str:
+    """
+    Hash the opaque learner material token with SHA-256.
+    """
     return hashlib.sha256(token.encode()).hexdigest()
 
 
 def issue_grant(
     db: Session, session_id: UUID, response: Response, secure: bool = False
 ) -> None:
+    """
+    Persist a 24-hour class-material grant and set its HttpOnly browser cookie.
+    """
     token = secrets.token_urlsafe(32)
     issued = now()
     db.execute(
@@ -65,6 +74,9 @@ def issue_grant(
 
 
 def lesson_request(path: str) -> tuple[bytes, dict[str, str]]:
+    """
+    Request learner-shared lesson data through the key-protected internal API.
+    """
     key = os.getenv("INTERNAL_API_KEY", "")
     if not key:
         raise HTTPException(503, "Materials are not available right now")
@@ -87,9 +99,16 @@ def lesson_request(path: str) -> tuple[bytes, dict[str, str]]:
 def create_materials_router(
     factory: Callable[[], Session]
 ) -> APIRouter:
+    """
+    Build the materials API router with its injected dependencies.
+    """
     router = APIRouter()
 
     def context(token: str | None):
+        """
+        Validate the material cookie and resolve its unexpired class and lesson
+        association.
+        """
         if not token or not 32 <= len(token) <= 256:
             raise HTTPException(401, "Please scan a class code and sign in again")
         with factory() as db:
@@ -123,6 +142,10 @@ def create_materials_router(
 
     @router.get("/learner/materials")
     def materials(ako_materials: str | None = Cookie(default=None)) -> dict[str, Any]:
+        """
+        Handle GET /learner/materials for materials, applying the route’s validation and
+        authorization rules.
+        """
         row = context(ako_materials)
         result = {
             "session_date": row["session_date"],
@@ -145,6 +168,10 @@ def create_materials_router(
     def download(
         material_id: UUID, ako_materials: str | None = Cookie(default=None)
     ) -> Response:
+        """
+        Handle GET /learner/materials/{material_id}/download for download, applying the
+        route’s validation and authorization rules.
+        """
         try:
             row = context(ako_materials)
         except HTTPException as exc:

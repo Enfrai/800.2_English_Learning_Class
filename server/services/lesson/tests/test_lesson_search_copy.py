@@ -32,10 +32,16 @@ PDF = b"%PDF-1.7\nTest material\n%%EOF"
 
 
 def auth(who: str = "author") -> dict[str, str]:
+    """
+    Prepare or exercise auth in the test lesson search copy test scenario.
+    """
     return {"Authorization": f"Bearer {who}"}
 
 
 def fields(**changes: Any) -> dict[str, Any]:
+    """
+    Prepare or exercise fields in the test lesson search copy test scenario.
+    """
     return {
         "title": "Copy of Transport",
         "lesson_date": "2026-10-26",
@@ -52,11 +58,17 @@ class Library:
     storage: Path
 
     def create(self, who: str = "author", **changes: Any) -> dict[str, Any]:
+        """
+        Prepare or exercise create in the test lesson search copy test scenario.
+        """
         reply = self.client.post("/lessons", headers=auth(who), json=fields(**changes))
         assert reply.status_code == 201, reply.text
         return reply.json()
 
     def upload(self, lesson: dict[str, Any], **changes: Any) -> dict[str, Any]:
+        """
+        Prepare or exercise upload in the test lesson search copy test scenario.
+        """
         reply = self.client.post(
             f"/lessons/{lesson['id']}/materials",
             headers=auth(),
@@ -73,15 +85,24 @@ class Library:
         return reply.json()
 
     def count(self) -> int:
+        """
+        Prepare or exercise count in the test lesson search copy test scenario.
+        """
         with self.factory() as db:
             return db.scalar(select(func.count()).select_from(lessons))
 
     def copy(self, source: dict[str, Any], who: str = "other", **changes: Any):
+        """
+        Prepare or exercise copy in the test lesson search copy test scenario.
+        """
         return self.client.post(
             f"/lessons/{source['id']}/copy", headers=auth(who), json=fields(**changes)
         )
 
     def search(self, **params: str) -> list[dict[str, Any]]:
+        """
+        Prepare or exercise search in the test lesson search copy test scenario.
+        """
         reply = self.client.get("/lessons", headers=auth("other"), params=params)
         assert reply.status_code == 200, reply.text
         return reply.json()
@@ -89,11 +110,17 @@ class Library:
 
 @pytest.fixture
 def library(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Library]:
+    """
+    Provide isolated lesson-library fixture including database and file storage.
+    """
     engine = create_engine(f"sqlite:///{tmp_path / 'library.sqlite'}")
 
     # PostgreSQL lower() handles Unicode; supply the equivalent for isolated SQLite tests.
     @event.listens_for(engine, "connect")
     def unicode_lower(connection, _):
+        """
+        Prepare or exercise unicode lower in the test lesson search copy test scenario.
+        """
         connection.create_function(
             "lower", 1, lambda value: value.casefold() if value is not None else None
         )
@@ -103,6 +130,9 @@ def library(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Library
     storage = tmp_path / "materials"
 
     def staff(token: str) -> user_client.Staff:
+        """
+        Prepare or exercise staff in the test lesson search copy test scenario.
+        """
         people = {
             "Bearer author": AUTHOR,
             "Bearer other": OTHER,
@@ -123,6 +153,9 @@ def library(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Library
 
 
 def test_exact_tag_filter_returns_only_two_of_ten(library: Library) -> None:
+    """
+    Verify that exact tag filter returns only two of ten.
+    """
     for index in range(10):
         library.create(
             title=f"Lesson {index}",
@@ -138,12 +171,18 @@ def test_exact_tag_filter_returns_only_two_of_ten(library: Library) -> None:
 def test_title_search_ignores_case_and_whitespace(
     library: Library, keyword: str
 ) -> None:
+    """
+    Verify that title search ignores case and whitespace.
+    """
     expected = library.create(title="Local Transport", tags=["health"])
     library.create(title="Shopping", tags=["shopping"])
     assert [item["id"] for item in library.search(q=keyword)] == [expected["id"]]
 
 
 def test_keyword_can_match_tags_and_combines_with_exact_tag(library: Library) -> None:
+    """
+    Verify that keyword can match tags and combines with exact tag.
+    """
     expected = library.create(title="Bus", tags=["transport", "health"])
     library.create(title="Bus", tags=["shopping"])
     assert [item["id"] for item in library.search(q="HEALTH", tag="transport")] == [
@@ -153,6 +192,9 @@ def test_keyword_can_match_tags_and_combines_with_exact_tag(library: Library) ->
 
 
 def test_description_filename_and_file_text_are_not_searched(library: Library) -> None:
+    """
+    Verify that description filename and file text are not searched.
+    """
     source = library.create(title="Lesson", tags=["general"], description="uniquenotes")
     library.upload(
         source, name="uniquefilename.pdf", content=b"%PDF-1.7 uniquefiletext"
@@ -165,12 +207,18 @@ def test_description_filename_and_file_text_are_not_searched(library: Library) -
 def test_keyword_wildcards_are_literal_and_sql_is_parameterized(
     library: Library, keyword: str
 ) -> None:
+    """
+    Verify that keyword wildcards are literal and sql is parameterized.
+    """
     match = library.create(title="Literal " + keyword, tags=["general"])
     library.create(title="Different lesson", tags=["general"])
     assert [item["id"] for item in library.search(q=keyword)] == [match["id"]]
 
 
 def test_unicode_macrons_and_case_are_preserved(library: Library) -> None:
+    """
+    Verify that unicode macrons and case are preserved.
+    """
     source = library.create(title="Te reo Māori", tags=["language"])
     assert library.search(q="MĀORI")[0]["title"] == "Te reo Māori"
     assert (
@@ -182,6 +230,9 @@ def test_unicode_macrons_and_case_are_preserved(library: Library) -> None:
 
 
 def test_deleted_lessons_never_appear_in_search_or_copy(library: Library) -> None:
+    """
+    Verify that deleted lessons never appear in search or copy.
+    """
     source = library.create()
     library.client.delete(f"/lessons/{source['id']}", headers=auth())
     assert library.search(q="Transport") == []
@@ -193,6 +244,9 @@ def test_deleted_lessons_never_appear_in_search_or_copy(library: Library) -> Non
 
 
 def test_empty_and_no_result_search_and_input_limits(library: Library) -> None:
+    """
+    Verify that empty and no result search and input limits.
+    """
     library.create()
     assert len(library.search(q="  ", tag="  ")) == 1
     assert library.search(q="not found") == []
@@ -204,6 +258,9 @@ def test_empty_and_no_result_search_and_input_limits(library: Library) -> None:
 
 
 def test_search_responds_within_two_seconds(library: Library) -> None:
+    """
+    Verify that search responds within two seconds.
+    """
     for index in range(50):
         library.create(title=f"Transport {index}")
     started = monotonic()
@@ -213,6 +270,9 @@ def test_search_responds_within_two_seconds(library: Library) -> None:
 
 @pytest.mark.parametrize("who", [None, "visitor"])
 def test_search_and_copy_require_staff(library: Library, who: str | None) -> None:
+    """
+    Verify that search and copy require staff.
+    """
     source = library.create()
     headers = auth(who) if who else {}
     for method, path in [
@@ -235,6 +295,9 @@ def test_search_and_copy_require_staff(library: Library, who: str | None) -> Non
 def test_copy_draft_is_unsaved_keeps_materials_tags_notes_and_empty_date(
     library: Library,
 ) -> None:
+    """
+    Verify that copy draft is unsaved keeps materials tags notes and empty date.
+    """
     source = library.create(title="Transport", tags=["transport", "health"])
     material = library.upload(source)
     before = library.client.get(f"/lessons/{source['id']}", headers=auth()).json()
@@ -270,6 +333,9 @@ def test_copy_draft_is_unsaved_keeps_materials_tags_notes_and_empty_date(
 def test_copy_validation_saves_nothing(
     library: Library, changes: dict, field: str
 ) -> None:
+    """
+    Verify that copy validation saves nothing.
+    """
     source = library.create()
     response = library.copy(source, **changes)
     assert response.status_code == 422
@@ -283,6 +349,9 @@ def test_copy_validation_saves_nothing(
 def test_new_copy_has_current_author_and_independent_metadata(
     library: Library, who: str
 ) -> None:
+    """
+    Verify that new copy has current author and independent metadata.
+    """
     source = library.create(title="Original", lesson_date="2025-01-01")
     response = library.copy(
         source, who=who, title="New topic", tags=["shopping"], description="New notes"
@@ -314,6 +383,9 @@ def test_new_copy_has_current_author_and_independent_metadata(
 def test_copied_file_survives_original_deletion_and_keeps_original_name(
     library: Library,
 ) -> None:
+    """
+    Verify that copied file survives original deletion and keeps original name.
+    """
     source = library.create()
     old = library.upload(source)
     saved = library.copy(source).json()
@@ -339,6 +411,9 @@ def test_copied_file_survives_original_deletion_and_keeps_original_name(
 
 
 def test_deleting_copy_does_not_remove_original_file(library: Library) -> None:
+    """
+    Verify that deleting copy does not remove original file.
+    """
     source = library.create()
     original = library.upload(source)
     copied = library.copy(source).json()
@@ -354,6 +429,9 @@ def test_deleting_copy_does_not_remove_original_file(library: Library) -> None:
 def test_draft_can_exclude_materials_without_removing_originals(
     library: Library,
 ) -> None:
+    """
+    Verify that draft can exclude materials without removing originals.
+    """
     source = library.create()
     original = library.upload(source)
     copied = library.copy(source, material_ids=[]).json()
@@ -367,6 +445,9 @@ def test_draft_can_exclude_materials_without_removing_originals(
 
 
 def test_foreign_and_deleted_material_ids_are_rejected(library: Library) -> None:
+    """
+    Verify that foreign and deleted material ids are rejected.
+    """
     source = library.create()
     other = library.create()
     foreign = library.upload(other)
@@ -378,6 +459,9 @@ def test_foreign_and_deleted_material_ids_are_rejected(library: Library) -> None
 
 
 def test_review_is_not_inherited_by_copy(library: Library) -> None:
+    """
+    Verify that review is not inherited by copy.
+    """
     source = library.create()
     with library.factory.begin() as db:
         db.execute(
@@ -422,6 +506,9 @@ def test_review_is_not_inherited_by_copy(library: Library) -> None:
 def test_bad_source_file_rolls_back_all_copy_metadata_and_files(
     library: Library, failure: str
 ) -> None:
+    """
+    Verify that bad source file rolls back all copy metadata and files.
+    """
     source = library.create()
     library.upload(source)
     second = library.upload(source, name="Second.pdf")
@@ -465,11 +552,18 @@ def test_bad_source_file_rolls_back_all_copy_metadata_and_files(
 def test_database_failure_removes_already_copied_files(
     library: Library, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """
+    Verify that database failure removes already copied files.
+    """
     source = library.create()
     library.upload(source)
     original = lesson_copy.copy_file
 
     def fail_after_copy(folder, material, created):
+        """
+        Prepare or exercise fail after copy in the test lesson search copy test
+        scenario.
+        """
         original(folder, material, created)
         raise OperationalError(
             "insert failed", {}, Exception("stand-in database error")
@@ -484,6 +578,9 @@ def test_database_failure_removes_already_copied_files(
 def test_existing_target_is_never_deleted_on_key_collision(
     library: Library, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """
+    Verify that existing target is never deleted on key collision.
+    """
     source = library.create()
     library.upload(source)
     existing = next(library.storage.iterdir())
@@ -493,6 +590,9 @@ def test_existing_target_is_never_deleted_on_key_collision(
 
 
 def test_maximum_size_source_material_copies(library: Library) -> None:
+    """
+    Verify that maximum size source material copies.
+    """
     source = library.create()
     content = b"%PDF-" + b"x" * (MAX_FILE_SIZE - 5)
     library.upload(source, content=content)
@@ -504,12 +604,18 @@ def test_maximum_size_source_material_copies(library: Library) -> None:
 
 
 def test_title_prefix_fits_existing_maximum_length(library: Library) -> None:
+    """
+    Verify that title prefix fits existing maximum length.
+    """
     source = library.create(title="x" * 255)
     draft = library.client.get(f"/lessons/{source['id']}/copy", headers=auth()).json()
     assert draft["title"].startswith("Copy of ") and len(draft["title"]) == 255
 
 
 def test_unknown_source_and_forged_author_are_not_accepted(library: Library) -> None:
+    """
+    Verify that unknown source and forged author are not accepted.
+    """
     assert (
         library.client.get(f"/lessons/{uuid4()}/copy", headers=auth()).status_code
         == 404

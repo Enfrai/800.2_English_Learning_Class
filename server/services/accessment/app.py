@@ -69,6 +69,9 @@ CLUB_TIMEZONE = ZoneInfo(os.getenv("CLUB_TIMEZONE", "Pacific/Auckland"))
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """
+    Initialize the service database and application resources for the lifespan context.
+    """
     prepare_schema(engine)
     yield
 
@@ -80,6 +83,9 @@ app = FastAPI(title="Accessment Service", lifespan=lifespan)
 async def private_session_responses(
     request: Request, call_next: RequestResponseEndpoint
 ) -> Response:
+    """
+    Apply no-store cache headers to session-dependent HTTP responses.
+    """
     response = await call_next(request)
     if request.url.path.startswith(
         ("/sessions", "/learner/", "/learners/", "/checkin/", "/reports/")
@@ -96,12 +102,20 @@ class CheckRequest(BaseModel):
 
 @app.get("/health")
 def health():
+    """
+    Handle GET /health for health, applying the route’s validation and authorization
+    rules.
+    """
     return {"status": "ok", "instance": INSTANCE}
 
 
 @app.post("/check")
 def check(payload: CheckRequest):
     # Demo-only policy: this is NOT authenticated authorization.
+    """
+    Handle POST /check for check, applying the route’s validation and authorization
+    rules.
+    """
     return {
         "role": payload.role,
         "resource": payload.resource,
@@ -114,6 +128,9 @@ def check(payload: CheckRequest):
 
 
 def club_today() -> date:
+    """
+    Return the current date in the configured club timezone.
+    """
     return datetime.now(CLUB_TIMEZONE).date()
 
 
@@ -218,6 +235,9 @@ def attendance_http_error(exc: AttendanceError) -> HTTPException:
 
 
 def user_service_http_error(exc: Exception) -> HTTPException:
+    """
+    Translate a User Service client failure into an HTTP exception.
+    """
     if isinstance(exc, user_client.LoginRequiredError):
         return HTTPException(status_code=401, detail="Login required")
     if isinstance(exc, user_client.LearnerFieldError):
@@ -236,6 +256,10 @@ USER_SERVICE_ERRORS = (
 
 @app.get("/sessions/{session_id}/attendance", response_model=AttendanceList)
 def read_attendance(session_id: UUID, request: LoggedInStaff):
+    """
+    Handle GET /sessions/{session_id}/attendance for read attendance, applying the
+    route’s validation and authorization rules.
+    """
     with SessionLocal() as db:
         session_date = db.execute(
             select(class_sessions.c.session_date).where(
@@ -259,6 +283,10 @@ def read_attendance(session_id: UUID, request: LoggedInStaff):
     status_code=201,
 )
 def tick_learner(session_id: UUID, payload: MarkPresentIn, request: LoggedInStaff):
+    """
+    Handle POST /sessions/{session_id}/attendance for tick learner, applying the route’s
+    validation and authorization rules.
+    """
     try:
         if not user_client.learner_exists(request.authorization, payload.learner_id):
             raise HTTPException(status_code=404, detail="Learner not found")
@@ -285,6 +313,10 @@ def tick_learner(session_id: UUID, payload: MarkPresentIn, request: LoggedInStaf
     "/sessions/{session_id}/attendance/{learner_id}", response_model=AttendanceChange
 )
 def untick_learner(session_id: UUID, learner_id: UUID, request: LoggedInStaff):
+    """
+    Handle DELETE /sessions/{session_id}/attendance/{learner_id} for untick learner,
+    applying the route’s validation and authorization rules.
+    """
     try:
         with SessionLocal.begin() as db:
             unmark(db, session_id=session_id, learner_id=learner_id, today=club_today())
@@ -446,11 +478,17 @@ class CorrectionOut(BaseModel):
 
 def require_coordinator(request: StaffRequest) -> None:
     # Checked before any lookup, so a teacher learns nothing about the class.
+    """
+    Reject staff identities that do not have the Coordinator role.
+    """
     if request.staff.role != "coordinator":
         raise HTTPException(status_code=403, detail=str(NotCoordinatorError()))
 
 
 def correction_http_error(exc: CorrectionError) -> HTTPException:
+    """
+    Translate a historical-attendance correction error into an HTTP exception.
+    """
     if isinstance(exc, NotCoordinatorError):
         return HTTPException(status_code=403, detail=str(exc))
     if isinstance(exc, SessionNotPastError):

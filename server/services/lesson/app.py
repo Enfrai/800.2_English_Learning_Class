@@ -24,6 +24,9 @@ INSTANCE = os.getenv("INSTANCE_NAME", "unknown")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """
+    Initialize the service database and application resources for the lifespan context.
+    """
     prepare_schema(engine)
     yield
 
@@ -37,6 +40,9 @@ app.include_router(create_maori_review_router(SessionLocal))
 
 @app.middleware("http")
 async def private_responses(request, call_next):
+    """
+    Prevent authenticated lesson responses from being cached.
+    """
     response = await call_next(request)
     response.headers["Cache-Control"] = "no-store"
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -45,5 +51,9 @@ async def private_responses(request, call_next):
 
 @app.get("/health")
 def health():
+    """
+    Handle GET /health for health, applying the route’s validation and authorization
+    rules.
+    """
     return {"status": "ok", "instance": INSTANCE}
 

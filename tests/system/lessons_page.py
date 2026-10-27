@@ -20,6 +20,9 @@ HANDOUT = {
 
 class LessonPages:
     def __init__(self, page: Page) -> None:
+        """
+        Initialize LessonPages and retain the supplied constructor state.
+        """
         self.page = page
         self.title = page.get_by_label("Title", exact=True)
         self.lesson_date = page.get_by_label("Lesson date", exact=True)
@@ -48,10 +51,16 @@ class LessonPages:
         return self.page.url.rstrip("/").split("/")[-1]
 
     def open(self, lesson_id: str) -> None:
+        """
+        Prepare or exercise open in the lessons page test scenario.
+        """
         self.page.goto(f"/lessons/{lesson_id}")
         expect(self.page.get_by_role("heading", name="Materials")).to_be_visible()
 
     def open_list(self) -> None:
+        """
+        Navigate to the lesson library list page.
+        """
         self.page.goto("/lessons")
         expect(self.page.locator("table.data, .msg-info").first).to_be_visible()
 
@@ -70,25 +79,40 @@ class LessonPages:
         expect(self.page.get_by_role("heading", name="Materials")).to_be_visible()
 
     def record_review(self, name: str, date: str) -> None:
+        """
+        Prepare or exercise record review in the lessons page test scenario.
+        """
         self.reviewer_name.fill(name)
         self.review_date.fill(date)
         self.save_review.click()
 
     def heading(self, title: str) -> Locator:
+        """
+        Locate the lesson page heading displayed to the current staff member.
+        """
         return self.page.get_by_role("heading", name=title, exact=True)
 
     def list_row(self, title: str) -> Locator:
+        """
+        Locate the lesson list row matching the supplied title.
+        """
         return self.page.locator("table.data tbody tr").filter(
             has=self.page.get_by_role("link", name=title, exact=True)
         )
 
     def expect_not_yet_reviewed(self, where: Locator | None = None) -> None:
+        """
+        Assert that the lesson displays the pending Māori review label.
+        """
         pill = (where or self.page).locator(".badge-review")
         expect(pill).to_have_text(NOT_YET_REVIEWED)
 
     def expect_reviewed(
         self, name: str, shown_date: str, where: Locator | None = None
     ) -> None:
+        """
+        Assert that the lesson displays the supplied reviewer and review date.
+        """
         pill = (where or self.page).locator(".badge-reviewed")
         expect(pill).to_have_text(
             re.compile(rf"^Reviewed by {re.escape(name)}, {shown_date}$")

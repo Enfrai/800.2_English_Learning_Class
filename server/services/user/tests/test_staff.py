@@ -21,6 +21,9 @@ def coordinator(pg: PgContext) -> tuple[UUID, str]:
 
 
 def add_coordinator(pg: PgContext) -> tuple[UUID, str]:
+    """
+    Insert a fictional Coordinator account for the account-management scenario.
+    """
     user_id, token = uuid4(), uuid4().hex
     now = datetime.now(UTC)
     with pg.engine.begin() as db:
@@ -45,10 +48,16 @@ def add_coordinator(pg: PgContext) -> tuple[UUID, str]:
 
 
 def headers(token: str | None) -> dict[str, str]:
+    """
+    Prepare or exercise headers in the test staff test scenario.
+    """
     return {"Cookie": "", **({"Authorization": f"Bearer {token}"} if token else {})}
 
 
 def payload(**changes: Any) -> dict[str, Any]:
+    """
+    Prepare or exercise payload in the test staff test scenario.
+    """
     return {
         "username": f"new_{uuid4().hex}",
         "display_name": "New Teacher",
@@ -58,6 +67,9 @@ def payload(**changes: Any) -> dict[str, Any]:
 
 
 def count_username(pg: PgContext, username: str) -> int:
+    """
+    Count staff rows with the supplied login name in the test database.
+    """
     with pg.engine.connect() as db:
         return db.scalar(
             select(func.count())
@@ -69,6 +81,9 @@ def count_username(pg: PgContext, username: str) -> int:
 def test_create_list_and_password_hash(
     pg: PgContext, coordinator: tuple[UUID, str]
 ) -> None:
+    """
+    Verify that create list and password hash.
+    """
     data = payload()
     response = pg.clients[0].post("/staff", json=data, headers=headers(coordinator[1]))
     assert response.status_code == 201
@@ -104,6 +119,9 @@ def test_create_list_and_password_hash(
 def test_password_boundary(
     pg: PgContext, coordinator: tuple[UUID, str], length: int, status: int
 ) -> None:
+    """
+    Verify that password boundary.
+    """
     data = payload(temporary_password="x" * length)
     response = pg.clients[0].post("/staff", json=data, headers=headers(coordinator[1]))
     assert response.status_code == status
@@ -116,6 +134,9 @@ def test_password_boundary(
 def test_duplicate_username(
     pg: PgContext, coordinator: tuple[UUID, str], active: bool
 ) -> None:
+    """
+    Verify that duplicate username.
+    """
     with pg.engine.begin() as db:
         db.execute(
             pg.users.update()
@@ -134,12 +155,18 @@ def test_duplicate_username(
 def test_concurrent_duplicate_creation(
     pg: PgContext, coordinator: tuple[UUID, str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """
+    Verify that concurrent duplicate creation.
+    """
     other = add_coordinator(pg)
     barrier = Barrier(2)
     staff = importlib.import_module("staff")
     original = staff.create_teacher
 
     def create(*args: Any, **kwargs: Any) -> Any:
+        """
+        Prepare or exercise create in the test staff test scenario.
+        """
         barrier.wait(5)
         return original(*args, **kwargs)
 
@@ -163,6 +190,9 @@ def test_concurrent_duplicate_creation(
 @pytest.mark.parametrize("actor", ["anonymous", "teacher"])
 @pytest.mark.parametrize("action", ["list", "create", "rename", "deactivate"])
 def test_permission_denial(pg: PgContext, actor: str, action: str) -> None:
+    """
+    Verify that permission denial.
+    """
     token = pg.login().json()["sessionid"] if actor == "teacher" else None
     method, path, data = {
         "list": ("GET", "/staff", None),
@@ -185,6 +215,9 @@ def test_permission_denial(pg: PgContext, actor: str, action: str) -> None:
 def test_create_rejects_extra_fields(
     pg: PgContext, coordinator: tuple[UUID, str], extra: str
 ) -> None:
+    """
+    Verify that create rejects extra fields.
+    """
     data = payload(**{extra: "coordinator"})
     response = pg.clients[0].post("/staff", json=data, headers=headers(coordinator[1]))
     assert response.status_code == 422 and count_username(pg, data["username"]) == 0
@@ -194,6 +227,9 @@ def test_create_rejects_extra_fields(
 def test_rename_rejects_other_mutations(
     pg: PgContext, coordinator: tuple[UUID, str], extra: str
 ) -> None:
+    """
+    Verify that rename rejects other mutations.
+    """
     before = pg.user()
     response = pg.clients[0].patch(
         f"/staff/{pg.user_id}",
@@ -206,6 +242,9 @@ def test_rename_rejects_other_mutations(
 def test_rename_updates_list_only_name_and_timestamp(
     pg: PgContext, coordinator: tuple[UUID, str]
 ) -> None:
+    """
+    Verify that rename updates list only name and timestamp.
+    """
     before = pg.user()
     response = pg.clients[0].patch(
         f"/staff/{pg.user_id}",
@@ -227,6 +266,9 @@ def test_rename_updates_list_only_name_and_timestamp(
 def test_deactivate_preserves_account_and_revokes_session(
     pg: PgContext, coordinator: tuple[UUID, str]
 ) -> None:
+    """
+    Verify that deactivate preserves account and revokes session.
+    """
     token = pg.login().json()["sessionid"]
     before = pg.user()
     response = pg.clients[1].post(
@@ -258,6 +300,9 @@ def test_deactivate_preserves_account_and_revokes_session(
 def test_coordinator_name_is_not_a_mutation_target(
     pg: PgContext, coordinator: tuple[UUID, str]
 ) -> None:
+    """
+    Verify that coordinator name is not a mutation target.
+    """
     response = pg.clients[0].patch(
         f"/staff/{coordinator[0]}",
         json={"display_name": "No"},
@@ -273,6 +318,9 @@ LAST_COORDINATOR = {"detail": "At least one coordinator must stay active"}
 
 
 def is_active(pg: PgContext, user_id: UUID) -> bool:
+    """
+    Read the staff account activation flag from the isolated database.
+    """
     with pg.engine.connect() as db:
         return db.scalar(select(pg.users.c.is_active).where(pg.users.c.id == user_id))
 
@@ -288,6 +336,9 @@ def keep_only_active_coordinator(pg: PgContext, user_id: UUID) -> None:
 
 
 def deactivate(pg: PgContext, target: UUID, actor_token: str, replica: int = 0) -> Any:
+    """
+    Prepare or exercise deactivate in the test staff test scenario.
+    """
     return pg.clients[replica].post(
         f"/staff/{target}/deactivate", headers=headers(actor_token)
     )
@@ -296,6 +347,9 @@ def deactivate(pg: PgContext, target: UUID, actor_token: str, replica: int = 0) 
 def test_only_active_coordinator_cannot_deactivate_their_account(
     pg: PgContext, coordinator: tuple[UUID, str]
 ) -> None:
+    """
+    Verify that only active coordinator cannot deactivate their account.
+    """
     keep_only_active_coordinator(pg, coordinator[0])
 
     response = deactivate(pg, coordinator[0], coordinator[1])
@@ -309,6 +363,9 @@ def test_only_active_coordinator_cannot_deactivate_their_account(
 def test_inactive_coordinators_do_not_count_as_staying_active(
     pg: PgContext, coordinator: tuple[UUID, str]
 ) -> None:
+    """
+    Verify that inactive coordinators do not count as staying active.
+    """
     add_coordinator(pg)
     keep_only_active_coordinator(pg, coordinator[0])
 
@@ -321,6 +378,9 @@ def test_inactive_coordinators_do_not_count_as_staying_active(
 def test_coordinator_can_be_deactivated_while_another_stays_active(
     pg: PgContext, coordinator: tuple[UUID, str]
 ) -> None:
+    """
+    Verify that coordinator can be deactivated while another stays active.
+    """
     keep_only_active_coordinator(pg, coordinator[0])
     other = add_coordinator(pg)
 
@@ -337,6 +397,9 @@ def test_coordinator_can_be_deactivated_while_another_stays_active(
 def test_coordinator_can_deactivate_own_account_while_another_stays_active(
     pg: PgContext, coordinator: tuple[UUID, str]
 ) -> None:
+    """
+    Verify that coordinator can deactivate own account while another stays active.
+    """
     other = add_coordinator(pg)
 
     response = deactivate(pg, coordinator[0], coordinator[1])
@@ -350,6 +413,9 @@ def test_coordinator_can_deactivate_own_account_while_another_stays_active(
 def test_two_coordinators_deactivating_themselves_at_once_leave_one_active(
     pg: PgContext, coordinator: tuple[UUID, str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """
+    Verify that two coordinators deactivating themselves at once leave one active.
+    """
     keep_only_active_coordinator(pg, coordinator[0])
     other = add_coordinator(pg)
     staff = importlib.import_module("staff")
@@ -357,6 +423,9 @@ def test_two_coordinators_deactivating_themselves_at_once_leave_one_active(
     held, release, waiting = Event(), Event(), Event()
 
     def hold_first(*args: Any) -> Any:
+        """
+        Pause the first operation so that a competing transaction can be exercised.
+        """
         row = original(*args)
         if not held.is_set():
             held.set()
@@ -366,6 +435,9 @@ def test_two_coordinators_deactivating_themselves_at_once_leave_one_active(
     def query(
         conn: Any, cursor: Any, statement: str, params: Any, context: Any, many: bool
     ) -> None:
+        """
+        Prepare or exercise query in the test staff test scenario.
+        """
         if "FOR UPDATE" in statement and "users" in statement:
             waiting.set()
 
@@ -398,6 +470,9 @@ def test_two_coordinators_deactivating_themselves_at_once_leave_one_active(
 def test_cookie_csrf_denial(
     pg: PgContext, coordinator: tuple[UUID, str], origin: str | None, action: str
 ) -> None:
+    """
+    Verify that cookie csrf denial.
+    """
     method, path, data = {
         "create": ("POST", "/staff", payload()),
         "rename": ("PATCH", f"/staff/{pg.user_id}", {"display_name": "No"}),
@@ -415,6 +490,9 @@ def test_cookie_csrf_denial(
 def test_same_origin_cookie_mutation(
     pg: PgContext, coordinator: tuple[UUID, str]
 ) -> None:
+    """
+    Verify that same origin cookie mutation.
+    """
     response = pg.clients[1].post(
         "/staff",
         json=payload(),
@@ -429,12 +507,19 @@ def test_same_origin_cookie_mutation(
 def test_deactivation_database_failure_rolls_back(
     pg: PgContext, coordinator: tuple[UUID, str]
 ) -> None:
+    """
+    Verify that deactivation database failure rolls back.
+    """
     pg.login()
     before, sessions = pg.user(), pg.session_rows()
 
     def fail(
         conn: Any, cursor: Any, statement: str, params: Any, context: Any, many: bool
     ) -> None:
+        """
+        Simulate an unavailable dependency or failing operation for the surrounding
+        test.
+        """
         if statement.startswith("UPDATE user_sessions"):
             cursor.execute("SELECT 1 / 0")
 
@@ -458,12 +543,18 @@ def test_deactivation_wins_concurrent_login_or_activity(
     monkeypatch: pytest.MonkeyPatch,
     operation: str,
 ) -> None:
+    """
+    Verify that deactivation wins concurrent login or activity.
+    """
     token = pg.login().json()["sessionid"]
     staff = importlib.import_module("staff")
     original = staff.deactivate_teacher
     held, release, waiting = Event(), Event(), Event()
 
     def hold(*args: Any) -> Any:
+        """
+        Prepare or exercise hold in the test staff test scenario.
+        """
         row = original(*args)
         held.set()
         assert release.wait(5)
@@ -472,6 +563,9 @@ def test_deactivation_wins_concurrent_login_or_activity(
     def query(
         conn: Any, cursor: Any, statement: str, params: Any, context: Any, many: bool
     ) -> None:
+        """
+        Prepare or exercise query in the test staff test scenario.
+        """
         if "FOR UPDATE" in statement and "users" in statement:
             waiting.set()
 
@@ -506,11 +600,17 @@ def test_deactivation_wins_concurrent_login_or_activity(
 def test_actor_revoked_while_waiting_cannot_mutate(
     pg: PgContext, coordinator: tuple[UUID, str]
 ) -> None:
+    """
+    Verify that actor revoked while waiting cannot mutate.
+    """
     waiting = Event()
 
     def query(
         conn: Any, cursor: Any, statement: str, params: Any, context: Any, many: bool
     ) -> None:
+        """
+        Prepare or exercise query in the test staff test scenario.
+        """
         if "FOR UPDATE" in statement:
             waiting.set()
 
@@ -545,6 +645,9 @@ def test_actor_revoked_while_waiting_cannot_mutate(
 def test_target_errors(
     pg: PgContext, coordinator: tuple[UUID, str], target: str, status: int
 ) -> None:
+    """
+    Verify that target errors.
+    """
     value = str(uuid4()) if target == "missing" else target
     response = pg.clients[0].patch(
         f"/staff/{value}", json={"display_name": "No"}, headers=headers(coordinator[1])
@@ -558,6 +661,9 @@ def test_target_errors(
 def test_deactivation_rejects_mutation_payload(
     pg: PgContext, coordinator: tuple[UUID, str]
 ) -> None:
+    """
+    Verify that deactivation rejects mutation payload.
+    """
     response = pg.clients[0].post(
         f"/staff/{pg.user_id}/deactivate",
         json={"role": "coordinator"},

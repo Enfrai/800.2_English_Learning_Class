@@ -25,6 +25,9 @@ NOW = datetime(2026, 10, 26, 0, tzinfo=UTC)
 
 @pytest.fixture
 def qr(engine, monkeypatch):
+    """
+    Provide the qr context and release its resources after use.
+    """
     monkeypatch.setenv("CHECKIN_TOKEN_SECRET", "shared-test-key")
     monkeypatch.setenv("CHECKIN_PUBLIC_ORIGIN", "http://localhost:8080")
     factory = sessionmaker(engine)
@@ -36,6 +39,9 @@ def qr(engine, monkeypatch):
         )
 
     def staff():
+        """
+        Prepare or exercise staff in the test checkin management postgres test scenario.
+        """
         return SimpleNamespace(staff=SimpleNamespace(id=owner, role="teacher"))
 
     clients = []
@@ -57,6 +63,9 @@ def qr(engine, monkeypatch):
 
 
 def test_two_replicas_open_exactly_one_window(qr):
+    """
+    Verify that two replicas open exactly one window.
+    """
     factory, sid, clients = qr
     with ThreadPoolExecutor(max_workers=8) as pool:
         replies = list(
@@ -79,6 +88,9 @@ def test_two_replicas_open_exactly_one_window(qr):
 
 
 def test_close_commit_blocks_an_already_resolved_signin(qr, engine):
+    """
+    Verify that close commit blocks an already resolved signin.
+    """
     factory, sid, clients = qr
     data = clients[0].post(f"/sessions/{sid}/check-in").json()
     token = data["sign_in_url"].rsplit("/", 1)[1]
@@ -87,6 +99,9 @@ def test_close_commit_blocks_an_already_resolved_signin(qr, engine):
     waiting = Event()
 
     def trace(connection, cursor, statement, parameters, context, many):
+        """
+        Inspect or record trace events for the surrounding database or HTTP test.
+        """
         if (
             "SELECT class_sessions.session_date" in statement
             and "FOR UPDATE" in statement
@@ -96,6 +111,10 @@ def test_close_commit_blocks_an_already_resolved_signin(qr, engine):
     event.listen(engine, "before_cursor_execute", trace)
 
     def submit():
+        """
+        Prepare or exercise submit in the test checkin management postgres test
+        scenario.
+        """
         with factory.begin() as db:
             with pytest.raises(CheckinClosedError):
                 sign_in(db, opened, uuid4(), DAY, now=NOW)

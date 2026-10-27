@@ -14,6 +14,9 @@ from playwright.sync_api import expect
 def test_real_history_tracks_corrections_and_inclusive_range(
     logged_in_page, add_learner
 ):
+    """
+    Verify that real history tracks corrections and inclusive range.
+    """
     page = logged_in_page
     suffix = uuid4().hex[:10]
     learner = add_learner("Māia", f"History{suffix}")
@@ -66,6 +69,9 @@ def test_real_history_tracks_corrections_and_inclusive_range(
 
 
 def test_teacher_history_is_readonly_and_unrecorded_is_empty(teacher_page, add_learner):
+    """
+    Verify that teacher history is readonly and unrecorded is empty.
+    """
     learner = add_learner("History", f"Empty{uuid4().hex[:8]}")
     teacher_page.goto(f"/learners/{learner['id']}/history")
     expect(
@@ -81,6 +87,9 @@ def test_teacher_history_is_readonly_and_unrecorded_is_empty(teacher_page, add_l
 
 
 def test_anonymous_cannot_read_history(page):
+    """
+    Verify that anonymous cannot read history.
+    """
     learner_id = uuid4()
     response = page.request.get(
         f"/api/staff/access/learners/{learner_id}/attendance-history"

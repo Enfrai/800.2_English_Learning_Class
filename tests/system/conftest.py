@@ -44,6 +44,9 @@ expect.set_options(timeout=10_000)
 
 @pytest.fixture(scope="session")
 def browser() -> Iterator[Browser]:
+    """
+    Provide playwright browser used to create isolated test contexts.
+    """
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(
             channel=os.environ.get("BROWSER_CHANNEL") or None
@@ -144,6 +147,9 @@ def add_learner(page: Page, session_id: str) -> Callable[..., dict[str, Any]]:
     """Add a made-up learner through the User Service API."""
 
     def add(first: str, family: str, language: str = "") -> dict[str, Any]:
+        """
+        Prepare or exercise add in the conftest test scenario.
+        """
         response = page.request.post(
             "/api/user/learners",
             headers=api_headers(session_id),
@@ -184,6 +190,9 @@ def class_session(page: Page, session_id: str) -> Callable[..., str]:
     assert session_id
 
     def create(days_ago: int = 0) -> str:
+        """
+        Prepare or exercise create in the conftest test scenario.
+        """
         if days_ago == 0:
             response = staff.post("/api/staff/access/sessions/today", headers=ORIGIN)
         else:
@@ -222,6 +231,9 @@ def ticked_in_class() -> Callable[[str, str], None]:
 
     def tick(session_id: str, learner_id: str) -> None:
         # UUID() checks both ids before they go into the SQL text.
+        """
+        Prepare or exercise tick in the conftest test scenario.
+        """
         access_sql(
             "INSERT INTO attendance_records "
             "(id, session_id, learner_id, status, recorded_by) VALUES "
@@ -248,6 +260,9 @@ def log_in_through_page(page: Page) -> Callable[[], None]:
     """Log in with the real login page, as a person would."""
 
     def log_in() -> None:
+        """
+        Provide helper fixture supplying authenticated staff requests.
+        """
         page.goto("/")
         page.get_by_label("Username", exact=True).fill(USERNAME)
         page.get_by_label("Password", exact=True).fill(PASSWORD)

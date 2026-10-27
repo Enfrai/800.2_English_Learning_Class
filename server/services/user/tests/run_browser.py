@@ -28,12 +28,19 @@ from test_postgres import postgres_url
 
 
 def free_port() -> int:
+    """
+    Prepare or exercise free port in the run browser test scenario.
+    """
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
         return sock.getsockname()[1]
 
 
 def wait_ready(url: str, process: subprocess.Popen) -> None:
+    """
+    Poll the owned application endpoint until it is ready or its startup deadline
+    expires.
+    """
     for _ in range(100):
         if process.poll() is not None:
             raise RuntimeError("Test server exited before becoming ready")
@@ -46,6 +53,9 @@ def wait_ready(url: str, process: subprocess.Popen) -> None:
 
 
 def main() -> int:
+    """
+    Parse command-line options and run the module’s documented command-line workflow.
+    """
     url = (
         postgres_url.__wrapped__()
     )  # Same identity/port/DB verification as integration tests.
@@ -87,18 +97,31 @@ def main() -> int:
 
     class Proxy(BaseHTTPRequestHandler):
         def log_message(self, format: str, *args: Any) -> None:
+            """
+            Apply the test HTTP server logging policy to the formatted request message.
+            """
             return
 
         def do_GET(self) -> None:
+            """
+            Handle a GET request through the ephemeral test HTTP proxy.
+            """
             self.forward()
 
         def do_POST(self) -> None:
+            """
+            Handle a POST request through the ephemeral test HTTP proxy.
+            """
             if self.path.startswith("/__test/"):
                 self.control()
             else:
                 self.forward()
 
         def control(self) -> None:
+            """
+            Apply the test-only control action to the owned disposable application
+            state.
+            """
             if self.headers.get("X-Test-Key") != key:
                 self.send_error(403)
                 return
@@ -156,6 +179,9 @@ def main() -> int:
             self.wfile.write(body)
 
         def forward(self) -> None:
+            """
+            Forward an allowed request through the test proxy and relay its response.
+            """
             is_api = self.path.startswith("/api/user/")
             path = self.path[len("/api/user") :] if is_api else self.path
             connection = http.client.HTTPConnection(

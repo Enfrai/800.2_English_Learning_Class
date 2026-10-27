@@ -32,6 +32,9 @@ NewSession = Callable[..., UUID]
 
 
 def tick(db: Session, session_id: UUID, learner_id: UUID, today: date) -> dict:
+    """
+    Prepare or exercise tick in the test attendance test scenario.
+    """
     return mark_present(
         db,
         session_id=session_id,
@@ -42,6 +45,9 @@ def tick(db: Session, session_id: UUID, learner_id: UUID, today: date) -> dict:
 
 
 def record_count(db: Session) -> int:
+    """
+    Count attendance or audit records in the isolated scenario database.
+    """
     return db.execute(select(func.count()).select_from(attendance_records)).scalar_one()
 
 
@@ -51,6 +57,9 @@ def record_count(db: Session) -> int:
 def test_ticked_learner_is_present_with_the_time_and_count_rises_by_1(
     db: Session, new_session: NewSession, teacher_id: UUID, today: date
 ) -> None:
+    """
+    Verify that ticked learner is present with the time and count rises by 1.
+    """
     session_id = new_session()
     learner_id = uuid4()
 
@@ -72,6 +81,9 @@ def test_ticked_learner_is_present_with_the_time_and_count_rises_by_1(
 def test_present_records_list_who_is_here_earliest_first(
     db: Session, new_session: NewSession, today: date
 ) -> None:
+    """
+    Verify that present records list who is here earliest first.
+    """
     session_id = new_session()
     learners = [uuid4(), uuid4(), uuid4()]
     for learner_id in learners:
@@ -88,6 +100,9 @@ def test_present_records_list_who_is_here_earliest_first(
 def test_ticking_the_same_learner_again_says_already_signed_in(
     db: Session, new_session: NewSession, today: date
 ) -> None:
+    """
+    Verify that ticking the same learner again says already signed in.
+    """
     session_id = new_session()
     learner_id = uuid4()
     first = tick(db, session_id, learner_id, today)
@@ -104,6 +119,9 @@ def test_ticking_the_same_learner_again_says_already_signed_in(
 def test_same_learner_can_be_present_at_two_different_sessions(
     db: Session, new_session: NewSession, today: date
 ) -> None:
+    """
+    Verify that same learner can be present at two different sessions.
+    """
     learner_id = uuid4()
     first_session, second_session = new_session(), new_session(today - timedelta(days=1))
 
@@ -120,6 +138,9 @@ def test_same_learner_can_be_present_at_two_different_sessions(
 def test_unticking_removes_the_record_and_count_falls_by_1(
     db: Session, new_session: NewSession, today: date
 ) -> None:
+    """
+    Verify that unticking removes the record and count falls by 1.
+    """
     session_id = new_session()
     mistake, other = uuid4(), uuid4()
     tick(db, session_id, mistake, today)
@@ -134,6 +155,9 @@ def test_unticking_removes_the_record_and_count_falls_by_1(
 def test_learner_can_be_ticked_again_after_unticking(
     db: Session, new_session: NewSession, today: date
 ) -> None:
+    """
+    Verify that learner can be ticked again after unticking.
+    """
     session_id = new_session()
     learner_id = uuid4()
     tick(db, session_id, learner_id, today)
@@ -147,6 +171,9 @@ def test_learner_can_be_ticked_again_after_unticking(
 def test_unticking_a_learner_who_is_not_present_is_reported(
     db: Session, new_session: NewSession, today: date
 ) -> None:
+    """
+    Verify that unticking a learner who is not present is reported.
+    """
     session_id = new_session()
 
     with pytest.raises(NotMarkedPresentError):
@@ -160,6 +187,9 @@ def test_unticking_a_learner_who_is_not_present_is_reported(
 def test_present_count_is_correct(
     db: Session, new_session: NewSession, today: date, present: int
 ) -> None:
+    """
+    Verify that present count is correct.
+    """
     session_id, other_session = new_session(), new_session(today - timedelta(days=1))
     for _ in range(present):
         tick(db, session_id, uuid4(), today)
@@ -174,6 +204,9 @@ def test_present_count_is_correct(
 def test_attendance_of_a_past_session_cannot_be_changed(
     db: Session, new_session: NewSession, today: date
 ) -> None:
+    """
+    Verify that attendance of a past session cannot be changed.
+    """
     session_id = new_session(today - timedelta(days=1))
     learner_id = uuid4()
 
@@ -191,6 +224,9 @@ def test_attendance_of_a_past_session_cannot_be_changed(
 def test_todays_session_is_running(
     db: Session, new_session: NewSession, today: date
 ) -> None:
+    """
+    Verify that todays session is running.
+    """
     check_session_is_running(db, new_session(today), today)
 
 
@@ -198,6 +234,9 @@ def test_todays_session_is_running(
 
 
 def test_unknown_session_is_reported(db: Session, today: date) -> None:
+    """
+    Verify that unknown session is reported.
+    """
     with pytest.raises(SessionNotFoundError):
         tick(db, uuid4(), uuid4(), today)
     with pytest.raises(SessionNotFoundError):
@@ -207,6 +246,9 @@ def test_unknown_session_is_reported(db: Session, today: date) -> None:
 def test_absent_record_becomes_present_when_ticked(
     db: Session, new_session: NewSession, teacher_id: UUID, today: date
 ) -> None:
+    """
+    Verify that absent record becomes present when ticked.
+    """
     session_id = new_session()
     learner_id = uuid4()
     db.execute(
@@ -229,6 +271,9 @@ def test_absent_record_becomes_present_when_ticked(
 def test_absent_record_is_not_counted_or_listed_as_present(
     db: Session, new_session: NewSession, teacher_id: UUID, today: date
 ) -> None:
+    """
+    Verify that absent record is not counted or listed as present.
+    """
     session_id = new_session()
     absent_learner = uuid4()
     db.execute(

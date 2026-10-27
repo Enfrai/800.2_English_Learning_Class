@@ -25,6 +25,9 @@ from run_postgres import verify_container
 
 @pytest.fixture(scope="module")
 def postgres_url() -> str:
+    """
+    Prepare or exercise postgres url in the test postgres test scenario.
+    """
     compose_url = os.getenv("AKO_COMPOSE_TEST_DATABASE_URL")
     if compose_url:
         url = make_url(compose_url)
@@ -85,9 +88,16 @@ class PgContext:
 
     @property
     def engine(self) -> Engine:
+        """
+        Prepare or exercise engine in the test postgres test scenario.
+        """
         return self.a.engine
 
     def login(self, replica: int = 0, password: str = "CorrectPass!") -> httpx.Response:
+        """
+        Validate staff credentials, replace previous sessions and issue the session
+        cookie.
+        """
         return self.clients[replica].post(
             "/login",
             json={"username": self.username, "password": password},
@@ -95,11 +105,17 @@ class PgContext:
         )
 
     def validate(self, token: str, replica: int = 1) -> httpx.Response:
+        """
+        Prepare or exercise validate in the test postgres test scenario.
+        """
         return self.clients[replica].get(
             "/session", headers={"Authorization": f"Bearer {token}", "Cookie": ""}
         )
 
     def user(self) -> dict[str, Any]:
+        """
+        Prepare or exercise user in the test postgres test scenario.
+        """
         with self.engine.connect() as db:
             return dict(
                 db.execute(select(self.users).where(self.users.c.id == self.user_id))
@@ -108,6 +124,9 @@ class PgContext:
             )
 
     def session_rows(self) -> list[dict[str, Any]]:
+        """
+        Read the isolated staff session rows for lifecycle assertions.
+        """
         with self.engine.connect() as db:
             return [
                 dict(row)
@@ -117,6 +136,9 @@ class PgContext:
             ]
 
     def update_session(self, **values: Any) -> None:
+        """
+        Change session fixture state to exercise expiry or revocation behavior.
+        """
         with self.b.engine.begin() as db:
             db.execute(
                 self.sessions.update()
@@ -127,6 +149,9 @@ class PgContext:
 
 @pytest.fixture
 def pg(postgres_url: str, monkeypatch: pytest.MonkeyPatch) -> Iterator[PgContext]:
+    """
+    Provide owned PostgreSQL fixture used to isolate database state.
+    """
     service = Path(__file__).resolve().parents[1]
     monkeypatch.syspath_prepend(str(service))
     monkeypatch.setenv("DATABASE_URL", postgres_url)
@@ -172,6 +197,9 @@ def pg(postgres_url: str, monkeypatch: pytest.MonkeyPatch) -> Iterator[PgContext
 
 
 def test_persisted_five_failure_lockout_and_expiry(pg: PgContext) -> None:
+    """
+    Verify that persisted five failure lockout and expiry.
+    """
     for attempt in range(1, 5):
         assert pg.login(attempt % 2, "wrong").status_code == 401
         assert pg.user()["failed_login_attempts"] == attempt
@@ -204,6 +232,9 @@ def test_persisted_five_failure_lockout_and_expiry(pg: PgContext) -> None:
 
 
 def test_success_resets_committed_failures(pg: PgContext) -> None:
+    """
+    Verify that success resets committed failures.
+    """
     for _ in range(3):
         assert pg.login(0, "wrong").status_code == 401
     assert pg.user()["failed_login_attempts"] == 3
@@ -214,6 +245,9 @@ def test_success_resets_committed_failures(pg: PgContext) -> None:
 
 
 def test_hash_persistence_and_cross_replica_validation(pg: PgContext) -> None:
+    """
+    Verify that hash persistence and cross replica validation.
+    """
     login = pg.login(0)
     assert login.status_code == 200 and login.json()["instance"] == "A"
     token = login.json()["sessionid"]
@@ -227,6 +261,9 @@ def test_hash_persistence_and_cross_replica_validation(pg: PgContext) -> None:
 
 
 def test_replacement_and_revocation_visible_across_replicas(pg: PgContext) -> None:
+    """
+    Verify that replacement and revocation visible across replicas.
+    """
     first = pg.login(0).json()["sessionid"]
     assert pg.validate(first, 1).status_code == 200
     second_response = pg.login(1)
@@ -243,6 +280,9 @@ def test_replacement_and_revocation_visible_across_replicas(pg: PgContext) -> No
 
 @pytest.mark.parametrize("state", ["expired", "revoked", "inactive"])
 def test_reject_persisted_invalid_sessions(pg: PgContext, state: str) -> None:
+    """
+    Verify that reject persisted invalid sessions.
+    """
     token = pg.login().json()["sessionid"]
     now = datetime.now(UTC)
     if state == "expired":
@@ -264,9 +304,16 @@ def test_reject_persisted_invalid_sessions(pg: PgContext, state: str) -> None:
 
 @pytest.mark.parametrize("count", [4, 5, 8])
 def test_concurrent_failures_are_not_lost(pg: PgContext, count: int) -> None:
+    """
+    Verify that concurrent failures are not lost.
+    """
     barrier = Barrier(count)
 
     def fail(index: int) -> int:
+        """
+        Simulate an unavailable dependency or failing operation for the surrounding
+        test.
+        """
         barrier.wait(timeout=10)
         return pg.login(index % 2, "wrong").status_code
 
@@ -281,9 +328,15 @@ def test_concurrent_failures_are_not_lost(pg: PgContext, count: int) -> None:
 
 
 def test_concurrent_successes_preserve_one_session(pg: PgContext) -> None:
+    """
+    Verify that concurrent successes preserve one session.
+    """
     barrier = Barrier(4)
 
     def succeed(index: int) -> httpx.Response:
+        """
+        Prepare or exercise succeed in the test postgres test scenario.
+        """
         barrier.wait(timeout=10)
         return pg.login(index % 2)
 
@@ -299,6 +352,9 @@ def test_concurrent_successes_preserve_one_session(pg: PgContext) -> None:
 
 
 def test_postgres_uuid_timestamps_and_partial_unique_index(pg: PgContext) -> None:
+    """
+    Verify that postgres uuid timestamps and partial unique index.
+    """
     pg.login()
     row = pg.session_rows()[0]
     assert isinstance(row["id"], UUID) and isinstance(row["user_id"], UUID)
@@ -327,6 +383,9 @@ def test_postgres_uuid_timestamps_and_partial_unique_index(pg: PgContext) -> Non
 def test_failed_login_transaction_restores_prior_state(
     pg: PgContext, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """
+    Verify that failed login transaction restores prior state.
+    """
     first = pg.login().json()["sessionid"]
     assert pg.login(1, "wrong").status_code == 401
     before_user, before_sessions = pg.user(), pg.session_rows()
@@ -341,6 +400,9 @@ def test_failed_login_transaction_restores_prior_state(
 
 
 def test_cookie_created_by_a_is_valid_on_b_without_refresh(pg: PgContext) -> None:
+    """
+    Verify that cookie created by a is valid on b without refresh.
+    """
     response = pg.login(0)
     assert response.status_code == 200
     token = response.cookies["ako_session"]
@@ -356,6 +418,9 @@ def test_cookie_created_by_a_is_valid_on_b_without_refresh(pg: PgContext) -> Non
 def test_cookie_cannot_restore_invalid_postgres_session(
     pg: PgContext, state: str
 ) -> None:
+    """
+    Verify that cookie cannot restore invalid postgres session.
+    """
     token = pg.login(0).cookies["ako_session"]
     now = datetime.now(UTC)
     if state == "expired":
@@ -379,6 +444,9 @@ def test_cookie_cannot_restore_invalid_postgres_session(
 
 
 def test_conflicting_valid_identities_rejected(pg: PgContext) -> None:
+    """
+    Verify that conflicting valid identities rejected.
+    """
     teacher_token = pg.login(0).json()["sessionid"]
     other_username = f"other_{uuid4().hex}"
     with pg.b.engine.begin() as db:

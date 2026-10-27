@@ -48,6 +48,9 @@ KEEP_FAILURES = timedelta(hours=1)
 
 
 def aware(value: datetime) -> datetime:
+    """
+    Supply UTC timezone information when the input datetime is naive.
+    """
     return value.replace(tzinfo=UTC) if value.tzinfo is None else value
 
 
@@ -73,6 +76,9 @@ class CheckinUnavailableError(Exception):
     reason = "unavailable"
 
     def __init__(self) -> None:
+        """
+        Initialize CheckinUnavailableError and retain the supplied constructor state.
+        """
         super().__init__(CHECKIN_CLOSED)
 
 

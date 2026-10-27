@@ -38,6 +38,9 @@ CHANGE_TIME = re.compile(r"^\d{1,2} \w{3} \d{4}, \d{1,2}:\d{2}\s?[ap]m$")
 
 
 def full_name(learner: dict[str, Any]) -> str:
+    """
+    Build the learner display name used to find an attendance row.
+    """
     return f"{learner['first_name']} {learner['family_name']}"
 
 
@@ -59,6 +62,9 @@ def last_weeks_class(
 
 
 def run_axe(page: Page) -> list[str]:
+    """
+    Run the accessibility audit against the rendered page and inspect its violations.
+    """
     page.add_script_tag(url=AXE_URL)
     return page.evaluate(
         "async () => (await axe.run()).violations.map(v => v.id + ': ' + v.help)"
@@ -74,6 +80,9 @@ def test_st04_coordinator_corrects_attendance(
     class_session: ClassSession,
     ticked_in_class: TickedInClass,
 ) -> None:
+    """
+    Verify that st04 coordinator corrects attendance.
+    """
     session_id, ticked, missed = last_weeks_class(
         add_learner, class_session, ticked_in_class
     )
@@ -122,6 +131,9 @@ def test_st04_coordinator_corrects_attendance(
 def test_correction_view_has_no_add_learner_form(
     logged_in_page: Page, class_session: ClassSession
 ) -> None:
+    """
+    Verify that correction view has no add learner form.
+    """
     attendance = AttendancePage(logged_in_page)
 
     attendance.open(class_session(days_ago=LAST_WEEK))
@@ -133,6 +145,9 @@ def test_correction_view_has_no_add_learner_form(
 def test_ticking_todays_class_is_not_a_correction(
     logged_in_page: Page, add_learner: AddLearner, class_session: ClassSession
 ) -> None:
+    """
+    Verify that ticking todays class is not a correction.
+    """
     learner = full_name(add_learner("Aroha", unique("Today")))
     attendance = AttendancePage(logged_in_page)
     attendance.open(class_session())
@@ -155,6 +170,9 @@ def test_st05_teacher_cannot_correct(
     class_session: ClassSession,
     ticked_in_class: TickedInClass,
 ) -> None:
+    """
+    Verify that st05 teacher cannot correct.
+    """
     session_id, ticked, missed = last_weeks_class(
         add_learner, class_session, ticked_in_class
     )
@@ -192,6 +210,9 @@ def test_teacher_sees_which_learners_were_corrected(
     class_session: ClassSession,
     ticked_in_class: TickedInClass,
 ) -> None:
+    """
+    Verify that teacher sees which learners were corrected.
+    """
     session_id, ticked, missed = last_weeks_class(
         add_learner, class_session, ticked_in_class
     )
@@ -217,6 +238,9 @@ def test_nt06_correction_view_can_be_used_with_the_keyboard(
     class_session: ClassSession,
     ticked_in_class: TickedInClass,
 ) -> None:
+    """
+    Verify that nt06 correction view can be used with the keyboard.
+    """
     session_id, _, missed = last_weeks_class(
         add_learner, class_session, ticked_in_class
     )
@@ -239,6 +263,9 @@ def test_nt06_correction_and_teacher_views_have_no_accessibility_violations(
     class_session: ClassSession,
     ticked_in_class: TickedInClass,
 ) -> None:
+    """
+    Verify that nt06 correction and teacher views have no accessibility violations.
+    """
     session_id, _, missed = last_weeks_class(
         add_learner, class_session, ticked_in_class
     )

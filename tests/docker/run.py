@@ -156,6 +156,9 @@ def web() -> list[dict]:
 
 
 def system() -> list[dict]:
+    """
+    Start the isolated system test workflow and retain its reports and exit status.
+    """
     return [
         run(
             "system",
@@ -178,6 +181,9 @@ def system() -> list[dict]:
 
 
 def main() -> int:
+    """
+    Parse command-line options and run the module’s documented command-line workflow.
+    """
     mode = sys.argv[1]
     folder = REPORTS / mode
     folder.mkdir(parents=True, exist_ok=True)

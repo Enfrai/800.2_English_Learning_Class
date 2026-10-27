@@ -13,6 +13,9 @@ from uuid import uuid4
 
 
 def main() -> int:
+    """
+    Parse command-line options and run the module’s documented command-line workflow.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--suite", choices=["all", "backend", "web", "system"], default="all"

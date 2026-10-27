@@ -11,6 +11,9 @@ from fastapi.testclient import TestClient
 
 
 def test_app_startup_and_private_headers(tmp_path, monkeypatch):
+    """
+    Verify that app startup and private headers.
+    """
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path / 'app.sqlite'}")
     monkeypatch.setenv("MATERIALS_DIR", str(tmp_path / "materials"))
     spec = importlib.util.spec_from_file_location(

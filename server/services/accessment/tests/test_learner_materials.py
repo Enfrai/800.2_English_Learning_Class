@@ -33,6 +33,9 @@ NOW = datetime(2026, 10, 26, 0, tzinfo=UTC)
 
 @pytest.fixture
 def material_api(tmp_path, monkeypatch):
+    """
+    Provide aPI fixture configured for learner material access.
+    """
     engine = create_engine(f"sqlite:///{tmp_path / 'access.sqlite'}")
     for table in (
         class_sessions,
@@ -53,6 +56,9 @@ def material_api(tmp_path, monkeypatch):
         db.execute(session_lesson_links.insert().values(session_id=sid, lesson_id=lid))
     monkeypatch.setattr(materials, "now", lambda: NOW)
     def auth():
+        """
+        Prepare or exercise auth in the test learner materials test scenario.
+        """
         raise HTTPException(401, "Login required")
 
     app = FastAPI()
@@ -79,6 +85,9 @@ def material_api(tmp_path, monkeypatch):
 
 
 def test_grant_is_random_hashed_httponly_and_not_a_staff_login(material_api):
+    """
+    Verify that grant is random hashed httponly and not a staff login.
+    """
     a = material_api
     assert len(a.token) == 43
     assert (
@@ -100,6 +109,9 @@ def test_grant_is_random_hashed_httponly_and_not_a_staff_login(material_api):
 
 @pytest.mark.parametrize("token", [None, "", "guessed", "x" * 43, "x" * 257])
 def test_no_access_without_valid_signin(material_api, token):
+    """
+    Verify that no access without valid signin.
+    """
     a = material_api
     a.client.cookies.clear()
     if token:
@@ -121,6 +133,9 @@ def test_no_access_without_valid_signin(material_api, token):
 def test_access_expires_at_24_hours_without_refreshing(
     material_api, monkeypatch, hours, status
 ):
+    """
+    Verify that access expires at 24 hours without refreshing.
+    """
     a = material_api
     monkeypatch.setattr(materials, "now", lambda: NOW + timedelta(hours=hours))
     monkeypatch.setattr(
@@ -136,10 +151,16 @@ def test_access_expires_at_24_hours_without_refreshing(
 def test_listing_is_scoped_to_linked_lesson_and_no_personal_data(
     material_api, monkeypatch
 ):
+    """
+    Verify that listing is scoped to linked lesson and no personal data.
+    """
     a = material_api
     paths = []
 
     def upstream(path):
+        """
+        Prepare or exercise upstream in the test learner materials test scenario.
+        """
         paths.append(path)
         return json.dumps(
             {
@@ -163,6 +184,9 @@ def test_listing_is_scoped_to_linked_lesson_and_no_personal_data(
 
 
 def test_no_link_never_calls_lesson_service(material_api, monkeypatch):
+    """
+    Verify that no link never calls lesson service.
+    """
     a = material_api
     with a.factory.begin() as db:
         db.execute(session_lesson_links.delete())
@@ -178,6 +202,9 @@ def test_no_link_never_calls_lesson_service(material_api, monkeypatch):
 
 
 def test_hidden_review_message_passes_through(material_api, monkeypatch):
+    """
+    Verify that hidden review message passes through.
+    """
     monkeypatch.setattr(
         materials,
         "lesson_request",
@@ -190,10 +217,16 @@ def test_hidden_review_message_passes_through(material_api, monkeypatch):
 
 
 def test_download_uses_grant_lesson_and_original_headers(material_api, monkeypatch):
+    """
+    Verify that download uses grant lesson and original headers.
+    """
     a = material_api
     mid = uuid4()
 
     def upstream(path):
+        """
+        Prepare or exercise upstream in the test learner materials test scenario.
+        """
         assert path == f"/internal/lessons/{a.lid}/shared-materials/{mid}"
         return b"%PDF-content", {
             "Content-Type": "application/pdf",
@@ -211,6 +244,9 @@ def test_download_uses_grant_lesson_and_original_headers(material_api, monkeypat
 
 
 def test_link_get_put_unlink_and_missing_session(material_api, monkeypatch):
+    """
+    Verify that link get put unlink and missing session.
+    """
     a = material_api
     a.app.dependency_overrides[a.auth] = lambda: SimpleNamespace(
         staff=SimpleNamespace(id=uuid4(), role="teacher"), authorization="Bearer teacher"
@@ -233,12 +269,19 @@ def test_link_get_put_unlink_and_missing_session(material_api, monkeypatch):
 
 
 def test_failed_link_validation_keeps_existing_link(material_api, monkeypatch):
+    """
+    Verify that failed link validation keeps existing link.
+    """
     a = material_api
     a.app.dependency_overrides[a.auth] = lambda: SimpleNamespace(
         staff=SimpleNamespace(id=uuid4(), role="teacher"), authorization="Bearer teacher"
     )
 
     def unavailable(*args):
+        """
+        Simulate an unavailable dependency or failing operation for the surrounding
+        test.
+        """
         raise lesson_client.LessonUnavailableError()
 
     monkeypatch.setattr(lesson_client, "lesson_title", unavailable)
@@ -264,9 +307,16 @@ def test_failed_link_validation_keeps_existing_link(material_api, monkeypatch):
     ],
 )
 def test_upstream_errors_fail_closed(monkeypatch, failure, status):
+    """
+    Verify that upstream errors fail closed.
+    """
     monkeypatch.setenv("INTERNAL_API_KEY", "test-key")
 
     def unavailable(*args, **kwargs):
+        """
+        Simulate an unavailable dependency or failing operation for the surrounding
+        test.
+        """
         raise failure
 
     monkeypatch.setattr(materials, "urlopen", unavailable)
@@ -276,6 +326,9 @@ def test_upstream_errors_fail_closed(monkeypatch, failure, status):
 
 
 def test_internal_key_required_and_forwarded(monkeypatch):
+    """
+    Verify that internal key required and forwarded.
+    """
     monkeypatch.delenv("INTERNAL_API_KEY", raising=False)
     with pytest.raises(HTTPException):
         materials.lesson_request("/internal/test")
@@ -285,15 +338,28 @@ def test_internal_key_required_and_forwarded(monkeypatch):
         headers = {"Content-Type": "application/json"}
 
         def __enter__(self):
+            """
+            Enter the test resource context and return the object used by the scenario.
+            """
             return self
 
         def __exit__(self, *args):
+            """
+            Finalize the test resource context according to the simulated cleanup
+            policy.
+            """
             pass
 
         def read(self):
+            """
+            Prepare or exercise read in the test learner materials test scenario.
+            """
             return b"{}"
 
     def upstream(request, timeout):
+        """
+        Prepare or exercise upstream in the test learner materials test scenario.
+        """
         assert request.get_header("X-internal-key") == "test-key"
         assert timeout == 10
         return Reply()
@@ -303,6 +369,9 @@ def test_internal_key_required_and_forwarded(monkeypatch):
 
 
 def test_signin_mints_grant_in_same_transaction(material_api, monkeypatch):
+    """
+    Verify that signin mints grant in same transaction.
+    """
     a = material_api
     monkeypatch.setenv("DATABASE_URL", "sqlite://")
     module = importlib.import_module("app")
@@ -317,6 +386,9 @@ def test_signin_mints_grant_in_same_transaction(material_api, monkeypatch):
     )
 
     def signin(db, window, learner_id, today, *, now=None):
+        """
+        Prepare or exercise signin in the test learner materials test scenario.
+        """
         db.execute(
             attendance_records.insert().values(
                 session_id=window.session_id,
@@ -338,6 +410,9 @@ def test_signin_mints_grant_in_same_transaction(material_api, monkeypatch):
 
 
 def test_grants_random_cleanup_and_secure_cookie(material_api, monkeypatch):
+    """
+    Verify that grants random cleanup and secure cookie.
+    """
     a = material_api
     monkeypatch.setattr(materials, "now", lambda: NOW + timedelta(days=2))
     response = Response()
@@ -351,6 +426,9 @@ def test_grants_random_cleanup_and_secure_cookie(material_api, monkeypatch):
 
 
 def test_malformed_lesson_response_fails_closed(material_api, monkeypatch):
+    """
+    Verify that malformed lesson response fails closed.
+    """
     monkeypatch.setattr(materials, "lesson_request", lambda path: (b"not json", {}))
     assert material_api.client.get("/learner/materials").status_code == 503
 
@@ -358,6 +436,9 @@ def test_malformed_lesson_response_fails_closed(material_api, monkeypatch):
 def test_signin_rolls_back_attendance_when_grant_cannot_be_saved(
     material_api, monkeypatch
 ):
+    """
+    Verify that signin rolls back attendance when grant cannot be saved.
+    """
     a = material_api
     monkeypatch.setenv("DATABASE_URL", "sqlite://")
     module = importlib.import_module("app")
@@ -375,6 +456,9 @@ def test_signin_rolls_back_attendance_when_grant_cannot_be_saved(
     )
 
     def signin(db, window, learner_id, today, *, now=None):
+        """
+        Prepare or exercise signin in the test learner materials test scenario.
+        """
         db.execute(
             attendance_records.insert().values(
                 session_id=window.session_id,
@@ -385,6 +469,10 @@ def test_signin_rolls_back_attendance_when_grant_cannot_be_saved(
         )
 
     def failed_grant(*args, **kwargs):
+        """
+        Simulate material-grant failure after attendance processing to test transaction
+        rollback.
+        """
         raise RuntimeError("Database failure")
 
     monkeypatch.setattr(module, "sign_in", signin)
@@ -404,6 +492,9 @@ def test_signin_rolls_back_attendance_when_grant_cannot_be_saved(
 def test_unauthenticated_material_responses_are_not_cacheable(
     material_api, monkeypatch
 ):
+    """
+    Verify that unauthenticated material responses are not cacheable.
+    """
     a = material_api
     monkeypatch.setenv("DATABASE_URL", "sqlite://")
     module = importlib.import_module("app")
@@ -416,6 +507,9 @@ def test_unauthenticated_material_responses_are_not_cacheable(
 
 
 def test_closed_class_does_not_revoke_material_access(material_api, monkeypatch):
+    """
+    Verify that closed class does not revoke material access.
+    """
     a = material_api
     with a.factory.begin() as db:
         db.execute(
