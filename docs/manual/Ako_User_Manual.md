@@ -1,6 +1,6 @@
 # Ako User Manual
 
-Version 1.0 | 27 October 2026 | English
+Version 1.1 | 27 October 2026 | English
 
 Ako supports one English conversation club. This manual explains how visitors,
 learners, teachers and coordinators use its pages. Follow the role and menu path
@@ -486,6 +486,148 @@ A higher shared-address limit of fifty protects the service.
 If **Too many tries. Please ask the teacher** appears, stop retrying and ask staff.
 Learners without phones continue to use manual attendance.
 
+### 7.7 Verify QR sign-in step by step
+
+Use this walkthrough to check US-011, US-012 and US-013 together on a real phone.
+Use a disposable demonstration dataset and a new, uniquely named test learner.
+These instructions are a test procedure, not a record that the checks passed.
+
+**Step 1 Start the system**
+
+Start Docker Desktop or the Docker daemon. In the repository root, enter server.
+If server/.env does not exist, copy .env.example to .env before starting.
+Keep existing configuration and data volumes.
+
+```sh
+cd server
+docker compose up -d --build
+docker compose ps
+```
+
+Open http://localhost:8080 on the computer. Wait for the services to become ready.
+For an unchanged local demonstration, the coordinator is demo / DemoPass123!.
+Otherwise use the configured account.
+
+**Step 2 Make the address reachable from the phone**
+
+Connect the computer and phone to the same reachable Wi-Fi network.
+Find the computer's LAN IPv4 address in its active network settings.
+Replace 192.168.1.20 below with that actual address. Edit server/.env:
+
+```dotenv
+AKO_BIND_ADDRESS=0.0.0.0
+CHECKIN_PUBLIC_ORIGIN=http://192.168.1.20:8080
+COOKIE_SECURE=false
+```
+
+This is an HTTP LAN demonstration configuration. Keep private INTERNAL_API_KEY
+and CHECKIN_TOKEN_SECRET values configured consistently through Compose.
+Do not overwrite existing database passwords or remove volumes.
+
+From server, apply the settings:
+
+```sh
+docker compose up -d --build
+docker compose restart nginx
+```
+
+On the phone, open http://192.168.1.20:8080/class-information.
+Continue only when it loads. If it fails, check the IP, inbound TCP 8080 firewall
+rule and Wi-Fi client isolation. A guest network can block communication.
+The QR link must use the reachable IP, not localhost or 0.0.0.0.
+Use HTTPS and the corresponding secure-cookie configuration for an HTTPS deployment.
+
+**Step 3 Add a test learner**
+
+On the computer, log in and open Learners. Choose Add learner.
+Create First name Ana and Family name QRTest, or another unique test name.
+Check the list for an existing record before saving.
+Do not manually tick this learner Present: QR sign-in must create the first attendance.
+
+**Step 4 Prepare a shared test file**
+
+Open Lessons > New lesson. Enter a title, date and topic tag.
+Upload a small PDF and tick its Share with learners checkbox.
+For this basic check, leave Contains Māori content unticked.
+Choose Save lesson and confirm that the file is listed.
+Use a different lesson for cultural-review tests.
+
+**Step 5 Open today's class and QR window**
+
+Choose Class sessions > Start today's class.
+Check the date. Select the test lesson under Class lesson and choose Save lesson.
+Under QR check-in, choose Open check-in.
+Check that the code, sign-in link and expiry appear.
+The link must start with the LAN origin configured in Step 2.
+If today's session already has attendees, note the starting count instead of assuming zero.
+Keep the generated sign-in link available for the closure test.
+
+**Step 6 Scan and sign in**
+
+Scan the displayed code with the phone camera.
+Open the link in the browser, check today's date and enter Ana / QRTest.
+Choose Sign in once. Expect You are signed in and the lesson materials area.
+No staff login, learner password or app should be required.
+
+**Step 7 Confirm attendance on the computer**
+
+Open Attendance for that same class and find Ana QRTest.
+Allow approximately three seconds for automatic refresh.
+Expect Present, a recorded time and a count increase of one.
+It must appear within the ten-second acceptance window without manually ticking it.
+Confirm the learner is not recorded twice.
+
+**Step 8 Download and revisit the materials**
+
+On the phone, choose Lesson materials and Download beside the test PDF.
+Verify the original filename and that the file opens.
+Return to /materials on the same origin and browser; the shared file should remain available.
+Do not switch between the LAN IP and localhost, clear cookies, or use a new private window.
+Those actions do not preserve the material-access cookie.
+
+**Step 9 Check duplicate sign-in and closure**
+
+Reopen the original sign-in link and enter the same name.
+Expect Already signed in and no increase in attendance.
+Then choose Close check-in on the computer and reload the saved sign-in link.
+Expect Check-in is closed. Please ask the teacher, with no new attendance.
+Finally reopen /materials in the already authorized phone browser.
+Closing check-in should not revoke its existing 24-hour material access.
+
+### 7.8 Additional validation cases and results
+
+Run each case with suitable fresh test learners and note the starting present count.
+Use a separate unsigned-in browser for access-denial checks.
+Reopen today's check-in and use its current code when the case needs an open window.
+
+| Check | Action | Expected result |
+| --- | --- | --- |
+| Required names | Submit both names empty | First name and family name errors; no attendance |
+| Unknown name | Submit a unique name absent from Learners | We could not find that name. Please ask the teacher; no attendance |
+| Duplicate sign-in | Submit a learner already signed in | Already signed in; no second attendance and no count increase |
+| Closed code | Reload the saved link after Close check-in | Closed message; no new attendance |
+| No material grant | Open /materials in a separate unsigned-in browser | No filenames or files; asks for QR sign-in |
+| Private file | Link a lesson with one shared file and one staff-only file; sign in a fresh learner | Only the shared file appears |
+| No lesson | Unlink the lesson, then sign in a fresh learner | Attendance succeeds; No materials for today |
+| Pending review | Link a flagged, unreviewed lesson with a shared file; sign in a fresh learner | Attendance succeeds; Materials will be added soon; no files |
+| Existing grant after closure | Close check-in after a successful QR sign-in and revisit /materials on the same browser | Files remain accessible during the 24-hour grant |
+
+For a manually marked learner, a repeated QR attempt can show Already signed in
+without issuing a materials grant. This is a current limitation, not proof that
+material access works. Use a new learner for the successful scan/download case,
+and ask staff for a handout when that limitation occurs.
+
+The four-hour code limit, club-midnight cutoff, 24-hour grant expiry and wrong-name
+throttle need separate timed or automated tests. Do not change a shared server's
+clock to simulate expiry. Follow the QR, sign-in and materials test scripts in
+docs/system_test and the isolated Docker testing instructions in the README.
+
+For each run, record the date, commit, browser/phone, test learner, starting and
+ending counts, case result, and any sanitized screenshot or defect reference.
+Do not mark a case Pass until its actual result matches the expected result.
+Avoid repeating the whole walkthrough with the same already-signed-in learner;
+reuse today's session with a fresh unique learner instead.
+
 ## 8 Lesson library and cultural review
 
 ### 8.1 Create a lesson
@@ -683,9 +825,9 @@ learner details.
 | US-008 Māori content review | 8.6–8.7 |
 | US-009 Public class information | 2.1 |
 | US-010 Submit and view enquiries | 2.2–2.3 |
-| US-011 Open, print and close QR check-in | 7.2 and 7.4 |
-| US-012 Learner QR sign-in | 7.3 and 7.6 |
-| US-013 Learner materials | 7.1 and 7.5 |
+| US-011 Open, print and close QR check-in | 7.2, 7.4 and 7.7–7.8 |
+| US-012 Learner QR sign-in | 7.3 and 7.6–7.8 |
+| US-013 Learner materials | 7.1, 7.5 and 7.7–7.8 |
 | US-014 Manage class sessions | 5 |
 | US-015 Correct past attendance | 6.4 |
 | US-016 Learner attendance history | 6.5 |

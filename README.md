@@ -10,6 +10,7 @@ without an account.
 - **[User manual](docs/manual/Ako_User_Manual.md)**: role-based instructions,
   every feature, operation steps, validation messages and current limitations.
 - [User manual in Word](docs/manual/Ako_User_Manual.docx)
+- [QR sign-in walkthrough and validation checklist](docs/manual/Ako_User_Manual.md#77-verify-qr-sign-in-step-by-step)
 - [Requirements and user stories](docs/system_analysis/)
 - [System design and Ako UI kit](docs/system_design/)
 - [Database design and schema notes](database/)
@@ -252,6 +253,9 @@ browser cookies do not transfer between `localhost` and a LAN IP.
 Changing the QR secret or public origin requires issuing suitable new codes.
 Closing QR check-in does not remove an already issued 24-hour material grant.
 See the [manual's QR instructions](docs/manual/Ako_User_Manual.md#7-qr-check-in-and-learner-materials).
+For a complete real-phone check, follow the [step-by-step walkthrough](docs/manual/Ako_User_Manual.md#77-verify-qr-sign-in-step-by-step)
+and [additional validation cases](docs/manual/Ako_User_Manual.md#78-additional-validation-cases-and-results).
+Use a new test learner who has not already been marked Present.
 
 ## Local development tools
 
