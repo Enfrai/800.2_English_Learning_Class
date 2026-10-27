@@ -67,7 +67,7 @@ def main() -> int:
         if not options.keep:
             try:
                 cleanup = subprocess.run(
-                    command + ["down", "--remove-orphans"], cwd=root
+                    command + ["down", "--remove-orphans", "--volumes"], cwd=root
                 )
                 if cleanup.returncode:
                     failed = True
