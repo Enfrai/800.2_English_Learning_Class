@@ -1,4 +1,4 @@
-/* Collect accessible public feedback and retain entered text after submission errors.
+/* Collect feedback with shared Ako form controls and retain text after errors.
  * Author: Shuohui Liu
  * Date: 24 Oct 2026
  */
@@ -46,7 +46,7 @@ export default function FeedbackForm() {
   const error = (field: keyof FeedbackInput) => errors[field] && <p className="msg msg-error" id={`feedback-${field}-error`} role="alert">{errors[field]}</p>;
   return <form className={styles.form} ref={form} onSubmit={send} noValidate aria-busy={busy}>
     <div className="field"><label htmlFor="feedback-title" className="req">Title</label>
-      <input id="feedback-title" name="title" required maxLength={200} value={input.title} disabled={busy} {...attrs("title")} onChange={event => change("title", event.target.value)} />
+      <input id="feedback-title" name="title" type="text" required maxLength={200} value={input.title} disabled={busy} {...attrs("title")} onChange={event => change("title", event.target.value)} />
       {error("title")}</div>
     <div className="field"><label htmlFor="feedback-email" className="req">Email</label>
       <input id="feedback-email" name="email" type="email" autoComplete="email" required maxLength={254} value={input.email} disabled={busy} {...attrs("email")} onChange={event => change("email", event.target.value)} />
