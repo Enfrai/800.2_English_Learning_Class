@@ -7,9 +7,9 @@ without an account.
 
 ## Documentation
 
-- **[User manual](doc/user_manul/Ako_User_Manual.md)**: role-based instructions,
+- **[User manual](docs/manual/Ako_User_Manual.md)**: role-based instructions,
   every feature, operation steps, validation messages and current limitations.
-- [User manual in Word](doc/user_manul/Ako_User_Manual.docx)
+- [User manual in Word](docs/manual/Ako_User_Manual.docx)
 - [Requirements and user stories](docs/system_analysis/)
 - [System design and Ako UI kit](docs/system_design/)
 - [Database design and schema notes](database/)
@@ -51,7 +51,7 @@ one PostgreSQL database per service. Uploaded lesson files use a shared volume.
 | `setup/` | Optional host environment bootstrap |
 | `tests/` and `compose.test.yaml` | Isolated automated test stack and runners |
 | `docs/` | Requirements, project, design and test documents |
-| `doc/user_manul/` | English user manual in Markdown and Word |
+| `docs/manual/` | English user manual in Markdown and Word |
 
 The directory name `accessment` is retained to match the implementation.
 
@@ -251,7 +251,7 @@ Use one consistent hostname when signing in and returning to materials:
 browser cookies do not transfer between `localhost` and a LAN IP.
 Changing the QR secret or public origin requires issuing suitable new codes.
 Closing QR check-in does not remove an already issued 24-hour material grant.
-See the [manual's QR instructions](doc/user_manul/Ako_User_Manual.md#7-qr-check-in-and-learner-materials).
+See the [manual's QR instructions](docs/manual/Ako_User_Manual.md#7-qr-check-in-and-learner-materials).
 
 ## Local development tools
 
@@ -426,7 +426,7 @@ active coordinator. It is not a password reset or general account editor.
 | Write failed or response was lost | Refresh and inspect saved data before retrying to avoid duplicate or partial operations |
 
 Current workflow limitations and safe user actions are documented in the
-[user manual](doc/user_manul/Ako_User_Manual.md#10-troubleshooting-and-current-limitations).
+[user manual](docs/manual/Ako_User_Manual.md#10-troubleshooting-and-current-limitations).
 
 ## Contributing
 
