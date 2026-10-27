@@ -115,8 +115,11 @@ services:
     networks:
       test:
         aliases: [lesson-service]
+    volumes: [lesson-files:/var/lib/ako/materials]
     environment:
       DATABASE_URL: postgresql+psycopg://lesson_app:test_only_password@postgres-lesson:5432/lessondb
+      INTERNAL_API_KEY: ako_test_internal_key
+      MATERIALS_DIR: /var/lib/ako/materials
     depends_on:
       postgres-lesson: {condition: service_healthy}
       user1: {condition: service_healthy}
@@ -143,7 +146,7 @@ services:
   nginx:
     image: nginx:1.28-alpine
     networks: [test]
-    volumes: [./server/nginx/nginx.conf:/etc/nginx/nginx.conf:ro]
+    volumes: [./tests/docker/nginx.test.conf:/etc/nginx/nginx.conf:ro]
     depends_on:
       web: {condition: service_healthy}
       user1: {condition: service_healthy}
@@ -175,3 +178,6 @@ services:
 
 networks:
   test:
+
+volumes:
+  lesson-files:

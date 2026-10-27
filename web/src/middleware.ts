@@ -19,7 +19,13 @@ export async function middleware(request: NextRequest) {
     // may contain the Next server's port, so use the incoming public Host here.
     // This host is never used for backend fetches.
     const target = new URL(request.url);
-    target.host = request.headers.get("host") || target.host;
+    const publicHost = request.headers.get("x-forwarded-host")
+      || request.headers.get("host")
+      || target.host;
+    // Next's internal request URL includes its own :3000 port. Clear that
+    // port before applying the public Host, which may supply its own port.
+    target.port = "";
+    target.host = publicHost;
     target.pathname = "/";
     target.search = "";
     return NextResponse.redirect(target, { headers: noStore });
