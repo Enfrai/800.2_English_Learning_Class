@@ -60,10 +60,10 @@ Administer the adopted standard ten-item SUS questionnaire after the session. Us
 | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- |
 | P01 | 27 Oct 2026 | 4 | 1 | 5 | 1 | 4 | 2 | 5 | 1 | 4 | 1 | 90.0 | forms/sus_p01.pdf |
 | P02 | 27 Oct 2026 | 4 | 2 | 4 | 2 | 4 | 2 | 4 | 2 | 4 | 2 | 75.0 | forms/sus_p02.pdf |
-| P03 | 27 Oct 2026 | 5 | 1 | 5 | 1 | 5 | 1 | 4 | 1 | 5 | 1 | 95.0 | forms/sus_p03.pdf |
-| P04 | 27 Oct 2026 | 4 | 1 | 4 | 2 | 4 | 1 | 5 | 1 | 4 | 1 | 85.0 | forms/sus_p04.pdf |
+| P03 | 27 Oct 2026 | 5 | 1 | 5 | 1 | 5 | 1 | 4 | 1 | 5 | 1 | 97.5 | forms/sus_p03.pdf |
+| P04 | 27 Oct 2026 | 4 | 1 | 4 | 2 | 4 | 1 | 5 | 1 | 4 | 1 | 87.5 | forms/sus_p04.pdf |
 
-Score each completed questionnaire by subtracting 1 from responses to odd items (1, 3, 5, 7, 9), and subtracting even-item responses (2, 4, 6, 8, 10) from 5. Add those adjusted values and multiply by 2.5 for that participant's SUS score. The 6.3 result is the mean of the completed participant scores. Keep the completed forms and calculation with the test evidence. The scoring method is from John Brooke's original SUS paper.
+Score each completed questionnaire by subtracting 1 from responses to odd items (1, 3, 5, 7, 9), and subtracting even-item responses (2, 4, 6, 8, 10) from 5. Add those adjusted values and multiply by 2.5 for that participant's SUS score. The 6.3 result is the mean of the completed participant scores. P03 and P04 scores were corrected by recalculating from their recorded answers: 97.5 and 87.5, respectively; the earlier entries of 95 and 85 produced the incorrect mean of 86.25. Keep the completed forms and calculation with the test evidence. The scoring method is from John Brooke's original SUS paper.
 
 ## 5. Copy these results to Test Plan section 6.3
 
@@ -71,6 +71,6 @@ Score each completed questionnaire by subtracting 1 from responses to odd items 
 | ----- | ----- | ----- |
 | Task success | Completed-alone attempts / attempted UA-01 to UA-10 tasks = **15 / 16** = **93.75%**. No UA task failed by two consecutive participants. | Completed task observation records above. |
 | Errors and confusion | **1 item**; triaged: **OBS-01**. | Observation log above. |
-| Satisfaction (SUS) | **4 participants**; mean SUS score **86.25 / 100**. | Completed SUS forms and score calculations above. |
+| Satisfaction (SUS) | **4 participants**; mean SUS score **87.5 / 100**. | Completed SUS forms and score calculations above. |
 | Plain language | **0 messages** misunderstood by two or more participants. | Wording observations above. |
 | Must-story acceptance | Use the 7.3 criteria totals and the 6.5 sign-off table. | Test Plan sections 7.3 and 6.5. |
