@@ -1,4 +1,4 @@
-# Build isolated backend, browser and system test runners on Python 3.14.
+# Build isolated backend, browser and system test runners.
 # Author: Shuohui Liu
 # Date: 19 Oct 2026
 
@@ -15,14 +15,10 @@ COPY server/services /workspace/server/services
 COPY tests/docker /runner
 ENTRYPOINT ["python", "/runner/run.py", "backend"]
 
-FROM node:24-bookworm AS node-runtime
-
-FROM python:3.14-bookworm AS web
-COPY --from=node-runtime /usr/local/bin/node /usr/local/bin/node
-COPY --from=node-runtime /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/npm
-RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
-    && ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
+FROM node:24-bookworm AS web
 ENV NEXT_TELEMETRY_DISABLED=1 PLAYWRIGHT_BROWSERS_PATH=/ms-playwright BROWSER_CHANNEL=chromium
+RUN apt-get update && apt-get install -y --no-install-recommends python3 \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /workspace/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci --no-audit --no-fund \

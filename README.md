@@ -271,21 +271,10 @@ port 3000; integrated API use additionally needs working service URLs and gatewa
 routing. Server-side `USER_API_URL`, `ACCESS_API_URL` and `LESSON_API_URL` must
 point to reachable API base URLs, not browser-facing `/api/...` paths.
 
-For Python development, use Python 3.14 and a virtual environment, then install
-each service's requirements. All application and test container runtimes use
-Python 3.14. The optional `setup/buildup_dev_environment.py` checks or installs
-Python 3.14 on macOS/Windows and prepares the root `.venv`:
-
-```sh
-python3 setup/buildup_dev_environment.py
-```
-
-On Windows use `py setup/buildup_dev_environment.py`. Run from the repository root;
-the script asks before installations. It preserves existing virtual environments
-and refuses one using another Python version. Move an old environment aside,
-create a new one with Python 3.14 and reinstall dependencies.
-The bootstrap is not required for Docker. The root `.python-version` records 3.14
-for version managers; verify `python --version` after activating an environment.
+For Python development, use a virtual environment and install each service's
+requirements. Python 3.14 matches the current images; the optional
+`setup/buildup_dev_environment.py` still provisions Python 3.12 on macOS/Windows.
+It is not required for Docker and does not establish parity with the container runtime.
 
 Example using Python 3.14, from the repository root:
 
@@ -313,13 +302,13 @@ not a complete application startup.
 From the **repository root**, with the Docker engine running:
 
 ```sh
-python3.14 tests/run_docker_tests.py
+python3 tests/run_docker_tests.py
 ```
 
 Windows:
 
 ```powershell
-py -3.14 tests/run_docker_tests.py
+py tests/run_docker_tests.py
 ```
 
 Or use Docker only, without host Python:
@@ -336,7 +325,7 @@ test project. The explicit Docker commands require checking every command's
 exit code and running cleanup yourself. The test stack uses separate databases
 and no published ports. Do not combine it with `server/compose.yaml`.
 
-Run one group with `python3.14 tests/run_docker_tests.py --suite backend`,
+Run one group with `python3 tests/run_docker_tests.py --suite backend`,
 `--suite web` or `--suite system`. Add `--keep` for debugging.
 Do not run multiple helpers concurrently in the same checkout.
 
@@ -375,12 +364,6 @@ For Accessment and Lesson pytest tests, start the throwaway PostgreSQL server de
 `requirements-dev.txt`, and run pytest from that service directory with
 `TEST_DATABASE_URL` set. A PostgreSQL-capable test role must be able to create
 and drop the generated test databases.
-
-Bootstrap regression checks run without an installer or Docker:
-
-```sh
-python3.14 -m unittest discover -s setup/tests -v
-```
 
 The [Docker testing guide](tests/docker/README.md) documents suite selections,
 coverage limits and specialized authentication runners.

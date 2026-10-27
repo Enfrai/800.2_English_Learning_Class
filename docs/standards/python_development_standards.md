@@ -14,7 +14,7 @@ The goals are readable code, clear responsibilities, reproducible environments, 
 - **Should** indicates a default practice. Departures must have a clear reason.
 - **May** indicates an optional practice.
 
-Python 3.14 is the supported runtime for local development, application images and test runners. The root `.python-version` records this version, Ruff targets `py314`, and CI setup must select `3.14`. The team must record the dependency management workflow and quality checks in the repository. Exceptions to required rules must be documented and approved during code review.
+The team must record the supported Python versions, dependency management workflow, and quality checks in the repository. Exceptions to required rules must be documented and approved during code review.
 
 ## 2. Project Structure
 

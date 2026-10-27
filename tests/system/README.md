@@ -19,7 +19,7 @@ that testers follow and sign off are in `docs/system_test/`.
 
 ## Recommended: isolated Docker tests
 
-From the repository root, run `python3.14 tests/run_docker_tests.py --suite system`,
+From the repository root, run `python3 tests/run_docker_tests.py --suite system`,
 or `docker compose -f compose.test.yaml -p ako-tests run --build --rm test-system`.
 See [Docker testing instructions](../docker/README.md) for all suites, reports
 and cleanup. This mode uses temporary databases, bundled Chromium and no host
@@ -43,7 +43,7 @@ ports. The manual steps below are for a host-installed Python/browser only.
 
    ```bash
    cd tests/system
-   python3.14 -m venv .venv
+   python3 -m venv .venv
    .venv/bin/pip install -r requirements.txt
    .venv/bin/playwright install chromium
    ```

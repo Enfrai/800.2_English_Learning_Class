@@ -1,74 +1,121 @@
-# Development environment setup
+### 1. Setup environment to develop
 
-Python 3.14 is the supported project runtime. Docker application images and
-isolated test runners use the same minor version.
+1.1 Python environment checking
 
-## Optional bootstrap on macOS and Windows
+```shell
+python3 -c "import argparse, os, platform, shutil, subprocess, sys, tempfile, urllib.request; from pathlib import Path; print('All modules are available')" 
+```
 
-Run from the repository root using an existing Python interpreter:
+1.2 Setup
+
+```shell
+python buildup_dev_environment.py
+```
+
+### 2. Deploy & Run
+
+2.1 Steps
 
 ```sh
-python3 setup/buildup_dev_environment.py
+cp .env.example .env
+cat .env
+docker compose config
+docker compose up -d --build
 ```
 
-Windows:
-
-```powershell
-py setup/buildup_dev_environment.py
-```
-
-The script checks Docker, finds Python 3.14 or asks to install it, creates the
-root `.venv`, and installs all three services' runtime requirements.
-macOS automatic Python installation uses Homebrew (`python@3.14`).
-Windows uses winget (`Python.Python.3.14`).
-Restart the terminal if a newly installed interpreter is not yet discoverable.
-Docker Desktop must still be started before container commands.
-
-Use `--project-root /path/to/checkout` when running elsewhere. Use `--yes`
-only when you intend to approve the script's installation prompts.
-Linux users install Python 3.14 and Docker using their platform tools instead.
-
-Existing environments are checked before package installation. An environment
-using another Python version is preserved and rejected. Move it aside manually,
-then create a fresh Python 3.14 environment; do not reuse its site-packages.
-
-## Manual Python environment
-
-From the repository root on macOS/Linux:
+2.2 Individually update
 
 ```sh
-python3.14 -m venv .venv
-source .venv/bin/activate
-python --version
-python -m pip install -r server/services/user/requirements-dev.txt
-python -m pip install -r server/services/accessment/requirements-dev.txt
-python -m pip install -r server/services/lesson/requirements-dev.txt
+docker compose up -d --build user1 user2 ...
 ```
 
-Windows:
-
-```powershell
-py -3.14 -m venv .venv
-.venv\Scripts\Activate.ps1
-python --version
-python -m pip install -r server/services/user/requirements-dev.txt
-python -m pip install -r server/services/accessment/requirements-dev.txt
-python -m pip install -r server/services/lesson/requirements-dev.txt
-```
-
-Select the new `.venv` interpreter in your editor. The root `.python-version`
-records 3.14 for compatible version managers.
-
-## Bootstrap regression checks
-
-These checks mock installers and never install Docker/Python or modify a real
-environment:
+2.3 Checking 
 
 ```sh
-python3.14 -m unittest discover -s setup/tests -v
+docker compose ps
 ```
 
-On Windows use `py -3.14 -m unittest discover -s setup/tests -v`.
+2.4 Real-time logs
 
-See the [root README](../README.md) for the complete Docker startup, configuration,
-tests, clean image rebuild, logs and backup instructions.
+```sh
+docker compose logs -f
+```
+
+### 3. Testing
+
+3.1 Working testing
+
+```sh
+curl -i -X POST http://localhost:8080/api/user/login -H "Content-Type: application/json" -d '{"username":"demo","password":"DemoPass123!"}'
+
+curl -i -X POST http://localhost:8080/api/access/check -H "Content-Type: application/json" -d '{"role":"admin","resource":"lessons"}'
+
+curl -i -X POST http://localhost:8080/api/lesson/create -H "Content-Type: application/json" -d '{"title":"FastAPI Basics"}'
+```
+
+3.2 Load Balancor Testing
+
+```sh
+for i in {1..10}; do
+    curl -s -X POST http://localhost:8080/api/user/login -H "Content-Type: application/json" -d '{"username":"demo","password":"DemoPass123!"}'
+    echo
+done
+```
+
+### 4. PostgreSQL self-testing example
+
+Execute SQL statements.
+
+```sh
+docker compose exec postgres-user psql -U user_app -d userdb -c "SELECT * FROM users;"
+```
+
+### 5. Terminate / Stop running
+
+5.1 Terminate & remove containers
+
+```sh
+docker compose down
+
+# With removing data
+docker compose down -v
+
+# rerun
+docker compose up -d --build
+```
+
+5.2 Stop containers
+
+```sh 
+docker compose stop
+
+# restart
+docker compose start
+```
+
+### 6. Formatting (Ruff)
+
+6.1 
+
+```sh
+# Formatting
+ruff format . # ruff format --check .
+
+# Importing 
+ruff check --select I --fix .
+
+# Importing - remove unused.
+ruff check --select F401 --fix .
+
+# Checking
+ruff check .
+```
+
+6.2 Automaticall ruff
+
+[ruff.toml](../server/ruff.toml)
+
+```sh
+ruff check --fix .
+ruff format .
+```

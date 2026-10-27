@@ -18,7 +18,7 @@ databases started by `compose.yaml`.
 
    ```bash
    cd server/services/user
-   python3.14 -m venv .venv
+   python3 -m venv .venv
    .venv/bin/pip install -r requirements-dev.txt
    ```
 

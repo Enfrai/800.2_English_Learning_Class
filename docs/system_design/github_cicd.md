@@ -22,7 +22,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: '3.10'
           cache: 'pip' # Cache dependencies to speed up subsequent runs
 
       # Step 3: Install dependencies

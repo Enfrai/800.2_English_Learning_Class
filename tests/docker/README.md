@@ -12,8 +12,8 @@ and temporary database storage. It has no published ports and does not mount
 the Docker socket or any development database volume. Your usual app can keep
 running on port 8080.
 
-All test runners use Python 3.14 to match the service Dockerfiles.
-The web test image combines Python 3.14 with Node.js 24 and installs the Chromium version matching
+The backend test image uses Python 3.14 to match the service Dockerfiles.
+The web test image uses Node.js 24 and installs the Chromium version matching
 the project's Playwright dependency. Chrome is not needed on the host.
 
 ## Recommended: run all supported suites
@@ -21,13 +21,13 @@ the project's Playwright dependency. Chrome is not needed on the host.
 Only Python's standard library and Docker are required on the host:
 
 ```bash
-python3.14 tests/run_docker_tests.py
+python3 tests/run_docker_tests.py
 ```
 
 Windows:
 
 ```powershell
-py -3.14 tests/run_docker_tests.py
+py tests/run_docker_tests.py
 ```
 
 The helper builds the required images, runs backend, web and system suites
@@ -39,9 +39,9 @@ Its process exit code is 0 only when the requested suites and cleanup succeed.
 Run one group:
 
 ```bash
-python3.14 tests/run_docker_tests.py --suite backend
-python3.14 tests/run_docker_tests.py --suite web
-python3.14 tests/run_docker_tests.py --suite system
+python3 tests/run_docker_tests.py --suite backend
+python3 tests/run_docker_tests.py --suite web
+python3 tests/run_docker_tests.py --suite system
 ```
 
 Add `--keep` to leave application services running for troubleshooting. The
