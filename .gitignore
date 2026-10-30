@@ -235,3 +235,8 @@ __marimo__/
 
 # Isolated Docker test reports and browser artifacts
 /test-results/
+
+!release/server/.env
+ako-images-1.0.0.tar
+# Exported Docker images
+/release/*.tar
