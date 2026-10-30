@@ -5,61 +5,6 @@ attendance and reusable lessons. Visitors can view class information and send
 enquiries. Learners can check in by QR code and access shared lesson materials
 without an account.
 
-## Environment
-
-Check or install your developing and running environment: Docker & Python:
-
-```sh
-bash ./setup/setup/buildup_dev_environment.py
-```
-
-## Run directly
-```sh
-mkdir -p release/server/nginx
-cp server/compose.yaml ./release/server 
-cp server/nginx/nginx.conf ./release/server/nginx
-cp server/.env.example ./release/server/.env 
-```
-
-```sh
-cat > ./release/server/compose.images.yaml  <<'EOF'
-services:
-  web:
-    image: ako-web:1.0.0
-  user1:
-    image: ako-user:1.0.0
-  user2:
-    image: ako-user:1.0.0
-  access1:
-    image: ako-accessment:1.0.0
-  access2:
-    image: ako-accessment:1.0.0
-  lesson1:
-    image: ako-lesson:1.0.0
-  lesson2:
-    image: ako-lesson:1.0.0
-EOF
-```
-
-```sh
-cd ~/Desktop/ako-release/server
-
-export USER_DATA_VOLUME=ako-release-test-user-data
-export ACCESS_DATA_VOLUME=ako-release-test-access-data
-export LESSON_DATA_VOLUME=ako-release-test-lesson-data
-export LESSON_FILES_VOLUME=ako-release-test-lesson-files
-export AKO_BIND_ADDRESS=127.0.0.1
-
-docker compose \
-  -p ako-release-test \
-  -f compose.yaml \
-  -f compose.images.yaml \
-  up -d --no-build
-```
-
-Open [http://localhost:8080](http://localhost:8080) using your browser.
-
-
 ## Documentation
 
 - **[User manual](docs/manual/Ako_User_Manual.md)**: role-based instructions,
@@ -167,7 +112,7 @@ docker info
 From a terminal:
 
 ```sh
-git clone --branch feature/v1.0/pre_release https://github.com/Enfrai/800.2_English_Learning_Class.git
+git clone --branch feature/v1.0/dev https://github.com/Enfrai/800.2_English_Learning_Class.git
 cd 800.2_English_Learning_Class
 cd server
 ```
@@ -356,7 +301,12 @@ point to reachable API base URLs, not browser-facing `/api/...` paths.
 
 For Python development, use a virtual environment and install each service's
 requirements. Python 3.14 matches the current images; the optional
-`setup/buildup_dev_environment.py` still provisions Python 3.12 on macOS/Windows.
+`setup/buildup_dev_environment.py` can help install Docker and related Python on macOS/Windows, and also help install dependencies for the project. Use command to help:
+
+```sh
+python setup/buildup_dev_environment.py --help
+```
+
 It is not required for Docker and does not establish parity with the container runtime.
 
 Example using Python 3.14, from the repository root:

@@ -44,7 +44,6 @@ and computer should be on the same reachable Wi-Fi network. Use HTTPS as the
 public origin when the deployment serves HTTPS. The bind-address default remains
 127.0.0.1 unless configured. This feature needs no paid QR service or app.
 
-Use the current feature/v1.0/pre_release checkout. From the repository root:
 
 ```bash
 cd server
